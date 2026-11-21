@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
+      - name: Install PlatformIO and tool deps
+        run: pip install platformio==6.2.0 -r tools/requirements.txt
+      - name: Build release + dev
+        run: pio run -d firmware -e release -e dev
+      - name: Native unit tests
+        run: pio test -d firmware -e native
+      - name: Release-build guard (no DEV_ flags, setInsecure, http://)
+        run: python tools/check_release.py
+      - name: Tools tests
+        run: python -m pytest -q tools/tests
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/functions/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install functions deps (also compiles TypeScript)
+        run: npm --prefix functions ci
+      - name: Functions + rules tests on the emulator (demo project, no login)
+        run: npx --yes firebase-tools@15.37.0 emulators:exec --only functions,firestore "npm --prefix functions test"
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

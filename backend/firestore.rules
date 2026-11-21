@@ -1,0 +1,11 @@
+rules_version = '2';
+// Deny by default. Clients never read or write Firestore directly in v1:
+// the public map reads a CDN snapshot, and everything else goes through functions (Admin SDK).
+// private_locations in particular must never be client-readable.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
