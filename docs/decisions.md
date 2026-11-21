@@ -21,9 +21,10 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | Dev tools via Homebrew (platformio, firebase-cli, node@22, python@3.12). Functions run on Node 22 (deprecated by Google 2027-04-30 → move to Node 24 before then) | Founder approved |
 | 2026-11-21 | Approved dependencies (none on the device): pyserial (BSD), pytest (MIT), firebase-functions/firebase-admin/firebase/@firebase/rules-unit-testing (Apache-2.0), TypeScript (Apache-2.0), mocha + @types/mocha + @types/node (MIT, type definitions only), Vite + Vitest (MIT) | Build/test/web only; $0 |
 | 2026-11-21 | Local dev-assistant config stays out of the public repo; no tool credit lines in commits/PRs | Founder request |
-| 2026-11-21 | **Provisional** (founder allowed the recommendation): #3 RUNNING light = short blip every ~5 s | Shows the sensor is alive |
+| 2026-11-21 | **Provisional** (founder answered "Yes, all, as provisional" to the agent's question on 2026-11-21, covering #3 #4 #5 #6): #3 RUNNING light = short blip every ~5 s | Shows the sensor is alive |
 | 2026-11-21 | **Provisional**: #5 separate Firebase project from Fire Watch | Separate nonprofit |
-| 2026-11-21 | **Provisional**: #6 continuous measurement, uploads every ~2.5 min; PMS read in passive mode every 2.5 s | Simple; revisit for sensor lifespan |
+| 2026-11-21 | **Provisional**: #6 continuous measurement (no duty-cycling), uploads every ~2.5 min | Simple; revisit for sensor lifespan |
+| 2026-11-21 | Implementation detail (agent): the PMS is read in passive mode, one request every 2.5 s | Sensor only talks when asked; detects a rebooted sensor |
 | 2026-11-21 | Merging PRs stays with the founder (the agent was not allowed to merge); milestone PRs are stacked | Founder reviews each milestone |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
