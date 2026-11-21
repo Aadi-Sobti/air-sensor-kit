@@ -162,7 +162,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Edge; Safari shows the phone-path fallback.
 
 ### M6 Phone setup (captive portal): backup path
-- [x] Soft AP + captive portal + in-flash page (EN/ES), credential test with reconnect polling.
+- [x] Soft AP + captive portal + in-flash page (EN/ES), credential test with reconnect polling. **(Hardware
+      unverified: phone checklist pending.)**
       Firmware 0.5.0. `lib/core/src/portal.*`: EN+ES strings (kept in flash), form validation (WPA2 8–63 chars or
       open, 5-digit ZIP, address), server-rendered pages that work with JS off and in iOS's captive mini-browser
       (form POST → "Connecting…" page with meta refresh to /status, so a phone that drops during the AP channel
@@ -171,7 +172,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       #7), wildcard DNS → 192.168.4.1, Apple/Android/Windows probe URLs + unknown hosts → 302 to the portal, AP held
       60 s after success; web/DNS servers exist only while the AP is up; radio mode (STA/AP/AP+STA) decided in one
       place (`net.cpp applyMode`); Improv and the portal can't test credentials at the same time. Setup info is
-      saved with the WiFi only after it connects, sent once in the next signed upload, then erased from the device.
+      saved with the WiFi only after it connects, sent once in the next signed upload, then deleted from the device's
+      config file (file level: LittleFS may keep old blocks until reused, like the WiFi password).
       `tools/setup_info.py` shows the setup WiFi name + password (+ WiFi QR text) over USB, only within 60 s of boot
       or while no short code is assigned. Release guard allowlists exactly `http://192.168.4.1/` (local AP).
       `pio test` 75/75 (9 portal tests); tools 28/28 (the QR escaping test caught a real backslash bug).
@@ -180,7 +182,15 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       fragments to flash too. ⚠ M9 risk: OTA needs free space ≥ the new image, and the sketch area is ~1 MB, so the
       firmware must stay under ~520 KB (now 515 KB). Plan size cuts before M9 (e.g. drop HTTPClient for a raw POST).
       Deviation until M7: phone-path addresses are geocoded by the M7 job (ingest stays lean), so these sensors
-      appear on the map only after M7.
+      appear on the map only after M7. M7 acceptance: that job runs often enough to keep "on the map in about
+      10 minutes" true.
+      Spec-review fixes: "/" follows the setup phase (phones reopen the portal at "/" after the channel switch);
+      the test starts 0.5 s after the reply; a typed WiFi name wins over the pre-ticked network; async scan after
+      the AP starts (Improv still answers within ~2 s of boot); FLASH long-press resets the portal; the
+      setup-info command + send-once/clear-after-2xx rules moved to `lib/core/src/setup_info.*` with tests
+      (incl. a fix: a binary line could re-trigger the old command). Native 80/80.
+      Watch on hardware: only WL_WRONG_PASSWORD shows the password message; if the ESP8266 reports a wrong
+      password as CONNECT_FAILED/timeout, people see "couldn't reach that WiFi".
 - 👤 Founder has an iPhone only (2026-11-21): the iPhone run counts; the **Android** run stays open (unverified)
       until someone can lend one (a volunteer or friend in M10 works too).
 - 👤 Phone checklist (after the soak, once 0.5.0 is flashed; run `python3 tools/setup_info.py --port <port>` in your

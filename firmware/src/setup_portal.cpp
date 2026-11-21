@@ -31,6 +31,8 @@ static std::vector<pt::Network> gNets;
 
 enum class Phase { kIdle, kTesting, kSuccess, kFailed };
 static Phase gPhase = Phase::kIdle;
+static uint32_t gTestStartAt = 0;
+static bool gTestPending = false;  // start the test ~0.5 s after replying, so the page gets out first
 static pt::Form gForm;  // password only kept while the test runs
 static pt::Key gFailKey = pt::kErrPassword;
 static uint32_t gHoldUntil = 0;
@@ -50,8 +52,20 @@ static void redirectToPortal() {
   gServer.send(302, "text/plain", "");
 }
 
-static void scanNetworks() {
-  int n = WiFi.scanNetworks(false, false);  // blocking ~2 s, before the AP starts (no clients to disturb)
+static bool gScanning = false;
+
+// Async scan, started right after the AP comes up (a blocking scan at boot would delay the first Improv answer,
+// which must come within ~2 s). Results are collected in portalPoll.
+static void startScan() {
+  WiFi.scanNetworks(true, false);
+  gScanning = true;
+}
+
+static void collectScan() {
+  int n = WiFi.scanComplete();
+  if (n == WIFI_SCAN_RUNNING) return;
+  gScanning = false;
+  if (n < 0) return;
   gNets.clear();
   for (int i = 0; i < n; i++) {
     std::string s = WiFi.SSID(i).c_str();
@@ -67,9 +81,13 @@ static void scanNetworks() {
   std::sort(gNets.begin(), gNets.end(), [](const pt::Network& a, const pt::Network& b) { return a.rssi > b.rssi; });
 }
 
+static void handleStatus();
+
+// After the AP channel switch, phones reopen the captive browser at "/" (all probes redirect there), so "/"
+// must show the current phase, exactly like /status.
 static void handleRoot() {
-  if (gPhase == Phase::kSuccess) return sendPage(pt::donePage(lang()));
-  sendPage(pt::formPage(lang(), gNets, gForm, {}));
+  if (gPhase == Phase::kIdle) return sendPage(pt::formPage(lang(), gNets, gForm, {}));
+  handleStatus();
 }
 
 static void handleConnect() {
@@ -88,7 +106,8 @@ static void handleConnect() {
   gPhase = Phase::kTesting;
   Serial.println("[portal] testing new WiFi settings");  // never log SSID, password, or address
   sendPage(pt::connectingPage(lang()));
-  netTestBegin(form.ssid, form.password);  // AP follows the router's channel: phones may drop and rejoin
+  gTestPending = true;  // portalPoll starts the test; the AP then follows the router's channel (phones may rejoin)
+  gTestStartAt = millis() + 500;
 }
 
 static void handleStatus() {
@@ -158,14 +177,25 @@ void portalBegin(const Identity* id, uint32_t chipId, PortalSavedFn onSaved) {
 
 void portalSetWanted(bool wanted, uint32_t nowMs) {
   bool hold = gHolding && static_cast<int32_t>(gHoldUntil - nowMs) > 0;
-  if (gHolding && !hold) gHolding = false;
+  if (gHolding && !hold) {
+    gHolding = false;
+    if (gPhase == Phase::kSuccess) gPhase = Phase::kIdle;  // don't show an old "all set" page later
+  }
   bool on = wanted || hold || gPhase == Phase::kTesting;
   if (on && !gActive) {
-    if (!netTesting()) scanNetworks();
     startAp();
+    if (!netTesting()) startScan();
   } else if (!on && gActive) {
     stopAp();
   }
+}
+
+void portalReset() {
+  if (gPhase == Phase::kTesting && !gTestPending) netTestEnd();
+  gPhase = Phase::kIdle;
+  gTestPending = false;
+  gForm = pt::Form{};
+  gHolding = false;
 }
 
 bool portalActive() { return gActive; }
@@ -174,6 +204,7 @@ bool portalClientSeen() { return gClientSeen; }
 
 void portalPoll(uint32_t nowMs) {
   if (!gActive) return;
+  if (gScanning) collectScan();
   gDns.processNextRequest();
   gServer.handleClient();
   if (!gClientSeen && WiFi.softAPgetStationNum() > 0) {
@@ -181,6 +212,12 @@ void portalPoll(uint32_t nowMs) {
     Serial.println("[portal] a phone joined");
   }
   if (gPhase != Phase::kTesting) return;
+  if (gTestPending) {
+    if (static_cast<int32_t>(nowMs - gTestStartAt) < 0) return;
+    gTestPending = false;
+    netTestBegin(gForm.ssid, gForm.password);
+    return;
+  }
   NetTest t = netTestPoll(nowMs);
   if (t == NetTest::kConnected) {
     netTestEnd();

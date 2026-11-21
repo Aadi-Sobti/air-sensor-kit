@@ -50,6 +50,13 @@ static void test_validate_other_network_open_and_default_outdoor() {
   TEST_ASSERT_FALSE(f.indoor);  // default outdoor
 }
 
+static void test_typed_name_wins_over_preticked_network() {
+  Form f;
+  auto e = validate({{"net", "Neighbor"}, {"ssid", " MyHidden "}, {"pass", "hunter22"}, {"address", "1 A St"}, {"zip", "10001"}}, f);
+  TEST_ASSERT_EQUAL(0, e.size());
+  TEST_ASSERT_EQUAL_STRING("MyHidden", f.ssid.c_str());
+}
+
 static void test_validate_errors() {
   Form f;
   auto e = validate({{"net", "__other__"}, {"ssid", ""}, {"pass", "short"}, {"address", "x"}, {"zip", "1002a"}}, f);
@@ -120,6 +127,7 @@ int main(int, char**) {
   RUN_TEST(test_language_from_accept_language);
   RUN_TEST(test_validate_good_form_picked_network);
   RUN_TEST(test_validate_other_network_open_and_default_outdoor);
+  RUN_TEST(test_typed_name_wins_over_preticked_network);
   RUN_TEST(test_validate_errors);
   RUN_TEST(test_hostile_ssid_and_values_are_escaped);
   RUN_TEST(test_form_keeps_values_but_never_the_password);

@@ -114,8 +114,10 @@ static std::string trim(const std::string& s) {
 
 std::vector<Key> validate(const std::map<std::string, std::string>& f, Form& out) {
   std::vector<Key> e;
-  std::string net = get(f, "net");
-  out.ssid = (net.empty() || net == "__other__") ? trim(get(f, "ssid")) : net;
+  // Without JS the "WiFi name" box is always visible and a scanned network is pre-ticked; if someone typed a
+  // name, they mean it (hidden / unlisted network), whatever is ticked.
+  std::string net = get(f, "net"), typed = trim(get(f, "ssid"));
+  out.ssid = !typed.empty() ? typed : (net == "__other__" ? std::string() : net);
   out.password = get(f, "pass");
   out.address = trim(get(f, "address"));
   out.zip = trim(get(f, "zip"));

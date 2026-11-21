@@ -14,6 +14,7 @@
 #include "net.h"
 #include "pending_readings.h"
 #include "pms_driver.h"
+#include "setup_info.h"
 #include "setup_portal.h"
 #include "storage_fs.h"
 #include "upload_payload.h"
@@ -149,13 +150,7 @@ static void maybeUpload(uint32_t now) {
                  {"heap", ESP.getFreeHeap()}};
   std::string claimSent = gClaimHash;
   info.claimTokenHash = claimSent;
-  bool setupSent = gCfg.setupInfoPending;
-  if (setupSent) {
-    info.hasSetup = true;
-    info.address = gCfg.address;
-    info.zip = gCfg.zip;
-    info.indoor = gCfg.indoor;
-  }
+  bool setupSent = core::attachSetupInfo(info, gCfg.setupInfoPending, gCfg.address, gCfg.zip, gCfg.indoor);
   std::string body = core::buildUploadJson(info, gPending.items());
   bool enroll = !gUpload.enrolled();
   size_t sent = gPending.items().size();
@@ -167,7 +162,7 @@ static void maybeUpload(uint32_t now) {
     bool claimDone = !claimSent.empty() && claimSent == gClaimHash;
     if (claimDone) gClaimHash.clear();
     if (enroll || claimDone) saveUploadState();
-    if (setupSent) {  // delivered: the device doesn't need the address any more
+    if (core::shouldClearSetupInfo(setupSent, r.outcome)) {  // delivered: the device doesn't need it any more
       gCfg.address.clear();
       gCfg.zip.clear();
       gCfg.setupInfoPending = false;
@@ -246,6 +241,7 @@ void loop() {
   }
   if (fired) {
     bool ok = eraseWifiAndSetup(gCfg);
+    portalReset();
     gSm.eraseWifi(now);
     Serial.printf("[reset] FLASH long-press: WiFi + setup info erased (%s), identity kept\n", ok ? "ok" : "FAIL");
     logState("long_press");

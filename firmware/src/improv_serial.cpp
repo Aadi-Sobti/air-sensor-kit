@@ -9,6 +9,7 @@
 
 #include "config.h"
 #include "improv.h"
+#include "setup_info.h"
 #include "net.h"
 
 namespace im = core::improv;
@@ -26,29 +27,18 @@ static std::string gSsid, gPass;  // in RAM only during the test; never logged
 // sensor print its setup AP name + password once, so tools/setup_info.py (run by the founder/volunteer, never in
 // logs we capture) can show them before QR stickers exist. Only while unprovisioned (no short code) or within
 // 60 s of boot: physical USB access = ownership.
-static char gLine[24];
-static size_t gLineLen = 0;
+static core::CommandLine gCmd;
 static SetupInfoFn gSetupInfo = nullptr;
 
 static void feedLine(uint8_t b) {
-  if (b == '\n' || b == '\r') {
-    gLine[gLineLen] = 0;
-    if (gLineLen && strcmp(gLine, "PFCMD SETUPINFO") == 0 && gSetupInfo) {
-      bool allowed = (gId && gId->shortCode.empty()) || millis() < 60000;
-      if (allowed) {
-        std::string ssid, pw;
-        gSetupInfo(ssid, pw);
-        Serial.printf("[setupinfo] ap_ssid=%s ap_password=%s\n", ssid.c_str(), pw.c_str());
-      } else {
-        Serial.println("[setupinfo] not available (unplug and plug in the sensor, then run the tool within 60 s)");
-      }
-    }
-    gLineLen = 0;
-    return;
+  if (!gCmd.feed(b, "PFCMD SETUPINFO") || !gSetupInfo) return;
+  if (core::setupInfoAllowed(gId && !gId->shortCode.empty(), millis())) {
+    std::string ssid, pw;
+    gSetupInfo(ssid, pw);
+    Serial.printf("[setupinfo] ap_ssid=%s ap_password=%s\n", ssid.c_str(), pw.c_str());
+  } else {
+    Serial.println("[setupinfo] not available (unplug and plug in the sensor, then run the tool within 60 s)");
   }
-  if (b >= 0x20 && b < 0x7F && gLineLen < sizeof gLine - 1) gLine[gLineLen++] = static_cast<char>(b);
-  else gLineLen = sizeof gLine;  // binary (Improv) or too long: ignore this line
-  if (gLineLen >= sizeof gLine) gLineLen = sizeof gLine - 1;
 }
 
 void improvSetSetupInfo(SetupInfoFn fn) { gSetupInfo = fn; }

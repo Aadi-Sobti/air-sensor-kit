@@ -17,3 +17,4 @@ void portalPoll(uint32_t nowMs);
 bool portalActive();
 bool portalClientSeen();  // a phone joined since the AP opened (stops the idle timeout)
 const std::string& portalApSsid();
+void portalReset();  // FLASH long-press: forget any in-progress or finished phone setup
