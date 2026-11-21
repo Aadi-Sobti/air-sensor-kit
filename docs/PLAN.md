@@ -6,22 +6,38 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M0
 **Waiting on founder:**
-- [ ] Project/nonprofit name (decisions.md #1). Needed for the AP name, domain, and repo name.
-- [ ] Confirm which OS the dev computer runs, and that a NodeMCU + PMS5003 + data cable are available for testing.
+- [ ] Review and merge PR #1 (M0) on GitHub once CI is green: https://github.com/Aadi-Sobti/air-sensor-kit/pull/1
+- [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
+- [ ] Optional: glance at the board. The onboard blue LED should blink once a second with the M0 firmware.
 
 ---
 
 ## Phase 1: v1 kit
 
 ### M0 Scaffold and tooling
-- [ ] Check the toolchain (python3, PlatformIO, Node LTS, Java for emulators, firebase-tools, gcc/clang for
+- [x] Check the toolchain (python3, PlatformIO, Node LTS, Java for emulators, firebase-tools, gcc/clang for
       native tests). List what's missing with install commands; don't install system packages without asking.
-- [ ] Repo layout per the component specs (`firmware/`, `backend/`, `web/`, `tools/`, `logs/` gitignored).
-- [ ] PlatformIO project with envs `release`, `dev`, `native`; blink-and-log firmware builds.
-- [ ] `tools/serial_capture.py` (spec in tools rule) + its tests.
-- [ ] Functions skeleton + one emulator test via `firebase emulators:exec`. Web skeleton builds.
+      macOS 26.5 arm64. Founder-approved `brew install platformio firebase-cli node@22 python@3.12` →
+      PlatformIO 6.2.0, firebase-tools 15.37.0, Node 22.23.5 (keg-only; default Node is 26), Python 3.12.16,
+      Java 25, Apple clang 21. `tools/.venv` from `tools/requirements.txt`.
+- [x] Repo layout per the component specs (`firmware/`, `backend/`, `web/`, `tools/`, `logs/` gitignored).
+- [x] PlatformIO project with envs `release`, `dev`, `native`; blink-and-log firmware builds.
+      `pio run -d firmware -e release -e dev` → both SUCCESS. Size (espressif8266@4.2.1, core 3.1.2):
+      release RAM 34.6% (28,356 B), Flash 25.7% (268,727 B); dev RAM 34.7%, Flash 25.8%.
+      `pio test -d firmware -e native` → 3/3 passed.
+- [x] `tools/serial_capture.py` (spec in tools rule) + its tests. `tools/.venv/bin/python -m pytest -q tools/tests`
+      → 21 passed (includes `check_release.py` tests).
+- [x] Functions skeleton + one emulator test via `firebase emulators:exec`. Web skeleton builds.
+      `(cd backend && npm --prefix functions ci && firebase emulators:exec --only functions,firestore "npm --prefix functions test")`
+      → 7 passing (health GET/POST + deny-by-default rules). `(cd web && npm ci && npm test && npm run build)` → 5/5, built.
 - [ ] CI (GitHub Actions): firmware build (both envs), native tests, functions tests on emulator, web build,
-      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`).
+      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`). Workflow written; first run on PR #1.
+      `python3 tools/check_release.py` → OK locally.
+- 👤 Hardware: dev firmware flashed to the founder's NodeMCU (FTDI FT232R, `/dev/cu.usbserial-A5069RR4`;
+      esptool "Chip is ESP8266EX … Hash of data verified"). `serial_capture.py --seconds 15 --reset` →
+      `logs/m0-blink-1795252792.log`: `[boot] ProseFire fw=0.0.1 env=dev id=esp8266-11001626 reset=External System`,
+      then `[hb] uptime_s=5 heap=52008`, `[hb] uptime_s=10 heap=52008`. PASS (LED blink not observed by a person).
+- Unverified commands: `python3 tools/device_sim.py` (built in M3).
 - **Done when:** every documented dev command runs (or is marked unverified with the reason), CI is green,
       and 👤 the blink firmware flashes and a capture shows its log line.
 
@@ -93,3 +109,6 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
+  spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
+  checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
