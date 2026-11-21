@@ -19,4 +19,5 @@ void netTestBegin(const std::string& ssid, const std::string& pass);
 enum class NetTest { kIdle, kRunning, kConnected, kFailed };
 NetTest netTestPoll(uint32_t nowMs);  // kFailed after a wrong password or ~25 s
 void netTestEnd();                    // back to the saved network (netApply takes over again)
+const char* netTestReason();          // why the last test ended (diagnostics; never includes credentials)
 void netResyncTime();                 // re-run NTP (after the server reported clock skew)

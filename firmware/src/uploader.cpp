@@ -22,7 +22,7 @@ static uint32_t parseRetryAfter(const String& body) {
 
 UploadResult uploadNow(const std::string& deviceId, const std::string& secretHex, bool sendEnrollSecret,
                        const std::string& body) {
-  UploadResult r{core::UploadOutcome::kNetworkError, -1, 0, 0, ESP.getFreeHeap(), ESP.getFreeHeap(), 0};
+  UploadResult r{core::UploadOutcome::kNetworkError, -1, 0, 0, ESP.getFreeHeap(), ESP.getFreeHeap(), 0, -1};
   uint32_t t0 = millis();
   time_t now = time(nullptr);
   char ts[16];
@@ -60,6 +60,8 @@ UploadResult uploadNow(const std::string& deviceId, const std::string& secretHex
     r.outcome = core::UploadOutcome::kNetworkError;
   } else if (code >= 200 && code < 300) {
     r.outcome = core::UploadOutcome::kOk;
+    int i = resp.indexOf("\"accepted\":");
+    if (i >= 0) r.accepted = resp.substring(i + 11).toInt();
   } else if (code == 401 && resp.indexOf("clock_skew") >= 0) {
     r.outcome = core::UploadOutcome::kClockSkew;
   } else if (code == 403) {

@@ -52,7 +52,7 @@ def main(argv=None) -> int:
               "check it's a data cable, then try again.")
         return 2
     try:
-        parser = improv.Parser()
+        parser = improv.Parser(on_log=lambda line: print("   sensor: " + line))
         time.sleep(2.5)  # opening the port may reboot the sensor; give it a moment
         ser.reset_input_buffer()
         info = None
@@ -96,7 +96,7 @@ def main(argv=None) -> int:
         password = getpass.getpass(f"Password for {ssid} (hidden as you type): ")
         ser.write(improv.wifi_settings(ssid, password))
         password = ""  # drop our copy
-        print("Sending to the sensor and testing the connection (up to 30 s)...")
+        print("Sending to the sensor and testing the connection (up to 35 s)...")
 
         def result(t, d):
             if t == improv.T_ERROR and d and d[0] == 0x03:
@@ -106,7 +106,7 @@ def main(argv=None) -> int:
                 return ("ok", s[0] if s else "")
             return None
 
-        r = wait_for(ser, parser, result, 35)
+        r = wait_for(ser, parser, result, 40)
         if r and r[0] == "ok":
             print("Connected! The sensor saved your WiFi.")
             return 0

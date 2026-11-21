@@ -12,6 +12,7 @@ struct UploadResult {
   uint32_t ms;
   uint32_t heapBefore, heapMin;
   int sslError;
+  int accepted;  // readings the server stored (-1 unknown)
 };
 
 void uploaderBegin();

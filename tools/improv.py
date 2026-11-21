@@ -42,10 +42,21 @@ def parse_strings(data: bytes) -> list[str]:
 class Parser:
     """Feeds bytes (logs mixed in); yields (type, data) for checksum-valid frames."""
 
-    def __init__(self) -> None:
+    def __init__(self, on_log=None) -> None:
         self.buf = bytearray()
+        self.on_log = on_log  # called with device log lines like "[improv] ..." (they never contain secrets)
+        self._line = bytearray()
 
     def feed(self, chunk: bytes):
+        if self.on_log:
+            for b in chunk:
+                if b == 0x0A:
+                    line = self._line.decode("utf-8", "replace").strip()
+                    if line.startswith(("[improv]", "[cfg]", "[state]", "[up]")):
+                        self.on_log(line)
+                    self._line.clear()
+                elif len(self._line) < 200:
+                    self._line.append(b)
         self.buf += chunk
         while True:
             i = self.buf.find(HEADER)

@@ -10,6 +10,7 @@ static bool gNtpStarted = false;
 static std::string gSsid, gPass;
 static bool gTesting = false;
 static uint32_t gTestStart = 0;
+static char gTestReason[48] = "";
 
 void netBegin() {
   WiFi.persistent(false);  // credentials live in our /config, not the SDK's flash sector
@@ -56,10 +57,12 @@ bool timeValid() { return time(nullptr) > 1700000000; }  // after Nov 2023 = NTP
 void netTestBegin(const std::string& ssid, const std::string& pass) {
   gTesting = true;
   gTestStart = millis();
-  WiFi.disconnect();
   WiFi.forceSleepWake();
+  delay(2);  // the RF needs a moment after waking from forced sleep
   WiFi.mode(WIFI_STA);
+  WiFi.disconnect();
   WiFi.begin(ssid.c_str(), pass.c_str());
+  gTestReason[0] = 0;
   gStaStarted = false;  // force netApply to restart the saved network after the test
   gSsid.clear();
   gPass.clear();
@@ -67,13 +70,32 @@ void netTestBegin(const std::string& ssid, const std::string& pass) {
 
 NetTest netTestPoll(uint32_t nowMs) {
   if (!gTesting) return NetTest::kIdle;
+  // The caller's nowMs may be older than gTestStart (captured earlier in the same loop pass), and an
+  // unsigned difference would then wrap to ~49 days and end the test instantly. Use the live clock.
+  (void)nowMs;
+  nowMs = millis();
   wl_status_t st = WiFi.status();
-  if (st == WL_CONNECTED) return NetTest::kConnected;
-  if (st == WL_WRONG_PASSWORD || st == WL_NO_SSID_AVAIL) {
-    // NO_SSID can be transient right after begin(); only trust it after a few seconds.
-    if (st == WL_WRONG_PASSWORD || nowMs - gTestStart > 8000) return NetTest::kFailed;
+  uint32_t el = (nowMs - gTestStart) / 1000;
+  auto done = [&](const char* why) {
+    snprintf(gTestReason, sizeof gTestReason, "%s status=%d after=%lus", why, (int)st, (unsigned long)el);
+  };
+  if (st == WL_CONNECTED) {
+    done("connected");
+    return NetTest::kConnected;
   }
-  if (nowMs - gTestStart > 25000) return NetTest::kFailed;
+  if (st == WL_WRONG_PASSWORD) {
+    done("wrong_password");
+    return NetTest::kFailed;
+  }
+  // NO_SSID / CONNECT_FAILED can be transient right after begin(); only trust them after a while.
+  if ((st == WL_NO_SSID_AVAIL || st == WL_CONNECT_FAILED) && nowMs - gTestStart > 12000) {
+    done(st == WL_NO_SSID_AVAIL ? "network_not_found" : "connect_failed");
+    return NetTest::kFailed;
+  }
+  if (nowMs - gTestStart > 30000) {
+    done("timeout");
+    return NetTest::kFailed;
+  }
   return NetTest::kRunning;
 }
 
@@ -90,3 +112,4 @@ void netTestEnd() {
 }
 
 void netResyncTime() { gNtpStarted = false; }
+const char* netTestReason() { return gTestReason; }

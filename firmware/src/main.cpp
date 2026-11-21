@@ -57,7 +57,11 @@ static void saveUploadState() {
 static void onImprovSaved(const std::string& ssid, const std::string& pass) {
   gCfg.wifiSsid = ssid;
   gCfg.wifiPass = pass;
-  saveConfig(gCfg);
+  bool saved = saveConfig(gCfg);
+  DeviceConfig check;
+  bool readBack = loadConfig(check) && check.wifiSsid == ssid && check.wifiPass == pass;
+  Serial.printf("[cfg] wifi save=%s readback=%s (%s)\n", saved ? "ok" : "FAIL", readBack ? "ok" : "FAIL",
+                lastConfigLoadResult());
   gSm.wifiSettingsSaved(millis());
   logState("improv");
 }
@@ -97,6 +101,7 @@ static void maybeUpload(uint32_t now) {
                  {"heap", ESP.getFreeHeap()}};
   std::string body = core::buildUploadJson(info, gPending.items());
   bool enroll = !gUpload.enrolled();
+  size_t sent = gPending.items().size();
   UploadResult r = uploadNow(gId.deviceId, gId.secretHex, enroll, body);
   gUpload.onResult(r.outcome, millis(), r.retryAfterS);
   if (r.outcome == core::UploadOutcome::kOk) {
@@ -110,8 +115,8 @@ static void maybeUpload(uint32_t now) {
     netResyncTime();
     gUpload.clearTimeResync();
   }
-  Serial.printf("[up] http=%d readings=%u ms=%lu heap_before=%lu heap_after=%lu ssl_err=%d enroll=%d next_s=%lu ok=%lu fail=%lu\n",
-                r.httpCode, (unsigned)gPending.items().size(), (unsigned long)r.ms, (unsigned long)r.heapBefore,
+  Serial.printf("[up] http=%d readings=%u accepted=%d ms=%lu heap_before=%lu heap_during=%lu ssl_err=%d enroll=%d next_s=%lu ok=%lu fail=%lu\n",
+                r.httpCode, (unsigned)sent, r.accepted, (unsigned long)r.ms, (unsigned long)r.heapBefore,
                 (unsigned long)r.heapMin, r.sslError, enroll ? 1 : 0, (unsigned long)(gUpload.nextInMs(millis()) / 1000),
                 (unsigned long)gUploadsOk, (unsigned long)gUploadsFail);
 }
@@ -136,7 +141,7 @@ void setup() {
   // Never log the secret, setup password, WiFi credentials, or address.
   Serial.printf("[identity] %s short_code=%s fs=%s%s config=%s enrolled=%d\n", identityStatusName(gIdStatus),
                 gId.shortCode.empty() ? "(unassigned)" : gId.shortCode.c_str(), fsOk ? "ok" : "FAIL",
-                storageWasFormatted() ? "(formatted)" : "", cfgOk ? "loaded" : "defaults", gUpload.enrolled() ? 1 : 0);
+                storageWasFormatted() ? "(formatted)" : "", cfgOk ? "loaded" : lastConfigLoadResult(), gUpload.enrolled() ? 1 : 0);
   devLogBootDetails();
 
   improvBegin(&gId, onImprovSaved);

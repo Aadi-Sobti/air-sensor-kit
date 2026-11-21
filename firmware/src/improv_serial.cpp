@@ -111,13 +111,13 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
     gTesting = false;
     netTestEnd();
     if (gOnSaved) gOnSaved(gSsid, gPass);  // save only after the credentials worked
-    Serial.println("[improv] new WiFi works; saved");
+    Serial.printf("[improv] new WiFi works (%s)\n", netTestReason());
     send(im::stateFrame(im::kProvisioned));
     send(im::resultFrame(im::kWifiSettings, {redirectUrl()}));
   } else if (t == NetTest::kFailed) {
     gTesting = false;
     netTestEnd();  // the old saved network (if any) is untouched and resumes
-    Serial.println("[improv] new WiFi did not connect; nothing saved");
+    Serial.printf("[improv] new WiFi did not connect (%s); nothing saved\n", netTestReason());
     send(im::errorFrame(im::kUnableToConnect));
     send(im::stateFrame(im::kReady));
   }

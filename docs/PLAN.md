@@ -6,8 +6,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M4 (needs the founder's Firebase dev project) · M0–M3 done; M5/M7 groundwork next
 **Waiting on founder:**
-- [ ] Run the WiFi tool once the agent builds it (M4): one command in your own terminal; it asks for your WiFi
-      password hidden, and the agent never sees it.
+- [ ] Keep the board plugged in (USB + iPhone hotspot on with Maximize Compatibility) for the 24 h soak.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
 - [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
@@ -114,7 +113,20 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       login`, registered `devices/esp8266-11001626` (status allowlisted). Agent deployed rules, indexes, functions
       (`health`, `ingest`) and the placeholder Hosting site: https://prosefire-dev.web.app. Live checks:
       `/api/v1/health` → ok; `/api/v1/ingest` unsigned → 401 bad_signature for the registered board.
-      Next: firmware upload client (TLS + pinned roots, HMAC, backoff + jitter), `tools/` WiFi tool for the founder.
+- [x] Device → dev over TLS with pinned roots (GTS Root R1 + R4, GlobalSign Root CA; chain read 2026-11-21 with
+      `openssl s_client -showcerts`): `firmware/src/uploader.cpp`, signed with `core::signUpload` (same bytes as
+      the backend: native test vs a Python hmac vector). Exponential backoff + jitter, 403/429/clock-skew handling
+      (`upload_policy`, tested), ≤ 8 readings kept in RAM on failure. The emulator-over-LAN step was skipped: the
+      real dev project was ready, and the emulator path is covered by `device_sim.py` in CI.
+      WiFi via Improv over USB (`improv` codec + `src/improv_serial.cpp`; tests new credentials before saving) and
+      `tools/wifi_setup.py` (founder typed the password hidden; never seen by the agent).
+      `pio test -e native` → 63/63. Release: RAM 41.4%, Flash 45.1% (470,691 B; +146 KB for BearSSL/HTTPClient).
+      👤 Real board (founder's iPhone hotspot): `logs/m4-upload-1795286957.log`: enrolled on the first upload, then
+      HTTP 200 every 150 s (~3 s each, RSSI −29); after a reboot `enrolled=1`, `readings=1 accepted=1`. Free heap
+      dips to ~8 KB during the TLS handshake (Google's front end doesn't support MFLN): watch it in the soak.
+      Bugs found on hardware and fixed: credential test timed out instantly (millis wrap-around; also guarded in the
+      state machine with a regression test), and the tool now echoes the sensor's status lines.
+- [ ] 24 h soak (uptime, heap, ≥ 99% uploads): started after this commit.
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
