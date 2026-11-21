@@ -38,6 +38,7 @@ struct PmsStats {
   uint32_t length_errors = 0;
   uint32_t short_frames = 0;     // command acks (ignored)
   uint32_t bytes_discarded = 0;  // garbage skipped while looking for a header
+  uint32_t partial_dropped = 0;  // frames cut short (gap/silence reset) and thrown away
 };
 
 // Byte-at-a-time parser. Resyncs after garbage, bad lengths, and bad checksums (re-scanning the bytes it
@@ -47,7 +48,10 @@ class PmsParser {
  public:
   // Returns true when a complete, checksum-valid data frame was decoded into `out`.
   bool feed(uint8_t b, PmsFrame& out);
-  void reset() { len_ = 0; }
+  void reset() {
+    if (len_ > 0) stats_.partial_dropped++;
+    len_ = 0;
+  }
   const PmsStats& stats() const { return stats_; }
   bool midFrame() const { return len_ > 0; }
 
