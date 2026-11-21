@@ -8,6 +8,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 **Waiting on founder:**
 - [ ] Keep the board plugged in (USB + iPhone hotspot on with Maximize Compatibility) for the 24 h soak.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
+- [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
 - [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
 
@@ -180,6 +181,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       firmware must stay under ~520 KB (now 515 KB). Plan size cuts before M9 (e.g. drop HTTPClient for a raw POST).
       Deviation until M7: phone-path addresses are geocoded by the M7 job (ingest stays lean), so these sensors
       appear on the map only after M7.
+- 👤 Founder has an iPhone only (2026-11-21): the iPhone run counts; the **Android** run stays open (unverified)
+      until someone can lend one (a volunteer or friend in M10 works too).
 - 👤 Phone checklist (after the soak, once 0.5.0 is flashed; run `python3 tools/setup_info.py --port <port>` in your
       own terminal for the network name + password): on an iPhone AND an Android, join the network → the setup page
       opens by itself · WiFi list appears · wrong password → friendly retry · right password → "You're all set!" ·
