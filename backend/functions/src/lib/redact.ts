@@ -1,4 +1,4 @@
-// Logger that can never print private data (CLAUDE.md privacy non-negotiable; backend.md privacy tests).
+// Logger that can never print private data (privacy rule: no addresses, coordinates, secrets, or tokens in logs).
 import { logger } from "firebase-functions";
 
 const SENSITIVE = /(address|addr|street|zip|postal|lat|lng|lon|coord|secret|token|password|pass|signature|sig|owner.?code|contact|email|phone)/i;
