@@ -41,6 +41,17 @@
           "functionId": "claim",
           "region": "us-east1"
         }
+      },
+      {
+        "source": "/api/v1/snapshot.json",
+        "function": {
+          "functionId": "snapshot",
+          "region": "us-east1"
+        }
+      },
+      {
+        "source": "/s/**",
+        "destination": "/s.html"
       }
     ],
     "predeploy": [
@@ -54,7 +65,7 @@
         "headers": [
           {
             "key": "Content-Security-Policy",
-            "value": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+            "value": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; font-src 'self'; worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
           },
           {
             "key": "Referrer-Policy",
@@ -80,7 +91,7 @@
       "port": 8080
     },
     "hosting": {
-      "port": 5000
+      "port": 5050
     },
     "ui": {
       "enabled": false

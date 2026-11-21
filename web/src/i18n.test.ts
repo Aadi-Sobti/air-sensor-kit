@@ -10,7 +10,7 @@ describe("i18n", () => {
     for (const v of Object.values(STRINGS[lang])) expect(v.trim()).not.toBe("");
   });
 
-  const PAGES = ["index.html", "setup.html", "claim.html"];
+  const PAGES = ["index.html", "setup.html", "claim.html", "s.html"];
   const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
   it.each(PAGES)("every data-i18n key in %s exists", (page) => {
@@ -26,10 +26,14 @@ describe("i18n", () => {
   });
 
   it("every t() key used in the scripts exists", () => {
-    for (const f of ["src/setup.ts", "src/claim.ts"]) {
-      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety)\.[a-zA-Z.]+)"/g)].map((m) => m[1]);
+    for (const f of ["src/setup.ts", "src/claim.ts", "src/map.ts", "src/sensor.ts"]) {
+      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety|map|sensor|aqi)\.[a-zA-Z_.]+)"/g)].map((m) => m[1]);
       for (const k of used) expect(enKeys, `${f}: ${k}`).toContain(k);
     }
+  });
+
+  it("has a name for every AQI category in every language", () => {
+    for (const k of ["good", "moderate", "usg", "unhealthy", "very_unhealthy", "hazardous"]) expect(enKeys).toContain(`aqi.${k}`);
   });
 
   it("picks the browser language, falling back to English", () => {

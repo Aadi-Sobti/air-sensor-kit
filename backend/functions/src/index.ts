@@ -2,9 +2,11 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
 import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
+import { runPublish } from "./publish";
 
 // One region for everything; near NYC users. Keep in sync with firebase.json hosting rewrites.
 setGlobalOptions({ region: "us-east1", maxInstances: 10 });
@@ -44,4 +46,22 @@ export const claim = onRequest({ memory: "256MiB", maxInstances: 5, timeoutSecon
   const out = await handleClaim(getFirestore(), req.method, req.rawBody);
   res.set("Cache-Control", "no-store");
   res.status(out.status).json(out.body);
+});
+
+/** Every 5 min: place new sensors on the map (public cell), hourly rollup + NowCast, public snapshot. */
+export const publish = onSchedule({ schedule: "every 5 minutes", memory: "256MiB", timeoutSeconds: 240, maxInstances: 1 },
+  async () => {
+    await runPublish(getFirestore());
+  });
+
+/** GET /api/v1/snapshot.json : the public map data (CDN-cached; never exact locations). */
+export const snapshot = onRequest({ memory: "256MiB", maxInstances: 10 }, async (req, res) => {
+  if (req.method !== "GET") {
+    res.status(405).json({ ok: false });
+    return;
+  }
+  const doc = await getFirestore().doc("public/snapshot").get();
+  res.set("Cache-Control", "public, max-age=60, s-maxage=240");
+  res.set("Content-Type", "application/json; charset=utf-8");
+  res.status(200).send(doc.exists ? String(doc.get("json")) : JSON.stringify({ v: 1, generated: 0, sensors: [] }));
 });

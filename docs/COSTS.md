@@ -38,3 +38,14 @@ so each upload writes one document without dozens of index entries.
 **Choice (provisional, under the founder's 2026-11-21 permission): B.** It is the cheapest at every size, keeps raw
 data forever (needed because corrections are versioned and re-run), and makes idempotency free: a re-sent reading
 lands on the same map key.
+
+## Map + snapshot (M7, measured 2026-11-21)
+- One map visit downloads ≈ 1.1 MB from our own Hosting (map tiles 712 KB, fonts 95 KB, code 296 KB compressed); repeat
+  visits are mostly browser-cached. Hosting: 10 GB/month transfer free, then $0.15/GB
+  (https://firebase.google.com/docs/hosting/usage-quotas-pricing) → ≈ 9,000 first visits/month free, then ≈ $0.17
+  per 1,000 visits. Basemap storage 36 MB + fonts 0.8 MB (10 GB free).
+- `publish` runs every 5 min: it reads each public sensor + its current-hour document (2 reads per sensor per run ≈
+  17,280 per sensor per month) → ≈ $0.05/sensor/month at list price after the free tier (≈ $52/month at 10K sensors;
+  higher than the 1 read assumed in the readings table above). Snapshot requests are CDN-cached (s-maxage 240 s), so
+  map traffic adds only ~1 read per 4 min per CDN edge. Lever if needed: run publish every 10 min.
+- External calls: NWS once per station per run (a handful for NYC), Census geocoder once per newly set-up sensor.

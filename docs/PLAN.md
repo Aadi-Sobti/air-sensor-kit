@@ -201,8 +201,24 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** 👤 phone-setup checklist passes on at least one iPhone and one Android.
 
 ### M7 Corrections, snapshot, map
-- [ ] EPA correction (+ extended) with paper-value tests, RH from weather, AQI, H3 cells, snapshot, map + `/s/<code>`.
+- [x] EPA correction (+ extended) with paper-value tests, RH from weather, AQI, H3 cells, snapshot, map + `/s/<code>`.
+      Facts verified 2026-11-21 from primary sources (cited in code): Barkjohn 2021 AMT Eq. 10 (read in the article's
+      MathML), Barkjohn 2022 Sensors Eqs. 1–3 (transition at PA_cf1 570–611, NOT the AirNow fire-map formula I'd have
+      guessed), EPA AQI TAD EPA-403/B-26-003 (May 2026) Table 6 + Eq. 1 + NowCast, NWS API docs, Protomaps CLI docs,
+      H3 resolution table. `backend/functions/src/lib/{correction,aqi,cells,rh,shortcode}.ts`; `publish.ts` (every
+      5 min: place new sensors incl. phone-path geocoding → public H3 res-9 cell, NWS station from the cell center only,
+      hourly rollup + NowCast, snapshot; indoor = no location; offline after 30 min; RH fallback cached ≤3 h → 50 %);
+      `GET /api/v1/snapshot.json` (CDN cache 60 s / 240 s). Web: MapLibre + self-hosted PMTiles NYC basemap (36 MB,
+      `tools/make_basemap.sh`, not in git) + self-hosted fonts, AQI-colored dots + legend + popups, `/s/<code>` page.
+      Tests: backend 53 passing (17 math incl. TAD example 35.9→102 and the paper checkpoints PA 570→~300, 611→~400;
+      3 publish tests incl. "no address/exact coordinates in the snapshot"), web 21, tools 28, native 80.
+      Local demo (emulator + `backend/functions/scripts/seed-demo.mjs`): map + popup + sensor page checked in the
+      browser. One map visit ≈ 1.1 MB (tiles 712 KB, fonts 95 KB, code 296 KB), 0 third-party requests.
+      Deployed to dev: real Hosting serves range requests (206); live map loads under the CSP with no console errors.
+      Founder decisions 2026-11-21: deps approved, H3 res 9, RH from NWS.
 - **Done when:** tests pass (incl. "no exact location in snapshot"); 👤 founder approves map look + wording.
+      👤 Pending: founder review of https://prosefire-dev.web.app (with a real sensor once the board is claimed after
+      the soak) and the wording on the map/sensor pages. Spanish AQI names ("Insalubre…") need a native speaker.
 
 ### M7b "My sensor": checking and managing your device
 - [ ] `/s/<code>` (public): live reading, AQI, 24 h / 7 d chart, online/offline + last seen.
@@ -242,6 +258,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M7 corrections/AQI/NowCast/H3/snapshot/map + sensor page, deployed to dev · backend 53, web 21 · next: founder map review; after the soak flash 0.5.0 + browser/phone checklists.
 - 2026-11-21 · M6 phone setup built (portal, AP, setup-info tool) · native 75/75, tools 28/28, release RAM 44.6% / Flash 49.3% · next: flash 0.5.0 after the soak; phone + browser checklists.
 - 2026-11-21 · M5 built + spec-reviewed + deployed to dev (setup/claim pages, claim endpoint, claim token) · backend 33, native 66, web 18, tools 25 · next: flash 0.4.0 after the soak, founder browser checklist.
 - 2026-11-21 · Founder back: decisions (startup-only AP fallback, LED = WiFi only, SETUP AP never times out, agent may merge) · M2 review fixes (secure RNG, identity backup) `logs/m2-fresh-1795282632.log` · PRs #1 #2 merged · M3 cost table + ingest: 21 backend tests, simulator 0 problems · next: M4 needs the dev Firebase project (founder); meanwhile M5/M7 groundwork.
