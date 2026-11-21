@@ -50,6 +50,7 @@ void StateMachine::begin(const StateInputs& in, uint32_t nowMs) {
   hasWifi_ = in.hasSavedWifi;
   out_ = StateOutputs{};
   apClosedByTimeout_ = false;
+  everConnected_ = false;
   disconnectedSince_ = nowMs;
   if (hasWifi_) {
     out_.connectWifi = true;
@@ -65,6 +66,7 @@ void StateMachine::wifiSettingsSaved(uint32_t nowMs) {
   hasWifi_ = true;
   out_.connectWifi = true;
   disconnectedSince_ = nowMs;
+  everConnected_ = false;  // new network: the startup fallback applies again until it connects
   // The AP stays up (if on) so a phone user can see the result; it closes once WiFi connects.
   enter(DeviceState::kConnecting, nowMs);
 }
@@ -83,26 +85,31 @@ bool StateMachine::update(const StateInputs& in, uint32_t nowMs) {
   if (in.hasSavedWifi && !hasWifi_) wifiSettingsSaved(nowMs);
   // Note: in.hasSavedWifi == false never clears hasWifi_ here: only eraseWifi() erases WiFi.
 
-  if (out_.apOn && !in.apClientSeen && nowMs - apOpenedAt_ >= kApIdleTimeoutMs) {
+  if (out_.apOn && hasWifi_ && !in.apClientSeen && nowMs - apOpenedAt_ >= kApIdleTimeoutMs) {
     out_.apOn = false;
     apClosedByTimeout_ = true;
   }
 
   if (!hasWifi_) {
     if (state_ != DeviceState::kSetup) enter(DeviceState::kSetup, nowMs);
+    if (!out_.apOn) {
+      apClosedByTimeout_ = false;
+      openAp(nowMs);  // SETUP always offers the AP
+    }
     return state_ != before;
   }
 
   out_.connectWifi = true;
   if (in.wifiConnected) {
     disconnectedSince_ = nowMs;
+    everConnected_ = true;
     out_.apOn = false;
     apClosedByTimeout_ = false;
-    enter(in.sensorOk ? DeviceState::kRunning : DeviceState::kProblem, nowMs);
+    enter(DeviceState::kRunning, nowMs);
   } else {
-    bool longOutage = nowMs - disconnectedSince_ >= kApFallbackMs;
-    if (longOutage) openAp(nowMs);
-    if (state_ == DeviceState::kRunning || state_ == DeviceState::kProblem || longOutage) {
+    bool startupFailing = !everConnected_ && nowMs - disconnectedSince_ >= kApFallbackMs;
+    if (startupFailing) openAp(nowMs);
+    if (state_ == DeviceState::kRunning || state_ == DeviceState::kProblem || startupFailing) {
       enter(DeviceState::kProblem, nowMs);
     } else {
       enter(DeviceState::kConnecting, nowMs);

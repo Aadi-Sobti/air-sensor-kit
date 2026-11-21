@@ -36,5 +36,15 @@ class LittleFsStore : public core::FileStore {
 LittleFsStore gStore;
 }  // namespace
 
-bool storageBegin() { return LittleFS.begin(); }  // formats on first boot (autoFormat default)
+// Mount without auto-format, so a mount glitch can't silently wipe the identity. Format only if mounting
+// fails (a brand-new board, or real corruption); the caller logs that the FS was formatted.
+static bool gFormatted = false;
+bool storageBegin() {
+  LittleFSConfig cfg(false);
+  LittleFS.setConfig(cfg);
+  if (LittleFS.begin()) return true;
+  gFormatted = LittleFS.format();
+  return gFormatted && LittleFS.begin();
+}
+bool storageWasFormatted() { return gFormatted; }
 core::FileStore& fileStore() { return gStore; }

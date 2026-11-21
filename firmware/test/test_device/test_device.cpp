@@ -5,6 +5,7 @@
 
 #include "codes.h"
 #include "device_state.h"
+#include "identity_policy.h"
 #include "kvstore.h"
 
 using namespace core;
@@ -161,6 +162,42 @@ static void test_hex() {
   TEST_ASSERT_EQUAL_STRING("00ab7f", toHex(b, 3).c_str());
 }
 
+// ---------- identity policy ----------
+static void test_identity_policy() {
+  IdentityFiles f;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kCreate);  // brand-new device
+  f.main = LoadResult::kOk;
+  f.mainValid = true;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kUseMain);
+  f.mainValid = false;
+  f.main = LoadResult::kCorrupt;
+  f.backup = LoadResult::kOk;
+  f.backupValid = true;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kUseBackup);
+  f.backupValid = false;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kLost);  // never silently regenerate
+  f.main = LoadResult::kMissing;
+  f.backup = LoadResult::kCorrupt;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kLost);
+  f.main = LoadResult::kOk;  // parses but belongs to another chip / bad fields
+  f.backup = LoadResult::kMissing;
+  TEST_ASSERT_TRUE(decideIdentity(f) == IdentityAction::kLost);
+}
+
+static void test_identity_record_validation() {
+  KvRecord r;
+  r.set("device_id", "esp8266-1");
+  r.set("secret", std::string(64, 'a'));
+  r.set("setup_pw", "ABCDEFGHJKMN");
+  TEST_ASSERT_TRUE(identityRecordValid(r, "esp8266-1"));
+  TEST_ASSERT_FALSE(identityRecordValid(r, "esp8266-2"));  // moved flash to another chip
+  r.set("secret", std::string(63, 'a') + "Z");
+  TEST_ASSERT_FALSE(identityRecordValid(r, "esp8266-1"));
+  r.set("secret", std::string(64, 'a'));
+  r.set("setup_pw", "SHORT");
+  TEST_ASSERT_FALSE(identityRecordValid(r, "esp8266-1"));
+}
+
 // ---------- LED ----------
 static void test_led_patterns() {
   TEST_ASSERT_TRUE(ledLit(LedPattern::kSlowBlink, 0));
@@ -222,7 +259,7 @@ static void test_boot_wifi_failing_opens_ap_after_3_min_and_keeps_retrying() {
   TEST_ASSERT_FALSE(m.outputs().apOn);  // AP closes when WiFi returns
 }
 
-static void test_router_off_while_running_is_problem_never_erases_wifi() {
+static void test_router_off_while_running_is_problem_no_ap_never_erases_wifi() {
   StateMachine m;
   StateInputs in;
   in.hasSavedWifi = true;
@@ -233,24 +270,54 @@ static void test_router_off_while_running_is_problem_never_erases_wifi() {
   TEST_ASSERT_TRUE(m.state() == DeviceState::kProblem);
   TEST_ASSERT_FALSE(m.outputs().apOn);
   in.hasSavedWifi = false;  // even if a caller passes this, WiFi is not "forgotten"
-  for (uint32_t t = 10000; t < 120 * MIN; t += MIN) m.update(in, t);
+  for (uint32_t t = 10000; t < 120 * MIN; t += MIN) {
+    m.update(in, t);
+    TEST_ASSERT_FALSE(m.outputs().apOn);  // outage after a connection never opens the AP (founder decision)
+  }
   TEST_ASSERT_TRUE(m.outputs().connectWifi);
   TEST_ASSERT_TRUE(m.state() == DeviceState::kProblem);
 }
 
-static void test_ap_idle_timeout_after_15_min() {
+static void test_setup_ap_never_times_out() {
   StateMachine m;
   StateInputs in;
   m.begin(in, 0);
-  m.update(in, 15 * MIN - 1);
+  for (uint32_t t = 0; t < 24 * 60 * MIN; t += 7 * MIN) {
+    m.update(in, t);
+    TEST_ASSERT_TRUE(m.outputs().apOn);
+  }
+  TEST_ASSERT_TRUE(m.state() == DeviceState::kSetup);
+}
+
+static void test_fallback_ap_idle_timeout_after_15_min() {
+  StateMachine m;
+  StateInputs in;
+  in.hasSavedWifi = true;
+  m.begin(in, 0);
+  m.update(in, 3 * MIN);  // startup fallback opens the AP
   TEST_ASSERT_TRUE(m.outputs().apOn);
-  m.update(in, 15 * MIN);
+  m.update(in, 18 * MIN - 1);
+  TEST_ASSERT_TRUE(m.outputs().apOn);
+  m.update(in, 18 * MIN);
   TEST_ASSERT_FALSE(m.outputs().apOn);
-  TEST_ASSERT_TRUE(m.state() == DeviceState::kSetup);  // USB setup still works
   m.update(in, 60 * MIN);
   TEST_ASSERT_FALSE(m.outputs().apOn);  // stays closed until long-press / reboot
+  TEST_ASSERT_TRUE(m.outputs().connectWifi);
   m.eraseWifi(61 * MIN);
   TEST_ASSERT_TRUE(m.outputs().apOn);
+}
+
+static void test_new_settings_reenable_startup_fallback() {
+  StateMachine m;
+  StateInputs in;
+  in.hasSavedWifi = true;
+  in.wifiConnected = true;
+  m.begin(in, 0);
+  in.wifiConnected = false;
+  m.wifiSettingsSaved(MIN);  // moved house: new network that doesn't work yet
+  m.update(in, 4 * MIN + 1);
+  TEST_ASSERT_TRUE(m.outputs().apOn);
+  TEST_ASSERT_TRUE(m.state() == DeviceState::kProblem);
 }
 
 static void test_ap_stays_open_with_client() {
@@ -283,19 +350,6 @@ static void test_wifi_settings_in_any_state_then_long_press_resets() {
   TEST_ASSERT_TRUE(m.state() == DeviceState::kSetup);
 }
 
-static void test_sensor_failure_is_problem() {
-  StateMachine m;
-  StateInputs in;
-  in.hasSavedWifi = true;
-  in.wifiConnected = true;
-  m.begin(in, 0);
-  in.sensorOk = false;
-  m.update(in, 1000);
-  TEST_ASSERT_TRUE(m.state() == DeviceState::kProblem);
-  in.sensorOk = true;
-  m.update(in, 2000);
-  TEST_ASSERT_TRUE(m.state() == DeviceState::kRunning);
-}
 
 static void test_state_machine_survives_millis_wrap() {
   StateMachine m;
@@ -347,6 +401,8 @@ int main(int, char**) {
   RUN_TEST(test_power_loss_mid_write_keeps_old_file);
   RUN_TEST(test_power_loss_before_rename_recovers_new_file);
   RUN_TEST(test_missing_and_corrupt);
+  RUN_TEST(test_identity_policy);
+  RUN_TEST(test_identity_record_validation);
   RUN_TEST(test_code_alphabet_has_no_lookalikes);
   RUN_TEST(test_make_code_is_unbiased_and_sized);
   RUN_TEST(test_hex);
@@ -354,11 +410,12 @@ int main(int, char**) {
   RUN_TEST(test_fresh_device_is_setup_with_ap);
   RUN_TEST(test_saved_wifi_connects_then_runs);
   RUN_TEST(test_boot_wifi_failing_opens_ap_after_3_min_and_keeps_retrying);
-  RUN_TEST(test_router_off_while_running_is_problem_never_erases_wifi);
-  RUN_TEST(test_ap_idle_timeout_after_15_min);
+  RUN_TEST(test_router_off_while_running_is_problem_no_ap_never_erases_wifi);
+  RUN_TEST(test_setup_ap_never_times_out);
+  RUN_TEST(test_fallback_ap_idle_timeout_after_15_min);
+  RUN_TEST(test_new_settings_reenable_startup_fallback);
   RUN_TEST(test_ap_stays_open_with_client);
   RUN_TEST(test_wifi_settings_in_any_state_then_long_press_resets);
-  RUN_TEST(test_sensor_failure_is_problem);
   RUN_TEST(test_state_machine_survives_millis_wrap);
   RUN_TEST(test_long_press_fires_once_after_5s);
   RUN_TEST(test_long_press_ignores_bounce_and_boot_hold);

@@ -18,9 +18,10 @@ bool ledLit(LedPattern p, uint32_t ms);
 struct StateInputs {
   bool hasSavedWifi = false;
   bool wifiConnected = false;
-  bool sensorOk = true;      // PMS frames arriving (driver not timing out)
   bool apClientSeen = false;  // someone joined the setup AP since it opened
 };
+// Sensor faults are deliberately NOT a state: the LED means WiFi only (founder decision 2026-11-21); sensor
+// health is reported in uploads and shown on the owner page.
 
 struct StateOutputs {
   bool connectWifi = false;  // keep trying the saved network
@@ -30,11 +31,12 @@ struct StateOutputs {
 // Rules:
 //  - No saved WiFi -> SETUP (AP on). WiFi settings may arrive in any state (Improv, M5) -> CONNECTING.
 //  - Saved WiFi -> CONNECTING; connected -> RUNNING.
-//  - Saved WiFi failing for kApFallbackMs (from boot or since it dropped) -> PROBLEM + AP on, while still
-//    retrying the saved network. WiFi comes back -> RUNNING and the AP closes.
+//  - Saved WiFi failing for kApFallbackMs after boot, before it has ever connected -> PROBLEM + AP on, while
+//    still retrying. Only at startup (founder decision 2026-11-21): a router outage later never opens the AP.
+//    WiFi comes back -> RUNNING and the AP closes.
 //  - RUNNING and WiFi drops -> PROBLEM immediately (router off shows the double blink), still retrying.
-//  - RUNNING but the sensor stops answering -> PROBLEM until it answers again.
-//  - The AP closes after kApIdleTimeoutMs with no client (it can be reopened by a FLASH long-press or reboot).
+//  - The fallback AP closes after kApIdleTimeoutMs with no client. In SETUP (no saved WiFi) the AP never times
+//    out, so a new sensor stays ready for phone setup (founder decision 2026-11-21).
 //  - Saved WiFi is NEVER erased by this machine: only a FLASH long-press (eraseWifi) does that.
 class StateMachine {
  public:
@@ -57,6 +59,7 @@ class StateMachine {
   StateOutputs out_;
   bool hasWifi_ = false;
   bool apClosedByTimeout_ = false;
+  bool everConnected_ = false;  // since boot
   uint32_t disconnectedSince_ = 0;
   uint32_t apOpenedAt_ = 0;
 };
