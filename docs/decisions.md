@@ -25,6 +25,8 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | **Provisional**: #5 separate Firebase project from Fire Watch | Separate nonprofit |
 | 2026-11-21 | **Provisional**: #6 continuous measurement (no duty-cycling), uploads every ~2.5 min | Simple; revisit for sensor lifespan |
 | 2026-11-21 | Implementation detail (agent): the PMS is read in passive mode, one request every 2.5 s | Sensor only talks when asked; detects a rebooted sensor |
+| 2026-11-21 | **Provisional** #4: readings storage = design B (hourly bucket doc per sensor, 35-day TTL, nightly raw archive to Cloud Storage). ≈ $2 / $37 / $380 per month at 100 / 1k / 10k sensors (docs/COSTS.md) | Cheapest at every size; raw kept forever; idempotent by design |
+| 2026-11-21 | Implementation detail (agent): the HMAC key is stored as-is in `device_secrets/{id}` (no client access), not as a hash: verifying an HMAC needs the key itself | backend.md's `secretHash` couldn't work |
 | 2026-11-21 | The agent may merge milestone PRs in order once GitHub CI is green | Founder answer (supersedes "founder merges") |
 | 2026-11-21 | Setup hotspot fallback (3 min of failing WiFi) **only at startup**, before the saved network has connected; a later router outage never opens it | Founder: matches spec; no setup network appearing during outages |
 | 2026-11-21 | LED double blink = **WiFi problems only**. Sensor faults are reported in uploads and shown on the owner page | Founder: keeps the light simple, matches USER_FLOW |
@@ -35,7 +37,6 @@ Never act on an Open item without asking (the founder makes these calls).
 |---|---|---|---|
 | 1 | Final project/nonprofit name (ProseFire is a placeholder) | Before M9 labels | Used in AP name, domain, labels |
 | 2 | Wire colors in the kit (which jumper wires get bought) | M2/M10 | Red=VIN, black=G, two distinct colors for D1/D2; the guide shows colors |
-| 4 | Readings storage design (cost table first) | M3 | Decide from the cost table |
 | 7 | Setup AP security: WPA2 password in QR vs open network | M6 | WPA2: an open AP would send the home WiFi password unencrypted |
 | 8 | Per-device QR stickers (needs a cheap label printer) vs generic card | M6/M9 | Per-device stickers: zero typing for phone users |
 | 9 | Map library + tile source | M7 | Compare cost + usage policies first |

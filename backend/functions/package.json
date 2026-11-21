@@ -10,7 +10,7 @@
     "postinstall": "tsc",
     "build": "tsc",
     "pretest": "tsc && tsc -p tsconfig.test.json",
-    "test": "mocha --timeout 20000 \"lib-test/**/*.test.js\""
+    "test": "mocha --timeout 20000 \"lib-test/test/**/*.test.js\""
   },
   "dependencies": {
     "firebase-admin": "^14.5.1",
