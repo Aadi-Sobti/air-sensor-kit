@@ -5,6 +5,7 @@ import { claimPathFromRedirect, ImprovClient, Network } from "./improvClient";
 import { SerialTransport, USB_FILTERS } from "./serialTransport";
 
 const lang = applyI18n();
+document.title = t(lang, "setup.pageTitle");
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const show = (id: string, on = true) => ($(id).hidden = !on);
 const STEPS = ["unsupported", "step-connect", "step-wifi", "step-done", "busy"];
@@ -68,7 +69,22 @@ function renderNetworks(nets: Network[]) {
   }
 }
 
+/** Any failure while talking to the board: release the port and start over (never leave it held). */
+async function failBack(key: Key) {
+  await closePort();
+  only("step-connect");
+  setError(key);
+}
+
 async function connect() {
+  try {
+    await connectInner();
+  } catch {
+    await failBack("setup.err.noAnswer"); // e.g. unplugged mid-way: write() rejects
+  }
+}
+
+async function connectInner() {
   setError(null);
   show("retry", false);
   let port: SerialPort;
@@ -113,7 +129,18 @@ async function connect() {
 
 async function submitWifi(ev: Event) {
   ev.preventDefault();
-  if (!client) return;
+  try {
+    await submitWifiInner();
+  } catch {
+    await failBack("setup.err.noAnswer");
+  }
+}
+
+async function submitWifiInner() {
+  if (!client || client.isClosed) {
+    await failBack("setup.err.noAnswer");
+    return;
+  }
   const picked = (document.querySelector('input[name="net"]:checked') as HTMLInputElement | null)?.value ?? "__other__";
   const ssid = picked === "__other__" ? $<HTMLInputElement>("ssid").value.trim() : picked;
   if (!ssid) {
@@ -124,9 +151,13 @@ async function submitWifi(ev: Event) {
   setError(null);
   busy("setup.testing");
   const r = await client.sendWifi(ssid, pass.value);
+  if (!r.ok && client?.isClosed) {
+    await failBack("setup.err.noAnswer");
+    return;
+  }
   if (!r.ok) {
     only("step-wifi");
-    setError(r.reason === "timeout" ? "setup.err.timeout" : "setup.err.badPassword");
+    setError(r.reason === "wrong_password" ? "setup.err.badPassword" : "setup.err.timeout");
     pass.select();
     return;
   }

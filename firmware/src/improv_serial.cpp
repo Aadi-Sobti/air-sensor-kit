@@ -25,9 +25,10 @@ static void send(const std::vector<uint8_t>& f) {
   Serial.write('\n');  // keeps the log readable; Improv clients ignore bytes between frames
 }
 
-static std::string redirectUrl() {
-  // The claim page with a fresh claim token (https://<site>/claim#d=<id>&t=<token>).
-  return gRedirect ? gRedirect() : std::string(SITE_URL) + "/";
+// The claim page URL (https://<site>/claim#d=<id>&t=<token>). fresh=true after new WiFi was saved; a status
+// query reuses the current token so it doesn't break a claim page that's already open.
+static std::string redirectUrl(bool fresh) {
+  return gRedirect ? gRedirect(fresh) : std::string(SITE_URL) + "/";
 }
 
 static void sendDeviceInfo() {
@@ -89,7 +90,7 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
         case im::kGetCurrentState:
           if (wifiConnected && !gTesting) {
             send(im::stateFrame(im::kProvisioned));
-            send(im::resultFrame(im::kWifiSettings, {redirectUrl()}));
+            send(im::resultFrame(im::kWifiSettings, {redirectUrl(false)}));
           } else {
             send(im::stateFrame(gTesting ? im::kProvisioning : im::kReady));
           }
@@ -115,12 +116,12 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
     if (gOnSaved) gOnSaved(gSsid, gPass);  // save only after the credentials worked
     Serial.printf("[improv] new WiFi works (%s)\n", netTestReason());
     send(im::stateFrame(im::kProvisioned));
-    send(im::resultFrame(im::kWifiSettings, {redirectUrl()}));
+    send(im::resultFrame(im::kWifiSettings, {redirectUrl(true)}));
   } else if (t == NetTest::kFailed) {
     gTesting = false;
     netTestEnd();  // the old saved network (if any) is untouched and resumes
     Serial.printf("[improv] new WiFi did not connect (%s); nothing saved\n", netTestReason());
-    send(im::errorFrame(im::kUnableToConnect));
+    send(im::errorFrame(im::errorForWifiFailure(static_cast<im::WifiFailure>(netTestFailure()))));
     send(im::stateFrame(im::kReady));
   }
   if (!gTesting) {

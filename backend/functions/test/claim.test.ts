@@ -5,6 +5,8 @@ import { randomBytes } from "node:crypto";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { Firestore, getFirestore } from "firebase-admin/firestore";
 
+import { logger } from "firebase-functions";
+
 import { CLAIM, handleClaim } from "../src/claim";
 import { clearRegistryCache, handleIngest } from "../src/ingest";
 import { Geocoder } from "../src/lib/geocode";
@@ -84,16 +86,83 @@ describe("claim (emulator)", () => {
     await db.doc(`devices/${id}`).set({ status: "allowlisted" });
     const r = await handleClaim(db, "POST", claimBody(id, randomBytes(16).toString("hex")), NOW, match);
     assert.equal(r.status, 409);
-    assert.equal(r.body.error, "not_yet");
+    assert.equal(r.body.error, "not_ready");
     const { id: id2 } = await uploadedDevice(false); // enrolled but no claim hash yet
-    assert.equal((await handleClaim(db, "POST", claimBody(id2, randomBytes(16).toString("hex")), NOW, match)).body.error, "not_yet");
+    assert.equal((await handleClaim(db, "POST", claimBody(id2, randomBytes(16).toString("hex")), NOW, match)).body.error, "not_ready");
   });
 
-  it("rejects a wrong token without leaking whether the device exists", async () => {
+  it("gives one identical answer for unknown device, no claim yet, wrong token, and used token", async () => {
+    const tok = () => randomBytes(16).toString("hex");
+    const unknown = await handleClaim(db, "POST", claimBody("esp8266-999999999", tok()), NOW, match);
+    const { id: pendingId } = await uploadedDevice(false);
+    const noClaim = await handleClaim(db, "POST", claimBody(pendingId, tok()), NOW, match);
     const { id } = await uploadedDevice();
-    const r = await handleClaim(db, "POST", claimBody(id, randomBytes(16).toString("hex")), NOW + 1e3, match);
-    assert.equal(r.status, 409);
+    const wrong = await handleClaim(db, "POST", claimBody(id, tok()), NOW + 1e3, match);
+    const used = await uploadedDevice();
+    await handleClaim(db, "POST", claimBody(used.id, used.token), NOW + 1e3, match);
+    const again = await handleClaim(db, "POST", claimBody(used.id, used.token), NOW + 2e3, match);
+    for (const r of [unknown, noClaim, wrong, again]) assert.deepEqual([r.status, r.body], [409, { ok: false, error: "not_ready" }]);
     assert.equal((await db.doc(`private_locations/${id}`).get()).exists, false);
+  });
+
+  it("normal polling (25 tries over 2 min before the sensor uploads) never trips the limit", async () => {
+    const id = `esp8266-${8500000 + ++n}`;
+    await db.doc(`devices/${id}`).set({ status: "allowlisted" });
+    const token = randomBytes(16).toString("hex");
+    for (let i = 0; i < 25; i++) {
+      assert.equal((await handleClaim(db, "POST", claimBody(id, token), NOW + i * 5e3, match)).status, 409);
+    }
+    // now the sensor enrolls and uploads this token's hash
+    const secret = randomBytes(32).toString("hex");
+    const body = JSON.stringify({ fw: "0.4.0", uptime_s: 1, rssi: -40, readings: [], claim_token_hash: sha256Hex(token) });
+    const ts = String(NOW_S + 125);
+    const up = await handleIngest(db, { method: "POST", rawBody: Buffer.from(body), headers: {
+      "x-device-id": id, "x-timestamp": ts, "x-signature": sign(secret, ts, Buffer.from(body)), "x-enroll-secret": secret,
+    } }, NOW + 125e3);
+    assert.equal(up.status, 200, JSON.stringify(up.body)); // health-only upload carrying the claim
+    const r = await handleClaim(db, "POST", claimBody(id, token), NOW + 130e3, match);
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.latest, null); // no reading yet: the page says it will show up soon
+  });
+
+  it("a used token can't be revived by the sensor re-sending the same hash (lost 200 + retry)", async () => {
+    const id = `esp8266-${8600000 + ++n}`;
+    await db.doc(`devices/${id}`).set({ status: "allowlisted" });
+    const secret = randomBytes(32).toString("hex");
+    const token = randomBytes(16).toString("hex");
+    const send = async (atMs: number, enroll: boolean) => {
+      const body = JSON.stringify({ fw: "0.4.0", uptime_s: 1, rssi: -40, readings: [], claim_token_hash: sha256Hex(token) });
+      const ts = String(Math.floor(atMs / 1000));
+      const headers: Record<string, string> = { "x-device-id": id, "x-timestamp": ts, "x-signature": sign(secret, ts, Buffer.from(body)) };
+      if (enroll) headers["x-enroll-secret"] = secret;
+      return handleIngest(db, { method: "POST", rawBody: Buffer.from(body), headers }, atMs);
+    };
+    assert.equal((await send(NOW, true)).status, 200);
+    assert.equal((await handleClaim(db, "POST", claimBody(id, token), NOW + 5e3, match)).status, 200);
+    clearRegistryCache();
+    assert.equal((await send(NOW + 20e3, false)).status, 200); // retry of the same upload
+    const r = await handleClaim(db, "POST", claimBody(id, token, { address: "9 Attacker Ave" }), NOW + 30e3, match);
+    assert.equal(r.status, 409);
+    assert.equal((await db.doc(`private_locations/${id}`).get()).get("address"), "123 Example St, Apt 4");
+  });
+
+  it("logs never contain the address, ZIP, token, or coordinates", async () => {
+    const lines: string[] = [];
+    const orig = { info: logger.info, warn: logger.warn };
+    logger.info = (...a: unknown[]) => void lines.push(JSON.stringify(a));
+    logger.warn = (...a: unknown[]) => void lines.push(JSON.stringify(a));
+    try {
+      const { id, token } = await uploadedDevice();
+      await handleClaim(db, "POST", claimBody(id, randomBytes(16).toString("hex")), NOW + 1e3, match); // wrong
+      await handleClaim(db, "POST", claimBody(id, token), NOW + 2e3, match); // ok
+    } finally {
+      logger.info = orig.info;
+      logger.warn = orig.warn;
+    }
+    const all = lines.join("\n");
+    assert.ok(all.includes("claim_ok") && all.includes("token_mismatch"), all);
+    for (const bad of ["Example", "10027", "40.8075", "-73.9626", "MATCHED"]) assert.equal(all.includes(bad), false, `${bad} in ${all}`);
+    assert.equal(/[0-9a-f]{32}/.test(all), false, `token-like string in logs: ${all}`);
   });
 
   it("expires after 24 h", async () => {
@@ -129,12 +198,12 @@ describe("claim (emulator)", () => {
     assert.equal((await handleClaim(db, "POST", Buffer.from("x".repeat(3000)), NOW, match)).status, 413);
   });
 
-  it("rate-limits guessing per device", async () => {
-    const { id } = await uploadedDevice();
-    let last = 0;
-    for (let i = 0; i <= CLAIM.maxAttemptsPerHour; i++) {
-      last = (await handleClaim(db, "POST", claimBody(id, randomBytes(16).toString("hex")), NOW + 5e3, match)).status;
+  it("rate-limits wrong guesses per device, then blocks even the right token for that hour", async () => {
+    const { id, token } = await uploadedDevice();
+    for (let i = 0; i < CLAIM.maxWrongPerHour; i++) {
+      assert.equal((await handleClaim(db, "POST", claimBody(id, randomBytes(16).toString("hex")), NOW + 5e3, match)).status, 409);
     }
-    assert.equal(last, 429);
+    assert.equal((await handleClaim(db, "POST", claimBody(id, token), NOW + 6e3, match)).status, 429);
+    assert.equal((await handleClaim(db, "POST", claimBody(id, token), NOW + 3700e3, match)).status, 200); // next hour: allowed again
   });
 });

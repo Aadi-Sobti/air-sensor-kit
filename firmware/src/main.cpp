@@ -37,7 +37,8 @@ static core::PendingReadings gPending;
 static double hwRand01() { return (RANDOM_REG32 >> 8) / 16777216.0; }
 static core::UploadPolicy gUpload(hwRand01);
 static uint32_t gUploadsOk = 0, gUploadsFail = 0;
-static std::string gClaimHash;  // waiting to go out in the next upload (the token itself is never stored)
+static std::string gClaimHash;  // waiting to go out in the next upload
+static std::string gClaimToken;  // RAM only (never in flash or logs): reused for status queries until replaced
 
 static void logState(const char* why) {
   Serial.printf("[state] %s why=%s wifi_saved=%d connected=%d ap=%d\n", core::stateName(gSm.state()), why,
@@ -75,12 +76,14 @@ static void onImprovSaved(const std::string& ssid, const std::string& pass) {
 
 // After a successful USB setup: a fresh single-use claim token for the website. Only its hash is kept (and sent
 // in the next upload); the token goes to the browser in the URL fragment and is never logged.
-static std::string makeClaimRedirect() {
+static std::string makeClaimRedirect(bool fresh) {
+  if (!fresh && !gClaimToken.empty()) return core::claimUrl(SITE_URL, gId.deviceId, gClaimToken);
   uint8_t rnd[16];
   secureRandom(rnd, sizeof rnd);
   core::ClaimToken c = core::makeClaimToken(rnd);
   memset(rnd, 0, sizeof rnd);
   gClaimHash = c.hashHex;
+  gClaimToken = c.token;
   saveUploadState();
   gUpload.requestSoon(millis());  // the claim page is waiting for this upload
   Serial.println("[claim] new claim token issued");
@@ -105,12 +108,14 @@ static void closeAverage(uint32_t now) {
 }
 
 static void maybeUpload(uint32_t now) {
-  if (!gClaimHash.empty() && gPending.empty() && gUpload.due(now) && timeValid()) {
-    closeAverage(now);  // don't make the claim page wait for the end of the 2.5-min window
+  if (!gUpload.due(now)) return;
+  if (!identityUsable(gIdStatus) || !netConnected() || !timeValid() || improvBusy()) return;
+  // A claim page is waiting: send what we have now instead of at the end of the 2.5-min window, but only a
+  // real average (>= 4 samples after warm-up). With nothing to report it goes out as a health-only upload.
+  if (!gClaimHash.empty() && gPending.empty() && gPms->pendingSamples() >= 4) {
+    closeAverage(now);
     gLastAverage = now;
   }
-  if (gPending.empty() || !gUpload.due(now)) return;
-  if (!identityUsable(gIdStatus) || !netConnected() || !timeValid() || improvBusy()) return;
   core::UploadInfo info;
   info.fw = FW_VERSION;
   info.uptimeS = now / 1000;

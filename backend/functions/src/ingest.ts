@@ -148,7 +148,9 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
   let duplicates = 0;
   let rateLimited = false;
   let newHour = false;
-  const latest = up.readings.reduce((a, b) => (b.ts > a.ts ? b : a));
+  // Health-only uploads (readings: []) are allowed: they keep "last seen" + sensor health fresh when the PMS
+  // has nothing to report (warm-up, unplugged sensor) and still deliver a pending claim hash.
+  const latest = up.readings.length ? up.readings.reduce((a, b) => (b.ts > a.ts ? b : a)) : null;
 
   await db.runTransaction(async (tx) => {
     accepted = 0;
@@ -157,6 +159,8 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     newHour = false;
     const refs = [...byHour.keys()].map((h) => db.doc(`readings_hourly/${id}_${h}`));
     const snaps = await tx.getAll(...refs);
+    // Only needed (1 extra read) when the upload carries a claim hash: refuse to revive a used one.
+    const devSnap = up.claim_token_hash ? await tx.get(db.doc(`devices/${id}`)) : undefined;
     const cur = snaps.find((s) => s.id === `${id}_${currentHour}`);
     const uploads = Number(cur?.exists ? cur.get("uploads") ?? 0 : 0);
     if (uploads >= INGEST.maxUploadsPerHour) {
@@ -186,7 +190,7 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
       if (h === currentHour) {
         update.uploads = FieldValue.increment(1);
         update.lastSeen = Timestamp.fromMillis(nowMs);
-        update.latest = { ts: latest.ts, ...compactReading(latest) };
+        if (latest) update.latest = { ts: latest.ts, ...compactReading(latest) };
         update.health = { fw: up.fw, uptime_s: up.uptime_s, rssi: up.rssi, errors: up.errors ?? {}, skew_s: skew };
       }
       if (h !== currentHour && !Object.keys(fresh).length) return; // nothing new for an old bucket
@@ -212,7 +216,7 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
       devUpdate.indoor = up.setup.indoor;
       devUpdate.locationPending = true; // geocode + H3 cell happen later (claim / M7), never here
     }
-    if (up.claim_token_hash) {
+    if (up.claim_token_hash && up.claim_token_hash !== devSnap?.get("usedClaimTokenHash")) {
       devUpdate.claimTokenHash = up.claim_token_hash;
       devUpdate.claimTokenExpires = Timestamp.fromMillis((nowS + INGEST.claimTokenTtlS) * 1000);
     }

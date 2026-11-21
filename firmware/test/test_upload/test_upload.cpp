@@ -239,6 +239,13 @@ static void test_improv_checksum_and_bad_frames() {
   TEST_ASSERT_TRUE(sawInvalid);
 }
 
+static void test_improv_wifi_failure_codes() {
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnableToConnect, improv::errorForWifiFailure(improv::WifiFailure::kWrongPassword));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kNotFound));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kConnectFailed));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kTimeout));
+}
+
 static void test_improv_result_and_state_frames() {
   auto r = improv::resultFrame(improv::kGetDeviceInfo, {"ProseFire", "0.3.0", "ESP8266", "ProseFire sensor"});
   TEST_ASSERT_EQUAL_UINT8(improv::kRpcResult, r[7]);
@@ -273,6 +280,7 @@ int main(int, char**) {
   RUN_TEST(test_policy_request_soon);
   RUN_TEST(test_improv_spec_example_wifi_settings);
   RUN_TEST(test_improv_checksum_and_bad_frames);
+  RUN_TEST(test_improv_wifi_failure_codes);
   RUN_TEST(test_improv_result_and_state_frames);
   return UNITY_END();
 }

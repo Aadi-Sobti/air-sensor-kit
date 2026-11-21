@@ -1,6 +1,6 @@
 // Talks Improv to the sensor over any byte transport (Web Serial in the browser, a fake device in tests).
 import {
-  ERR_UNABLE_TO_CONNECT, Frame, GET_INFO, GET_NETWORKS, GET_STATE, Parser, parseStrings, rpc, STATE_PROVISIONED,
+  ERR_UNABLE_TO_CONNECT, ERR_UNKNOWN, Frame, GET_INFO, GET_NETWORKS, GET_STATE, Parser, parseStrings, rpc, STATE_PROVISIONED,
   T_ERROR, T_RESULT, T_STATE, WIFI_SETTINGS, wifiSettings,
 } from "./improv";
 
@@ -12,13 +12,18 @@ export interface Transport {
 
 export interface DeviceInfo { firmware: string; version: string; chip: string; name: string }
 export interface Network { ssid: string; rssi: number; secure: boolean }
-export type WifiResult = { ok: true; redirect: string } | { ok: false; reason: "wrong_password_or_range" | "timeout" };
+export type WifiResult = { ok: true; redirect: string } | { ok: false; reason: "wrong_password" | "not_found_or_range" | "timeout" };
 
 export class ImprovClient {
   private parser = new Parser();
   private queue: Frame[] = [];
   private waiters: (() => void)[] = [];
   private closed = false;
+
+  /** True once the transport stopped delivering data (board unplugged, port error). */
+  get isClosed(): boolean {
+    return this.closed;
+  }
 
   constructor(private t: Transport) {
     void this.pump();
@@ -99,7 +104,9 @@ export class ImprovClient {
   async sendWifi(ssid: string, password: string, ms = 40000): Promise<WifiResult> {
     await this.t.write(wifiSettings(ssid, password));
     const r = await this.waitFor<WifiResult>((f) => {
-      if (f.type === T_ERROR && f.data[0] === ERR_UNABLE_TO_CONNECT) return { ok: false, reason: "wrong_password_or_range" };
+      // Firmware: 0x03 only for a wrong password; 0xFF for network not found / connect failed / timeout.
+      if (f.type === T_ERROR && f.data[0] === ERR_UNABLE_TO_CONNECT) return { ok: false, reason: "wrong_password" };
+      if (f.type === T_ERROR && f.data[0] === ERR_UNKNOWN) return { ok: false, reason: "not_found_or_range" };
       if (f.type === T_RESULT && f.data[0] === WIFI_SETTINGS) return { ok: true, redirect: parseStrings(f.data)[0] ?? "" };
       return undefined;
     }, ms);

@@ -34,6 +34,8 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | #7 Setup AP is **WPA2**, password printed in the per-device QR sticker | Founder: an open AP would expose the home WiFi password |
 | 2026-11-21 | #9 Map: **MapLibre + self-hosted PMTiles** on Firebase Hosting (re-check prices/usage rules before M7) | Founder: no API key, no per-view fees |
 | 2026-11-21 | #10 Geocoder: **US Census Geocoder** (free, no key, US only) | Founder |
+| 2026-11-21 | **Provisional (agent)**: the claim page shows the sensor's ATM PM2.5 as the "first reading" until the EPA correction + AQI exist (M7) | Raw CF=1 reads high; ATM is closer at low levels. Founder to confirm wording |
+| 2026-11-21 | Implementation (agent): uploads may carry `readings: []` (health only) | Delivers a pending claim and sensor-fault health even with no reading |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |

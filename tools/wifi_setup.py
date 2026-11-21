@@ -101,6 +101,8 @@ def main(argv=None) -> int:
         def result(t, d):
             if t == improv.T_ERROR and d and d[0] == 0x03:
                 return ("fail", "")
+            if t == improv.T_ERROR and d and d[0] == 0xFF:
+                return ("notfound", "")
             if t == improv.T_RESULT and d and d[0] == improv.WIFI_SETTINGS:
                 s = improv.parse_strings(d)
                 return ("ok", s[0] if s else "")
@@ -111,7 +113,9 @@ def main(argv=None) -> int:
             print("Connected! The sensor saved your WiFi.")
             return 0
         if r and r[0] == "fail":
-            print("That password didn't work, or the network isn't 2.4 GHz. Nothing was changed. Try again.")
+            print("That password didn't work. Nothing was changed. Try again (capital letters matter).")
+        elif r and r[0] == "notfound":
+            print("The sensor couldn't reach that WiFi. Check it's 2.4 GHz WiFi and the sensor is near the router.")
         else:
             print("No answer in time. Check the sensor is near the router, then try again.")
         return 1

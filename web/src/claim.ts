@@ -5,6 +5,7 @@ import { applyI18n, Key, t } from "./i18n";
 import { parseClaimFragment } from "./improvClient";
 
 const lang = applyI18n();
+document.title = t(lang, "claim.pageTitle");
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const show = (id: string, on = true) => ($(id).hidden = !on);
 const KEY = "prosefire.claim";
@@ -72,9 +73,11 @@ async function finish(ev: Event) {
       }
       if (res.status === 200) {
         try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
-        const latest = res.body.latest as { pm25_cf1?: number } | null;
-        $("reading").textContent = latest && typeof latest.pm25_cf1 === "number"
-          ? t(lang, "claim.firstReading", { value: latest.pm25_cf1.toFixed(1) })
+        // ATM values (the sensor's own ambient estimate) read closer to reality than raw CF=1 at low levels.
+        // The EPA-corrected value and AQI arrive with the map (M7). Provisional choice: see decisions.md.
+        const latest = res.body.latest as { pm25_atm?: number } | null;
+        $("reading").textContent = latest && typeof latest.pm25_atm === "number"
+          ? t(lang, "claim.firstReading", { value: latest.pm25_atm.toFixed(1) })
           : t(lang, "claim.noReadingYet");
         show("step-form", false);
         show("waiting", false);

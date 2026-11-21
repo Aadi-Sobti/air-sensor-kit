@@ -11,6 +11,7 @@ static std::string gSsid, gPass;
 static bool gTesting = false;
 static uint32_t gTestStart = 0;
 static char gTestReason[48] = "";
+static int gTestFailure = 3;  // WifiFailure::kTimeout
 
 void netBegin() {
   WiFi.persistent(false);  // credentials live in our /config, not the SDK's flash sector
@@ -85,15 +86,18 @@ NetTest netTestPoll(uint32_t nowMs) {
   }
   if (st == WL_WRONG_PASSWORD) {
     done("wrong_password");
+    gTestFailure = 0;
     return NetTest::kFailed;
   }
   // NO_SSID / CONNECT_FAILED can be transient right after begin(); only trust them after a while.
   if ((st == WL_NO_SSID_AVAIL || st == WL_CONNECT_FAILED) && nowMs - gTestStart > 12000) {
     done(st == WL_NO_SSID_AVAIL ? "network_not_found" : "connect_failed");
+    gTestFailure = st == WL_NO_SSID_AVAIL ? 1 : 2;
     return NetTest::kFailed;
   }
   if (nowMs - gTestStart > 30000) {
     done("timeout");
+    gTestFailure = 3;
     return NetTest::kFailed;
   }
   return NetTest::kRunning;
@@ -113,3 +117,4 @@ void netTestEnd() {
 
 void netResyncTime() { gNtpStarted = false; }
 const char* netTestReason() { return gTestReason; }
+int netTestFailure() { return gTestFailure; }

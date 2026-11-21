@@ -5,6 +5,7 @@ export const T_STATE = 0x01, T_ERROR = 0x02, T_RPC = 0x03, T_RESULT = 0x04;
 export const WIFI_SETTINGS = 0x01, GET_STATE = 0x02, GET_INFO = 0x03, GET_NETWORKS = 0x04;
 export const STATE_READY = 0x02, STATE_PROVISIONING = 0x03, STATE_PROVISIONED = 0x04;
 export const ERR_UNABLE_TO_CONNECT = 0x03;
+export const ERR_UNKNOWN = 0xff;
 
 const HEADER = [0x49, 0x4d, 0x50, 0x52, 0x4f, 0x56]; // "IMPROV"
 const enc = new TextEncoder();

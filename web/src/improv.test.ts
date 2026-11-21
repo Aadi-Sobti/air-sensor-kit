@@ -67,7 +67,9 @@ function fakeDevice(opts: { password: string; networks: [string, number, boolean
           const pass = new TextDecoder().decode(f.data.subarray(4 + sl));
           push(frame(T_STATE, Uint8Array.from([STATE_PROVISIONING])));
           setTimeout(() => {
-            if (pass === opts.password) push(result(WIFI_SETTINGS, ["https://site.example/claim#d=esp8266-42&t=" + "a".repeat(32)]));
+            const ssid = new TextDecoder().decode(f.data.subarray(3, 3 + sl));
+            if (!opts.networks.some((n) => n[0] === ssid)) push(frame(T_ERROR, Uint8Array.from([0xff])));
+            else if (pass === opts.password) push(result(WIFI_SETTINGS, ["https://site.example/claim#d=esp8266-42&t=" + "a".repeat(32)]));
             else push(frame(T_ERROR, Uint8Array.from([0x03])));
           }, 20);
         }
@@ -98,7 +100,17 @@ describe("ImprovClient against a fake sensor", () => {
 
   it("reports a wrong password", async () => {
     const c = new ImprovClient(fakeDevice({ password: "right", networks: nets }));
-    expect(await c.sendWifi("Home", "wrong")).toEqual({ ok: false, reason: "wrong_password_or_range" });
+    expect(await c.sendWifi("Home", "wrong")).toEqual({ ok: false, reason: "wrong_password" });
+    expect(await c.sendWifi("Nowhere 5G", "right")).toEqual({ ok: false, reason: "not_found_or_range" });
+  });
+
+  it("notices when the board goes away (unplugged)", async () => {
+    let n = 0;
+    const t: Transport = { async write() {}, async read() { return n++ ? null : new Uint8Array([1]); } };
+    const c = new ImprovClient(t);
+    await new Promise((r) => setTimeout(r, 10));
+    expect(c.isClosed).toBe(true);
+    expect(await c.sendWifi("Home", "x", 1000)).toEqual({ ok: false, reason: "timeout" });
   });
 
   it("gives up when the sensor doesn't answer", async () => {

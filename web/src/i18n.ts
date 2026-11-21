@@ -11,6 +11,8 @@ export const STRINGS = {
       "This is not a smoke alarm. It does not replace official warnings or evacuation orders.",
     "census.notice": "This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.",
 
+    "setup.pageTitle": "Set up your sensor · ProseFire",
+    "claim.pageTitle": "Finish setup · ProseFire",
     "setup.title": "Set up your air sensor",
     "setup.intro": "Plug the sensor into this computer with the USB cable from the kit. The small blue light blinks slowly.",
     "setup.connect": "Connect my sensor",
@@ -70,8 +72,11 @@ export const STRINGS = {
     "site.comingSoon": "Nuestro mapa comunitario del aire llegará pronto.",
     "safety.notSmokeAlarm":
       "Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación.",
+    // Kept verbatim in English: it is the attribution notice the Census Bureau terms ask for.
     "census.notice": "This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.",
 
+    "setup.pageTitle": "Configura tu sensor · ProseFire",
+    "claim.pageTitle": "Termina la configuración · ProseFire",
     "setup.title": "Configura tu sensor de aire",
     "setup.intro": "Conecta el sensor a esta computadora con el cable USB del kit. La lucecita azul parpadea despacio.",
     "setup.connect": "Conectar mi sensor",

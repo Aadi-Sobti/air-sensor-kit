@@ -12,6 +12,7 @@ class PmsDriver {
   void sleep();
   void wake(uint32_t nowMs);
   void takeAverage(core::PmsAverage& out) { avg_.take(out); }
+  uint16_t pendingSamples() const { return avg_.pending(); }
   const core::PmsStats& stats() const { return parser_.stats(); }
   uint32_t warmupDiscards() const { return avg_.warmupDiscards(); }
   uint32_t timeouts() const { return timeouts_; }
