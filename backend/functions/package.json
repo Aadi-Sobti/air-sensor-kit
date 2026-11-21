@@ -1,0 +1,27 @@
+{
+  "name": "prosefire-functions",
+  "private": true,
+  "description": "Cloud Functions (2nd gen). Node 22: listed as supported in https://firebase.google.com/docs/functions/manage-functions ; deprecation 2027-04-30 per https://cloud.google.com/functions/docs/runtime-support (move to Node 24 before then).",
+  "main": "lib/index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "postinstall": "tsc",
+    "build": "tsc",
+    "pretest": "tsc && tsc -p tsconfig.test.json",
+    "test": "mocha --timeout 20000 \"lib-test/**/*.test.js\""
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.20.5",
+    "firebase": "^13.4.0",
+    "mocha": "^12.0.3",
+    "typescript": "^5.9.3"
+  }
+}

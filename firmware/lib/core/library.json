@@ -1,0 +1,7 @@
+{
+  "name": "core",
+  "version": "0.0.1",
+  "description": "Hardware-independent logic (parsers, state machine, payloads). Must build on native.",
+  "frameworks": "*",
+  "platforms": "*"
+}
