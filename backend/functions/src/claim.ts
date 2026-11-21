@@ -6,7 +6,10 @@ import { timingSafeEqual } from "node:crypto";
 
 import { FieldValue, Firestore, Timestamp } from "firebase-admin/firestore";
 
+import { aqiFromPm25, category } from "./lib/aqi";
+import { DEFAULT_RH, epaCorrect } from "./lib/correction";
 import { censusGeocoder, Geocoder } from "./lib/geocode";
+import { shortCodeFor } from "./lib/shortcode";
 import { sha256Hex } from "./lib/hmac";
 import { logEvent, logWarn } from "./lib/redact";
 
@@ -109,11 +112,15 @@ export async function handleClaim(
   for (const k of [hourKey, prevKey]) {
     const h = await db.doc(`readings_hourly/${d}_${k}`).get();
     const l = h.exists ? (h.get("latest") as Record<string, unknown> | undefined) : undefined;
-    if (l) {
-      latest = { ts: l.ts, pm25_cf1: l.pm25, pm25_atm: l.pm25a };
+    if (l && typeof l.pm25 === "number") {
+      // EPA-corrected (RH not known yet at setup: 50 %, as the 2021 paper suggests for missing RH).
+      const pm = Math.round(epaCorrect(Number(l.pm25), DEFAULT_RH) * 10) / 10;
+      const aqi = aqiFromPm25(pm);
+      latest = { ts: l.ts, pm25: pm, aqi, cat: category(aqi).key };
       break;
     }
   }
+  const code = shortCodeFor(d, dev.get("shortCode") as string | undefined);
   logEvent("claim_ok", { device: d, geocoded: geo.kind === "match", indoor });
-  return { status: 200, body: { ok: true, device: d, located: geo.kind === "match", latest } };
+  return { status: 200, body: { ok: true, device: d, code, located: geo.kind === "match", latest } };
 }

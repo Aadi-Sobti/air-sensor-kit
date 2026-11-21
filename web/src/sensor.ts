@@ -26,6 +26,8 @@ function err(key: Key) {
   const s = snap.sensors.find((x) => x.code === code);
   if (!s) return err("sensor.notFound");
   $("indoor").hidden = !s.in;
+  $("unplaced").hidden = !!s.in || s.pl !== 0;
+  $("nowcast-note").textContent = t(lang, s.nc !== null ? "sensor.nowcast" : "sensor.latestOnly");
   if (s.on && s.aqi !== null && s.cat) {
     $("reading").hidden = false;
     $("aqi").textContent = String(s.aqi);
@@ -35,6 +37,9 @@ function err(key: Key) {
     box.style.color = textOn(s.cat);
     $("pm").textContent = s.pm !== null ? t(lang, "sensor.pm", { value: s.pm.toFixed(1) }) : "";
   }
-  $("status").textContent = !s.upd ? t(lang, "sensor.neverSeen")
-    : t(lang, s.on ? "sensor.working" : "sensor.offline", { ago: relTime(lang, s.upd) });
+  const seen = s.seen ?? s.upd;
+  $("status").textContent = !seen ? t(lang, "sensor.neverSeen")
+    : !s.on ? t(lang, "sensor.offline", { ago: relTime(lang, seen) })
+    : s.pm === null ? t(lang, "sensor.noFreshReading") // uploading, but the dust sensor isn't answering
+    : t(lang, "sensor.working", { ago: relTime(lang, s.upd ?? seen) });
 })();

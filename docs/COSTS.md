@@ -39,13 +39,19 @@ so each upload writes one document without dozens of index entries.
 data forever (needed because corrections are versioned and re-run), and makes idempotency free: a re-sent reading
 lands on the same map key.
 
-## Map + snapshot (M7, measured 2026-11-21)
-- One map visit downloads ≈ 1.1 MB from our own Hosting (map tiles 712 KB, fonts 95 KB, code 296 KB compressed); repeat
-  visits are mostly browser-cached. Hosting: 10 GB/month transfer free, then $0.15/GB
-  (https://firebase.google.com/docs/hosting/usage-quotas-pricing) → ≈ 9,000 first visits/month free, then ≈ $0.17
-  per 1,000 visits. Basemap storage 36 MB + fonts 0.8 MB (10 GB free).
-- `publish` runs every 5 min: it reads each public sensor + its current-hour document (2 reads per sensor per run ≈
-  17,280 per sensor per month) → ≈ $0.05/sensor/month at list price after the free tier (≈ $52/month at 10K sensors;
-  higher than the 1 read assumed in the readings table above). Snapshot requests are CDN-cached (s-maxage 240 s), so
-  map traffic adds only ~1 read per 4 min per CDN edge. Lever if needed: run publish every 10 min.
-- External calls: NWS once per station per run (a handful for NYC), Census geocoder once per newly set-up sensor.
+## Map + snapshot (M7, measured 2026-11-21; corrected after the M7 review)
+- One map visit downloads ≈ 1.1 MB from our own Hosting (map tiles 712 KB, fonts 95 KB, code 296 KB compressed) plus the
+  snapshot (≈ 26 B/sensor compressed: ≈ 3 KB at 100 sensors, ≈ 264 KB at 10K). Repeat visits are mostly browser-cached.
+  Hosting: 10 GB/month transfer free, then $0.15/GB (https://firebase.google.com/docs/hosting/usage-quotas-pricing) →
+  ≈ 9,000 first visits/month free, then ≈ $0.17 per 1,000 visits (+ ≈ $0.04 per 1,000 at 10K sensors for the snapshot).
+  Basemap 36 MB + fonts 0.8 MB of Hosting storage (10 GB free).
+- `publish` every 5 min, per sensor per month at list price ($0.03/100K reads, $0.09/100K writes):
+  current-hour read 8,640 + public_sensors read 8,640 + finished-hour reads ≈ 1,440 (incl. one late re-roll) ≈ 18,700
+  reads ≈ **$0.0056**; public_sensors writes ≈ 1,440 ≈ $0.0013. ≈ $0.007/sensor/month → ≈ $70/month at 10K sensors
+  (≈ $0.70 at 100). Lever: run every 10 min (halves it).
+- Snapshot document: stored gzip-compressed (≈ 264 KB at 10K sensors; Firestore's 1 MiB limit ≈ 35K sensors). CDN-cached
+  (s-maxage 120 s) → ≈ 1 read per 2 min per CDN edge, independent of visitors.
+- Nightly raw archive: one query over the previous day's hourly docs (24 reads/sensor/day = 720/month ≈ $0.0002) and one
+  gzipped file per day (≈ 3 KB/sensor/day compressed → ≈ 11 GB/year at 10K sensors; Storage ≈ $0.026/GB-month).
+- Cloud Scheduler: 2 jobs (publish, archive): free (3 jobs free per billing account, https://cloud.google.com/scheduler/pricing).
+- External calls: NWS once per station per run (a handful for NYC), Census once per newly set-up sensor.

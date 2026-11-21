@@ -4,11 +4,13 @@ export interface SnapSensor {
   code: string;
   c: [number, number] | null; // H3 cell center [lat, lng]; null for indoor sensors
   in: 0 | 1;
-  pm: number | null; // EPA-corrected PM2.5 now (µg/m³), null when offline
+  pl?: 0 | 1; // placed on the map
+  pm: number | null; // EPA-corrected PM2.5 now (µg/m³), null when offline or no fresh reading
   nc: number | null; // NowCast PM2.5
   aqi: number | null;
   cat: CatKey | null;
-  upd: number | null; // unix seconds of the last reading
+  upd: number | null; // unix seconds of the newest reading
+  seen?: number | null; // unix seconds of the newest upload
   on: 0 | 1;
 }
 export interface Snapshot { v: number; generated: number; correction: string; sensors: SnapSensor[] }
@@ -33,7 +35,7 @@ export function toGeoJson(s: Snapshot) {
     features: s.sensors.filter((x) => x.c && !x.in).map((x) => ({
       type: "Feature" as const,
       geometry: { type: "Point" as const, coordinates: [x.c![1], x.c![0]] },
-      properties: { code: x.code, aqi: x.aqi ?? -1, cat: x.on && x.cat ? x.cat : "offline", pm: x.pm ?? -1, upd: x.upd ?? 0 },
+      properties: { code: x.code, aqi: x.aqi ?? -1, cat: x.on && x.cat ? x.cat : "offline", pm: x.pm ?? -1, upd: x.upd ?? x.seen ?? 0 },
     })),
   };
 }

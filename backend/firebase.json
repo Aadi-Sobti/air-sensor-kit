@@ -55,6 +55,7 @@
       }
     ],
     "predeploy": [
+      "bash ../tools/check_site_assets.sh",
       "npm --prefix ../web run build",
       "rm -rf public && cp -R ../web/dist public"
     ],
@@ -97,5 +98,8 @@
       "enabled": false
     },
     "singleProjectMode": true
+  },
+  "storage": {
+    "rules": "storage.rules"
   }
 }

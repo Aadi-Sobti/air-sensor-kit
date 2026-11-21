@@ -4,7 +4,8 @@
 # Docs: https://docs.protomaps.com/pmtiles/cli . Needs the pmtiles CLI (brew install pmtiles).
 # The output (~36 MB) is NOT committed; it is copied into the site at build time (web/public/tiles/).
 set -euo pipefail
-BUILD="${1:-$(date -u +%Y%m%d)}"
+# Pinned build so the basemap is reproducible; pass another date (YYYYMMDD) to update it.
+BUILD="${1:-20261121}"
 OUT="$(cd "$(dirname "$0")/.." && pwd)/web/public/tiles/nyc.pmtiles"
 mkdir -p "$(dirname "$OUT")"
 # NYC + nearby NJ/Long Island edges. Zoom 0-14 (street level); MapLibre can over-zoom beyond 14.

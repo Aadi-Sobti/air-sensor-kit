@@ -105,13 +105,15 @@ map.on("load", async () => {
     head.style.background = p.cat === "offline" ? OFFLINE_COLOR : CAT_COLORS[p.cat];
     head.style.color = textOn(p.cat);
     head.textContent = p.cat === "offline" ? t(lang, "map.offline") : `AQI ${p.aqi} · ${t(lang, `aqi.${p.cat}` as Key)}`;
+    const pm = document.createElement("p");
+    pm.textContent = p.pm >= 0 ? t(lang, "sensor.pm", { value: p.pm.toFixed(1) }) : "";
     const when = document.createElement("p");
     when.className = "hint";
     when.textContent = p.upd ? t(lang, "map.updated", { time: relTime(lang, p.upd) }) : "";
     const link = document.createElement("a");
     link.href = `/s/${encodeURIComponent(p.code)}`;
     link.textContent = t(lang, "map.open");
-    box.append(head, when, link);
+    box.append(head, pm, when, link);
     new maplibregl.Popup({ closeButton: true }).setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number]).setDOMContent(box).addTo(map);
   });
   map.on("mouseenter", "sensors", () => (map.getCanvas().style.cursor = "pointer"));

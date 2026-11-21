@@ -1,0 +1,9 @@
+rules_version = '2';
+// Deny by default: the raw archive is written by the backend (Admin SDK) only. No client access.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

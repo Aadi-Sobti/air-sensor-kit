@@ -1,9 +1,13 @@
+import { gunzipSync } from "node:zlib";
+
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 
+import { runArchive } from "./archive";
 import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
 import { runPublish } from "./publish";
@@ -61,7 +65,17 @@ export const snapshot = onRequest({ memory: "256MiB", maxInstances: 10 }, async 
     return;
   }
   const doc = await getFirestore().doc("public/snapshot").get();
-  res.set("Cache-Control", "public, max-age=60, s-maxage=240");
+  res.set("Cache-Control", "public, max-age=60, s-maxage=120"); // keeps "on the map in ~10 min"
   res.set("Content-Type", "application/json; charset=utf-8");
-  res.status(200).send(doc.exists ? String(doc.get("json")) : JSON.stringify({ v: 1, generated: 0, sensors: [] }));
+  const gz = doc.exists ? (doc.get("gz") as Buffer | undefined) : undefined;
+  res.status(200).send(gz ? gunzipSync(gz).toString("utf8") : JSON.stringify({ v: 2, generated: 0, sensors: [] }));
 });
+
+/** Nightly: raw readings of each finished UTC day -> gzipped NDJSON in the private Storage bucket (kept forever). */
+export const archive = onSchedule({ schedule: "30 3 * * *", timeZone: "UTC", memory: "512MiB", timeoutSeconds: 540, maxInstances: 1 },
+  async () => {
+    const bucket = getStorage().bucket();
+    await runArchive(getFirestore(), async (path, data) => {
+      await bucket.file(path).save(data, { contentType: "application/x-ndjson", metadata: { contentEncoding: "gzip" }, resumable: false });
+    });
+  });

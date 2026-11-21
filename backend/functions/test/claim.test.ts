@@ -8,6 +8,8 @@ import { Firestore, getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
 import { CLAIM, handleClaim } from "../src/claim";
+import { aqiFromPm25 } from "../src/lib/aqi";
+import { epaCorrect } from "../src/lib/correction";
 import { clearRegistryCache, handleIngest } from "../src/ingest";
 import { Geocoder } from "../src/lib/geocode";
 import { sha256Hex, sign } from "../src/lib/hmac";
@@ -56,7 +58,10 @@ describe("claim (emulator)", () => {
     const r = await handleClaim(db, "POST", claimBody(id, token), NOW + 30e3, match);
     assert.equal(r.status, 200, JSON.stringify(r.body));
     assert.equal(r.body.located, true);
-    assert.equal((r.body.latest as { pm25_cf1: number }).pm25_cf1, 7.5);
+    const latest = r.body.latest as { pm25: number; aqi: number; cat: string };
+    assert.equal(latest.pm25, Math.round(epaCorrect(7.5, 50) * 10) / 10); // EPA-corrected, not raw
+    assert.equal(latest.aqi, aqiFromPm25(latest.pm25));
+    assert.match(String(r.body.code), /^[A-Z2-9]{6}$/);
     const loc = (await db.doc(`private_locations/${id}`).get()).data()!;
     assert.equal(loc.lat, 40.8075);
     assert.equal(loc.address, "123 Example St, Apt 4");

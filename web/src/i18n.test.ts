@@ -43,3 +43,18 @@ describe("i18n", () => {
     expect(pickLang([])).toBe("en");
   });
 });
+
+import { toGeoJson } from "./snapshot";
+
+describe("map data privacy", () => {
+  it("puts only placed outdoor sensors on the map (indoor and unplaced have no location)", () => {
+    const g = toGeoJson({ v: 2, generated: 1, correction: "x", sensors: [
+      { code: "AAAAAA", c: [40.7, -74.0], in: 0, pl: 1, pm: 5, nc: null, aqi: 21, cat: "good", upd: 1, on: 1 },
+      { code: "BBBBBB", c: null, in: 1, pm: 5, nc: null, aqi: 21, cat: "good", upd: 1, on: 1 },
+      { code: "CCCCCC", c: null, in: 0, pl: 0, pm: 5, nc: null, aqi: 21, cat: "good", upd: 1, on: 1 },
+      { code: "DDDDDD", c: [40.6, -73.9], in: 1, pm: 5, nc: null, aqi: 21, cat: "good", upd: 1, on: 1 },
+    ] });
+    expect(g.features.map((f) => f.properties.code)).toEqual(["AAAAAA"]);
+    expect(g.features[0].geometry.coordinates).toEqual([-74.0, 40.7]); // GeoJSON is [lng, lat]
+  });
+});

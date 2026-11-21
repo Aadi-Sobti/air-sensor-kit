@@ -34,7 +34,7 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | #7 Setup AP is **WPA2**, password printed in the per-device QR sticker | Founder: an open AP would expose the home WiFi password |
 | 2026-11-21 | #9 Map: **MapLibre + self-hosted PMTiles** on Firebase Hosting (re-check prices/usage rules before M7) | Founder: no API key, no per-view fees |
 | 2026-11-21 | #10 Geocoder: **US Census Geocoder** (free, no key, US only) | Founder |
-| 2026-11-21 | **Provisional (agent)**: the claim page shows the sensor's ATM PM2.5 as the "first reading" until the EPA correction + AQI exist (M7) | Raw CF=1 reads high; ATM is closer at low levels. Founder to confirm wording |
+| 2026-11-21 | Claim page shows the **EPA-corrected** first reading + AQI (RH 50 % at setup) and links to the sensor page (replaces the M5 provisional ATM value) | M7 corrections exist now |
 | 2026-11-21 | Implementation (agent): uploads may carry `readings: []` (health only) | Delivers a pending claim and sensor-fault health even with no reading |
 | 2026-11-21 | Implementation (agent): phone-path addresses are geocoded by a backend job, not inside `ingest` (keeps uploads fast). The job must run often enough to keep USER_FLOW's "on the map in about 10 minutes" | Spec: ingest stays lean; promise to recipients stays true |
 | 2026-11-21 | New dependencies approved: h3-js (Apache-2.0), maplibre-gl, pmtiles, @protomaps/basemaps (BSD-3), pmtiles CLI; Protomaps/OpenStreetMap basemap (ODbL: "© OpenStreetMap" shown); Noto Sans fonts (OFL), all self-hosted | Founder; no API keys, no third-party requests from the map |
