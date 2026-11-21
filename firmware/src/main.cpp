@@ -2,10 +2,12 @@
 #include <Arduino.h>
 #include <time.h>
 
+#include "claim.h"
 #include "config.h"
 #include "device_config.h"
 #include "device_id.h"
 #include "device_state.h"
+#include "entropy.h"
 #include "identity.h"
 #include "improv_serial.h"
 #include "kvstore.h"
@@ -35,6 +37,7 @@ static core::PendingReadings gPending;
 static double hwRand01() { return (RANDOM_REG32 >> 8) / 16777216.0; }
 static core::UploadPolicy gUpload(hwRand01);
 static uint32_t gUploadsOk = 0, gUploadsFail = 0;
+static std::string gClaimHash;  // waiting to go out in the next upload (the token itself is never stored)
 
 static void logState(const char* why) {
   Serial.printf("[state] %s why=%s wifi_saved=%d connected=%d ap=%d\n", core::stateName(gSm.state()), why,
@@ -45,12 +48,16 @@ static void loadUploadState() {
   core::KvRecord r;
   uint16_t v;
   core::LoadResult lr = core::loadRecord(fileStore(), "/state", r, v);
-  if (lr == core::LoadResult::kOk || lr == core::LoadResult::kRecoveredFromTmp) gUpload.setEnrolled(r.getInt("enrolled", 0) != 0);
+  if (lr == core::LoadResult::kOk || lr == core::LoadResult::kRecoveredFromTmp) {
+    gUpload.setEnrolled(r.getInt("enrolled", 0) != 0);
+    gClaimHash = r.get("claim_hash");
+  }
 }
 
 static void saveUploadState() {
   core::KvRecord r;
   r.setInt("enrolled", gUpload.enrolled() ? 1 : 0);
+  r.set("claim_hash", gClaimHash);
   core::saveRecord(fileStore(), "/state", r, 1);
 }
 
@@ -64,6 +71,20 @@ static void onImprovSaved(const std::string& ssid, const std::string& pass) {
                 lastConfigLoadResult());
   gSm.wifiSettingsSaved(millis());
   logState("improv");
+}
+
+// After a successful USB setup: a fresh single-use claim token for the website. Only its hash is kept (and sent
+// in the next upload); the token goes to the browser in the URL fragment and is never logged.
+static std::string makeClaimRedirect() {
+  uint8_t rnd[16];
+  secureRandom(rnd, sizeof rnd);
+  core::ClaimToken c = core::makeClaimToken(rnd);
+  memset(rnd, 0, sizeof rnd);
+  gClaimHash = c.hashHex;
+  saveUploadState();
+  gUpload.requestSoon(millis());  // the claim page is waiting for this upload
+  Serial.println("[claim] new claim token issued");
+  return core::claimUrl(SITE_URL, gId.deviceId, c.token);
 }
 
 // Every interval: close the averaging window. Readings need real time (NTP) for their timestamp.
@@ -84,6 +105,10 @@ static void closeAverage(uint32_t now) {
 }
 
 static void maybeUpload(uint32_t now) {
+  if (!gClaimHash.empty() && gPending.empty() && gUpload.due(now) && timeValid()) {
+    closeAverage(now);  // don't make the claim page wait for the end of the 2.5-min window
+    gLastAverage = now;
+  }
   if (gPending.empty() || !gUpload.due(now)) return;
   if (!identityUsable(gIdStatus) || !netConnected() || !timeValid() || improvBusy()) return;
   core::UploadInfo info;
@@ -99,6 +124,8 @@ static void maybeUpload(uint32_t now) {
                  {"sensor_ok", gPms->healthy(now) ? 1u : 0u},
                  {"dropped", gPending.dropped()},
                  {"heap", ESP.getFreeHeap()}};
+  std::string claimSent = gClaimHash;
+  info.claimTokenHash = claimSent;
   std::string body = core::buildUploadJson(info, gPending.items());
   bool enroll = !gUpload.enrolled();
   size_t sent = gPending.items().size();
@@ -107,7 +134,9 @@ static void maybeUpload(uint32_t now) {
   if (r.outcome == core::UploadOutcome::kOk) {
     gUploadsOk++;
     gPending.clear();
-    if (enroll) saveUploadState();
+    bool claimDone = !claimSent.empty() && claimSent == gClaimHash;
+    if (claimDone) gClaimHash.clear();
+    if (enroll || claimDone) saveUploadState();
   } else {
     gUploadsFail++;
   }
@@ -144,7 +173,7 @@ void setup() {
                 storageWasFormatted() ? "(formatted)" : "", cfgOk ? "loaded" : lastConfigLoadResult(), gUpload.enrolled() ? 1 : 0);
   devLogBootDetails();
 
-  improvBegin(&gId, onImprovSaved);
+  improvBegin(&gId, onImprovSaved, makeClaimRedirect);
   uploaderBegin();
 
   PmsLink* link = devPmsLink();

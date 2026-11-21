@@ -3,6 +3,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 
+import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
 
 // One region for everything; near NYC users. Keep in sync with firebase.json hosting rewrites.
@@ -37,3 +38,10 @@ export const ingest = onRequest(
     res.status(out.status).json(out.body);
   },
 );
+
+/** Computer-setup claim (from the /claim page). Same-origin only via the Hosting rewrite; no CORS. */
+export const claim = onRequest({ memory: "256MiB", maxInstances: 5, timeoutSeconds: 30 }, async (req, res) => {
+  const out = await handleClaim(getFirestore(), req.method, req.rawBody);
+  res.set("Cache-Control", "no-store");
+  res.status(out.status).json(out.body);
+});

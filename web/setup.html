@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProseFire setup</title>
+  </head>
+  <body>
+    <main>
+      <h1 data-i18n="setup.title">Set up your air sensor</h1>
+
+      <section id="unsupported" hidden>
+        <h2 data-i18n="setup.unsupported.title"></h2>
+        <p data-i18n="setup.unsupported.body"></p>
+        <ol>
+          <li data-i18n="setup.phone.step1"></li>
+          <li data-i18n="setup.phone.step2"></li>
+          <li data-i18n="setup.phone.step3"></li>
+        </ol>
+      </section>
+
+      <section id="step-connect" hidden>
+        <p data-i18n="setup.intro"></p>
+        <button id="connect" type="button" data-i18n="setup.connect"></button>
+        <p class="hint" data-i18n="setup.pickerHint"></p>
+      </section>
+
+      <p id="busy" hidden></p>
+
+      <section id="step-wifi" hidden>
+        <h2 data-i18n="setup.wifi.title"></h2>
+        <form id="wifi-form" autocomplete="off">
+          <div id="networks" role="radiogroup"></div>
+          <label class="choice"><input type="radio" name="net" value="__other__" /> <span data-i18n="setup.wifi.other"></span></label>
+          <div id="other" hidden>
+            <label for="ssid" data-i18n="setup.wifi.name"></label>
+            <input id="ssid" type="text" maxlength="32" autocapitalize="off" spellcheck="false" />
+          </div>
+          <label for="password" data-i18n="setup.wifi.password"></label>
+          <input id="password" type="password" maxlength="64" autocapitalize="off" spellcheck="false" />
+          <label class="choice"><input id="show" type="checkbox" /> <span data-i18n="setup.wifi.show"></span></label>
+          <p class="hint" data-i18n="setup.wifi.hint"></p>
+          <button id="next" type="submit" data-i18n="setup.next"></button>
+        </form>
+      </section>
+
+      <section id="step-done" hidden>
+        <p class="ok" data-i18n="setup.connected"></p>
+        <p data-i18n="setup.goingOn"></p>
+      </section>
+
+      <div id="error" class="error" role="alert" hidden></div>
+      <button id="retry" type="button" hidden data-i18n="setup.retry"></button>
+    </main>
+    <footer>
+      <p data-i18n="safety.notSmokeAlarm">This is not a smoke alarm. It does not replace official warnings or evacuation orders.</p>
+    </footer>
+    <script type="module" src="/src/setup.ts"></script>
+  </body>
+</html>

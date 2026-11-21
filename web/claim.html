@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <title>ProseFire setup</title>
+  </head>
+  <body>
+    <main>
+      <section id="step-form" hidden>
+        <h1 data-i18n="claim.title"></h1>
+        <form id="claim-form" novalidate>
+          <label for="address" data-i18n="claim.address"></label>
+          <input id="address" type="text" autocomplete="street-address" maxlength="200" required />
+          <p class="hint" data-i18n="claim.addressHint"></p>
+          <label for="zip" data-i18n="claim.zip"></label>
+          <input id="zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" required />
+          <p><strong data-i18n="claim.where"></strong></p>
+          <label class="choice"><input type="radio" name="where" value="outside" checked /> <span data-i18n="claim.outside"></span></label>
+          <label class="choice"><input type="radio" name="where" value="inside" /> <span data-i18n="claim.inside"></span></label>
+          <button id="finish" type="submit" data-i18n="claim.finish"></button>
+        </form>
+      </section>
+      <p id="waiting" hidden data-i18n="claim.waiting"></p>
+      <section id="step-done" hidden>
+        <h1 class="ok" data-i18n="claim.done"></h1>
+        <p id="reading"></p>
+        <p data-i18n="claim.nextSteps"></p>
+      </section>
+      <div id="error" class="error" role="alert" hidden></div>
+      <p id="setup-again" hidden><a class="button" href="/setup" data-i18n="claim.setupAgain"></a></p>
+    </main>
+    <footer>
+      <p data-i18n="safety.notSmokeAlarm">This is not a smoke alarm. It does not replace official warnings or evacuation orders.</p>
+      <p class="hint" data-i18n="census.notice">This product uses the Census Bureau Data API but is not endorsed or certified by the Census Bureau.</p>
+    </footer>
+    <script type="module" src="/src/claim.ts"></script>
+  </body>
+</html>

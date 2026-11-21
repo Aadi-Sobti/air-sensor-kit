@@ -34,11 +34,42 @@
           "functionId": "ingest",
           "region": "us-east1"
         }
+      },
+      {
+        "source": "/api/v1/claim",
+        "function": {
+          "functionId": "claim",
+          "region": "us-east1"
+        }
       }
     ],
     "predeploy": [
       "npm --prefix ../web run build",
       "rm -rf public && cp -R ../web/dist public"
+    ],
+    "cleanUrls": true,
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Content-Security-Policy",
+            "value": "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+          },
+          {
+            "key": "Referrer-Policy",
+            "value": "no-referrer"
+          },
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "Permissions-Policy",
+            "value": "serial=(self), camera=(), microphone=(), geolocation=()"
+          }
+        ]
+      }
     ]
   },
   "emulators": {

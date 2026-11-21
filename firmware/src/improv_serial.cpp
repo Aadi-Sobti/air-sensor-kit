@@ -16,6 +16,7 @@ namespace im = core::improv;
 static im::Parser gParser;
 static const Identity* gId = nullptr;
 static ImprovSavedFn gOnSaved = nullptr;
+static ImprovRedirectFn gRedirect = nullptr;
 static bool gTesting = false;
 static std::string gSsid, gPass;  // in RAM only during the test; never logged
 
@@ -25,8 +26,8 @@ static void send(const std::vector<uint8_t>& f) {
 }
 
 static std::string redirectUrl() {
-  // M5: the claim page (https://<domain>/claim#d=<id>&t=<token>). Until then, the sensor's public page.
-  return std::string(SITE_URL) + "/";
+  // The claim page with a fresh claim token (https://<site>/claim#d=<id>&t=<token>).
+  return gRedirect ? gRedirect() : std::string(SITE_URL) + "/";
 }
 
 static void sendDeviceInfo() {
@@ -61,9 +62,10 @@ static void sendNetworks() {
   if (wasOff && !gTesting) WiFi.mode(WIFI_OFF);
 }
 
-void improvBegin(const Identity* id, ImprovSavedFn onSaved) {
+void improvBegin(const Identity* id, ImprovSavedFn onSaved, ImprovRedirectFn redirect) {
   gId = id;
   gOnSaved = onSaved;
+  gRedirect = redirect;
 }
 
 bool improvBusy() { return gTesting; }

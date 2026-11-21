@@ -130,7 +130,21 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
-- [ ] Improv in firmware (+ codec tests), `/setup` page, `/claim` page + `claim` endpoint, claim token.
+- [x] Improv in firmware (+ codec tests), `/setup` page, `/claim` page + `claim` endpoint, claim token.
+      Firmware 0.4.0: a fresh 128-bit claim token per USB setup (only its SHA-256 is kept and sent in the next
+      upload, which is requested right away); redirect `https://<site>/claim#d=<id>&t=<token>`. `pio test` 65/65.
+      Backend `claim` (+ `lib/geocode.ts`, US Census Geocoder, verified 2026-11-21): single-use, 24 h expiry,
+      constant-time hash compare, per-device attempt limit, address/coords only in private_locations, geocoder
+      outage → accept + `locationPending`, no match → 422. Emulator: 30 passing (9 claim tests).
+      Web: Improv codec + client (tested against a fake sensor), `/setup` (Web Serial, filters CH340/FTDI/CP210x,
+      DTR/RTS off + 2 s boot wait, always closes the port, same-origin claim redirect only), `/claim` (token moved to
+      sessionStorage and stripped from the URL, polls up to 2 min). EN+ES strings; `npm test` 17/17. Hosting: clean
+      URLs + CSP/Referrer-Policy/Permissions-Policy. Deployed to dev 2026-11-21; local preview checked (setup intro,
+      claim bad-link + form). Deviation: "or tap your home on the map" waits for the map (M7).
+- 👤 Browser checklist (after the soak, once 0.4.0 is flashed): Chrome on macOS · Chrome on Windows · Edge ·
+      Safari shows the phone-path message. Per browser: picker shows exactly one device · WiFi list appears ·
+      wrong password → friendly retry · right password → claim page → first reading shown · port released
+      (`pio device list` / re-flash works afterwards).
 - **Done when:** codec/claim tests pass; 👤 computer-setup checklist passes on Chrome (Windows + macOS) and
       Edge; Safari shows the phone-path fallback.
 
