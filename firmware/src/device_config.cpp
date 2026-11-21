@@ -5,12 +5,24 @@
 
 static const char* kPath = "/config";
 static const uint16_t kSchema = 1;
+static core::LoadResult gLast = core::LoadResult::kMissing;
+
+const char* lastConfigLoadResult() {
+  switch (gLast) {
+    case core::LoadResult::kOk: return "loaded";
+    case core::LoadResult::kMissing: return "missing";
+    case core::LoadResult::kCorrupt: return "corrupt";
+    case core::LoadResult::kRecoveredFromTmp: return "recovered";
+  }
+  return "?";
+}
 
 bool loadConfig(DeviceConfig& out) {
   out = DeviceConfig{};
   core::KvRecord rec;
   uint16_t schema = 0;
   core::LoadResult r = core::loadRecord(fileStore(), kPath, rec, schema);
+  gLast = r;
   if (r != core::LoadResult::kOk && r != core::LoadResult::kRecoveredFromTmp) return false;
   // Future schema migrations go here (schema < kSchema -> fill new fields with defaults).
   out.wifiSsid = rec.get("ssid");

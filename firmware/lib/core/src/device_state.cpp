@@ -2,6 +2,13 @@
 
 namespace core {
 
+// Time since `since`, or 0 if `since` is (slightly) after `now`: timestamps taken with millis() at different
+// points of one loop pass can be out of order, and an unsigned difference would wrap to ~49 days.
+static uint32_t elapsed(uint32_t now, uint32_t since) {
+  int32_t d = static_cast<int32_t>(now - since);
+  return d > 0 ? static_cast<uint32_t>(d) : 0;
+}
+
 const char* stateName(DeviceState s) {
   switch (s) {
     case DeviceState::kSetup: return "SETUP";
@@ -85,7 +92,7 @@ bool StateMachine::update(const StateInputs& in, uint32_t nowMs) {
   if (in.hasSavedWifi && !hasWifi_) wifiSettingsSaved(nowMs);
   // Note: in.hasSavedWifi == false never clears hasWifi_ here: only eraseWifi() erases WiFi.
 
-  if (out_.apOn && hasWifi_ && !in.apClientSeen && nowMs - apOpenedAt_ >= kApIdleTimeoutMs) {
+  if (out_.apOn && hasWifi_ && !in.apClientSeen && elapsed(nowMs, apOpenedAt_) >= kApIdleTimeoutMs) {
     out_.apOn = false;
     apClosedByTimeout_ = true;
   }
@@ -107,7 +114,7 @@ bool StateMachine::update(const StateInputs& in, uint32_t nowMs) {
     apClosedByTimeout_ = false;
     enter(DeviceState::kRunning, nowMs);
   } else {
-    bool startupFailing = !everConnected_ && nowMs - disconnectedSince_ >= kApFallbackMs;
+    bool startupFailing = !everConnected_ && elapsed(nowMs, disconnectedSince_) >= kApFallbackMs;
     if (startupFailing) openAp(nowMs);
     if (state_ == DeviceState::kRunning || state_ == DeviceState::kProblem || startupFailing) {
       enter(DeviceState::kProblem, nowMs);

@@ -11,5 +11,6 @@ struct DeviceConfig {
 };
 
 bool loadConfig(DeviceConfig& out);  // false if missing/corrupt (out = defaults)
+const char* lastConfigLoadResult();  // "loaded" | "missing" | "corrupt" | "recovered" (diagnostics)
 bool saveConfig(const DeviceConfig& c);
 bool eraseWifiAndSetup(DeviceConfig& c);  // FLASH long-press

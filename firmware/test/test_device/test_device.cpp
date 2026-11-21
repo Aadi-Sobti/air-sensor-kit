@@ -363,6 +363,18 @@ static void test_state_machine_survives_millis_wrap() {
   TEST_ASSERT_TRUE(m.state() == DeviceState::kProblem);
 }
 
+static void test_settings_saved_slightly_after_now_does_not_trigger_fallback() {
+  // Regression: wifiSettingsSaved(millis()) runs inside a loop pass whose `now` was captured earlier.
+  StateMachine m;
+  StateInputs in;
+  m.begin(in, 0);
+  m.wifiSettingsSaved(100005);
+  in.hasSavedWifi = true;
+  m.update(in, 100000);  // older timestamp than the save
+  TEST_ASSERT_TRUE(m.state() == DeviceState::kConnecting);
+  TEST_ASSERT_TRUE(m.outputs().apOn);  // SETUP's AP stays up during the test (it was open), but no PROBLEM
+}
+
 // ---------- long press ----------
 static void test_long_press_fires_once_after_5s() {
   LongPress lp;
@@ -417,6 +429,7 @@ int main(int, char**) {
   RUN_TEST(test_ap_stays_open_with_client);
   RUN_TEST(test_wifi_settings_in_any_state_then_long_press_resets);
   RUN_TEST(test_state_machine_survives_millis_wrap);
+  RUN_TEST(test_settings_saved_slightly_after_now_does_not_trigger_fallback);
   RUN_TEST(test_long_press_fires_once_after_5s);
   RUN_TEST(test_long_press_ignores_bounce_and_boot_hold);
   return UNITY_END();

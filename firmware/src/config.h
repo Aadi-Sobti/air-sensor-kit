@@ -3,11 +3,17 @@
 
 #define PROJECT_NAME "ProseFire"   // placeholder name (decisions.md #1)
 #define AP_PREFIX PROJECT_NAME     // soft AP: <AP_PREFIX>-Setup-<SHORTCODE>, must stay <= 32 chars
-#define FW_VERSION "0.2.0"
+#define FW_VERSION "0.3.0"
 
 #ifndef FW_ENV
 #define FW_ENV "unknown"
 #endif
+
+// Upload endpoint: a Firebase Hosting rewrite to the ingest function, so the backend can move without a firmware
+// change. Dev project for now; the production domain replaces this before launch (M11).
+#define INGEST_HOST "prosefire-dev.web.app"
+#define INGEST_PATH "/api/v1/ingest"
+#define SITE_URL "https://prosefire-dev.web.app"
 
 // Serial (USB): logs + Improv setup + factory mode
 #define SERIAL_BAUD 115200
