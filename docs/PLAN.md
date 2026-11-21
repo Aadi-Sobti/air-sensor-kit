@@ -9,8 +9,6 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - [ ] When the board is back (≈ 1 day): plug it in and tell the agent → flash 0.5.0, Chrome setup checklist (M5),
       iPhone setup checklist (M6), smoke test (M1), then a full 24 h soak (keep it plugged in + hotspot on).
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
-- [ ] Turn on Cloud Storage for prosefire-dev (console → Build → Storage → Get started, location us-east1, production
-      mode) so the nightly raw archive can write (needed before real data is 35 days old). The agent deploys the rules.
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
 - [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
@@ -233,6 +231,10 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       shows the EPA-corrected first reading + AQI and links to `/s/<code>` (resolves the M5 deviations); predeploy
       refuses to ship without the basemap; basemap build pinned (20261121). Nightly raw archive built (`archive.ts`,
       03:30 UTC, catch-up, never skips a day; tests) + deny-all Storage rules. Backend 61 passing, web 22.
+      2026-11-21: founder enabled Cloud Storage on prosefire-dev; agent deployed the deny-all Storage rules and
+      redeployed `archive` so it sees the bucket. `publish` runs in the cloud every 5 min (`firebase functions:log
+      --only publish`: publish_ok, 0 errors). **Unverified:** the first archive run (03:30 UTC 2026-11-22): check
+      `firebase functions:log --project dev --only archive` for `archive_day_ok`.
 - [ ] QC before the map goes public (backend.md): range checks + stuck-value flags (needed before launch), neighbor
       comparison later. Indoor sensors are already excluded from the map.
 - [ ] Measure "set up → visible on the map" on dev with the real board (target ≤ 10 min).
