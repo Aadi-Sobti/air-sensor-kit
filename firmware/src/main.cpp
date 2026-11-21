@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 #include "config.h"
+#include "device_id.h"
 #include "device_config.h"
 #include "device_state.h"
 #include "identity.h"
@@ -21,6 +22,7 @@ static const uint32_t kPmsLogMs = 30000;  // log window; the upload interval (de
 static uint32_t gLastHeartbeat = 0, gLastPmsLog = 0;
 static PmsDriver* gPms = nullptr;
 static Identity gId;
+static IdentityStatus gIdStatus = IdentityStatus::kStorageFailed;  // M4: upload only if identityUsable()
 static DeviceConfig gCfg;
 static core::StateMachine gSm;
 static core::LongPress gFlash;
@@ -43,7 +45,6 @@ static core::StateInputs readInputs(uint32_t now) {
   core::StateInputs in;
   in.hasSavedWifi = gCfg.hasWifi();
   in.wifiConnected = netConnected();
-  in.sensorOk = gPms->healthy(now) || (now < core::kPmsWarmupMs);  // don't flag PROBLEM during boot
   in.apClientSeen = false;  // M6
   return in;
 }
@@ -61,15 +62,19 @@ void setup() {
   pinMode(PIN_FLASH_BUTTON, INPUT_PULLUP);
   netBegin();
 
+  char idBuf[24];
+  core::formatDeviceId(ESP.getChipId(), idBuf, sizeof idBuf);
+  gId.deviceId = idBuf;  // always set, even if storage fails
   bool fsOk = storageBegin();
-  IdentityStatus ids = fsOk ? loadOrCreateIdentity(gId) : IdentityStatus::kSaveFailed;
+  gIdStatus = fsOk ? loadOrCreateIdentity(gId) : IdentityStatus::kStorageFailed;
+  IdentityStatus ids = gIdStatus;
   bool cfgOk = fsOk && loadConfig(gCfg);
   Serial.printf("[boot] %s fw=%s env=%s id=%s reset=%s\n", PROJECT_NAME, FW_VERSION, FW_ENV,
                 gId.deviceId.c_str(), ESP.getResetReason().c_str());
   // Never log the secret, setup password, WiFi credentials, or address.
-  Serial.printf("[identity] %s short_code=%s fs=%s config=%s\n", identityStatusName(ids),
+  Serial.printf("[identity] %s short_code=%s fs=%s%s config=%s\n", identityStatusName(ids),
                 gId.shortCode.empty() ? "(unassigned)" : gId.shortCode.c_str(), fsOk ? "ok" : "FAIL",
-                cfgOk ? "loaded" : "defaults");
+                storageWasFormatted() ? "(formatted)" : "", cfgOk ? "loaded" : "defaults");
   devLogBootDetails();
 
   PmsLink* link = devPmsLink();
@@ -90,7 +95,13 @@ void loop() {
   uint32_t now = millis();
   gPms->poll(now);
 
-  if (gFlash.update(digitalRead(PIN_FLASH_BUTTON) == LOW, now)) {
+  static bool lastHeld = false;
+  bool fired = gFlash.update(digitalRead(PIN_FLASH_BUTTON) == LOW, now);
+  if (gFlash.held() != lastHeld) {
+    lastHeld = gFlash.held();
+    Serial.printf("[btn] flash=%s\n", lastHeld ? "down" : "up");
+  }
+  if (fired) {
     bool ok = eraseWifiAndSetup(gCfg);
     gSm.eraseWifi(now);
     Serial.printf("[reset] FLASH long-press: WiFi + setup info erased (%s), identity kept\n", ok ? "ok" : "FAIL");
@@ -103,8 +114,9 @@ void loop() {
 
   if (now - gLastHeartbeat >= kHeartbeatMs) {
     gLastHeartbeat = now;
-    Serial.printf("[hb] uptime_s=%lu heap=%u state=%s rssi=%d time_ok=%d\n", (unsigned long)(now / 1000),
-                  ESP.getFreeHeap(), core::stateName(gSm.state()), netRssi(), timeValid() ? 1 : 0);
+    Serial.printf("[hb] uptime_s=%lu heap=%u state=%s rssi=%d time_ok=%d flash_pin=%d\n", (unsigned long)(now / 1000),
+                  ESP.getFreeHeap(), core::stateName(gSm.state()), netRssi(), timeValid() ? 1 : 0,
+                  digitalRead(PIN_FLASH_BUTTON));
   }
   if (now - gLastPmsLog >= kPmsLogMs) {
     gLastPmsLog = now;

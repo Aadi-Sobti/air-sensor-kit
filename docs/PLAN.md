@@ -8,7 +8,6 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 **Waiting on founder:**
 - [ ] Merge the stacked PRs in order (each builds on the previous one): #1 M0 → #2 M1 → later ones. The app blocked
       the agent from merging. https://github.com/Aadi-Sobti/air-sensor-kit/pulls
-- [ ] 👤 M2 LED + button check (5 min, see M2 below): look at the blue LED, then hold FLASH for 5 s.
 - [ ] 👤 M1 smoke check (2 min): with the board plugged in, blow out a match or candle ~1 m from the sensor, then tell
       the agent. It should see PM2.5 jump from ~0 to well above 20 µg/m³ in the next capture.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -67,7 +66,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       `lib/core/src/kvstore.*` (key=value + schema + CRC-32; tmp+rename; torn/unrenamed tmp recovery),
       `codes.*` (31-char no-look-alike alphabet, unbiased), `src/identity.cpp` (32-byte secret + 12-char setup
       password from the ESP8266 hardware RNG; never logged), `src/device_config.cpp`.
-- [x] State machine + LED patterns, FLASH long-press reset, NTP, saved-WiFi retry rules.
+- [x] State machine + LED patterns, FLASH long-press reset, NTP, saved-WiFi retry rules. (WiFi/NTP: hardware unverified)
       `lib/core/src/device_state.*`; `src/net.cpp` (WiFi.persistent(false), auto-reconnect, NTP pool.ntp.org +
       time.google.com once connected). The setup AP is only tracked/logged until M6.
       `pio test -d firmware -e native` → 46/46 (22 M2 tests: CRC check value, nasty SSIDs, corruption, power loss
@@ -77,8 +76,18 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - 👤 Board: `logs/m2-boot1-1795273043.log` + `logs/m2-boot2-1795273113.log`: `[identity] loaded … fs=ok`,
       `[state] SETUP … ap=1` on both boots (identity persisted across reboots; no secret/password in logs),
       heap ~45 KB. WiFi/NTP on hardware **unverified** (no credentials on the device until M5/M6 setup exists).
-      **Founder LED checklist pending:** right now (no WiFi saved) the blue LED should blink slowly (1 s on,
-      1 s off) = SETUP. Holding FLASH 5 s should log `[reset] FLASH long-press` (agent can capture it).
+      Founder 2026-11-21: LED slow blink in SETUP ✓. FLASH button: two physical holds were never seen by the
+      board (`logs/founder-checks-1795279921.log`, `logs/founder-flash-1795280992.log`, `[btn]` logging added), but
+      pulling GPIO0 low through the FTDI auto-reset circuit (DTR) gave `[btn] flash=down` → 5 s →
+      `[reset] FLASH long-press … identity kept` → `up` (`logs/gpio0-dtr-test-*.log`): firmware path ✓; the dev
+      board's physical FLASH button is suspect. Re-check the button on a kit (CH340) board in M10.
+      CONNECTING/RUNNING/PROBLEM LED states need WiFi credentials (M5/M6).
+- M2 review fixes: secret + setup password from a woken radio + 2048 RNG samples condensed with SHA-256
+      (`src/entropy.cpp`; core's ESP.random() is pseudo-random with WiFi off); `/identity.bak` + never regenerate a
+      damaged identity (`identity_policy`, tested); LittleFS no auto-format (format only on mount failure, logged);
+      a new WiFi password for the same network reconnects; device ID always set. Fresh-board proof:
+      `logs/m2-fresh-1795282632.log` (`created … fs=ok(formatted)`) → `logs/m2-fresh2-1795282658.log` (`loaded`).
+      Founder decisions applied (startup-only AP fallback, LED = WiFi only, SETUP AP never times out). 49/49 native.
 - M1 review fixes (landed here): re-init after silence restarts warm-up; unsolicited frames (sensor rebooted into
       active mode) re-assert passive mode + warm-up (seen live at boot: `unsolicited=1`); partial frames dropped by
       the gap reset are counted (`partial=`); driver moved to `lib/core` with 6 mock-sensor tests.

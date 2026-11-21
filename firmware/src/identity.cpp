@@ -4,61 +4,78 @@
 
 #include "codes.h"
 #include "device_id.h"
+#include "entropy.h"
+#include "identity_policy.h"
 #include "kvstore.h"
 #include "storage_fs.h"
 
 static const char* kPath = "/identity";
+static const char* kBackupPath = "/identity.bak";  // written at creation (and by the factory tool in M9)
 static const uint16_t kSchema = 1;
 
 const char* identityStatusName(IdentityStatus s) {
   switch (s) {
     case IdentityStatus::kLoaded: return "loaded";
+    case IdentityStatus::kRestoredFromBackup: return "restored_from_backup";
     case IdentityStatus::kCreated: return "created";
-    case IdentityStatus::kRecreatedAfterCorruption: return "recreated_after_corruption";
-    case IdentityStatus::kSaveFailed: return "save_failed";
+    case IdentityStatus::kLost: return "LOST(needs re-provisioning)";
+    case IdentityStatus::kStorageFailed: return "STORAGE_FAILED";
   }
   return "?";
 }
 
+static void fill(Identity& out, const core::KvRecord& rec) {
+  out.secretHex = rec.get("secret");
+  out.setupPassword = rec.get("setup_pw");
+  out.shortCode = rec.get("short_code");
+}
+
 IdentityStatus loadOrCreateIdentity(Identity& out) {
-  char id[24];
-  core::formatDeviceId(ESP.getChipId(), id, sizeof id);
-  out.deviceId = id;
-
-  core::KvRecord rec;
+  core::KvRecord main, backup;
   uint16_t schema = 0;
-  core::LoadResult r = core::loadRecord(fileStore(), kPath, rec, schema);
-  if ((r == core::LoadResult::kOk || r == core::LoadResult::kRecoveredFromTmp) &&
-      rec.get("device_id") == out.deviceId && rec.get("secret").size() == 64 &&
-      rec.get("setup_pw").size() == core::kSetupPasswordLen) {
-    out.secretHex = rec.get("secret");
-    out.setupPassword = rec.get("setup_pw");
-    out.shortCode = rec.get("short_code");
-    return IdentityStatus::kLoaded;
-  }
-  bool corrupt = (r == core::LoadResult::kCorrupt) || (r != core::LoadResult::kMissing);
-  if (corrupt) fileStore().rename(kPath, "/identity.bad");  // keep for diagnosis; backend must re-enroll
+  core::IdentityFiles f;
+  f.main = core::loadRecord(fileStore(), kPath, main, schema);
+  f.mainValid = (f.main == core::LoadResult::kOk || f.main == core::LoadResult::kRecoveredFromTmp) &&
+                core::identityRecordValid(main, out.deviceId);
+  f.backup = core::loadRecord(fileStore(), kBackupPath, backup, schema);
+  f.backupValid = (f.backup == core::LoadResult::kOk || f.backup == core::LoadResult::kRecoveredFromTmp) &&
+                  core::identityRecordValid(backup, out.deviceId);
 
-  // ESP8266 hardware RNG (RANDOM_REG32), true random when the RF subsystem is on; WiFi is off here, but the
-  // core's ESP.random() still mixes the hardware register. 32-byte secret + setup password.
+  switch (core::decideIdentity(f)) {
+    case core::IdentityAction::kUseMain:
+      fill(out, main);
+      if (!f.backupValid) core::saveRecord(fileStore(), kBackupPath, main, kSchema);
+      return IdentityStatus::kLoaded;
+    case core::IdentityAction::kUseBackup:
+      fill(out, backup);
+      core::saveRecord(fileStore(), kPath, backup, kSchema);
+      return IdentityStatus::kRestoredFromBackup;
+    case core::IdentityAction::kLost:
+      return IdentityStatus::kLost;  // never regenerate: the backend and the printed sticker know the old one
+    case core::IdentityAction::kCreate:
+      break;
+  }
+
   uint8_t secret[32];
-  ESP.random(secret, sizeof secret);
-  uint8_t rnd[64];
+  secureRandom(secret, sizeof secret);
   std::string pw;
   while (pw.empty()) {
-    ESP.random(rnd, sizeof rnd);
+    uint8_t rnd[64];
+    secureRandom(rnd, sizeof rnd);
     pw = core::makeCode(rnd, sizeof rnd, core::kSetupPasswordLen);
+    memset(rnd, 0, sizeof rnd);
   }
   out.secretHex = core::toHex(secret, sizeof secret);
   out.setupPassword = pw;
   out.shortCode.clear();
   memset(secret, 0, sizeof secret);
 
-  core::KvRecord nrec;
-  nrec.set("device_id", out.deviceId);
-  nrec.set("secret", out.secretHex);
-  nrec.set("setup_pw", out.setupPassword);
-  nrec.set("short_code", out.shortCode);
-  if (!core::saveRecord(fileStore(), kPath, nrec, kSchema)) return IdentityStatus::kSaveFailed;
-  return corrupt ? IdentityStatus::kRecreatedAfterCorruption : IdentityStatus::kCreated;
+  core::KvRecord rec;
+  rec.set("device_id", out.deviceId);
+  rec.set("secret", out.secretHex);
+  rec.set("setup_pw", out.setupPassword);
+  rec.set("short_code", out.shortCode);
+  if (!core::saveRecord(fileStore(), kPath, rec, kSchema)) return IdentityStatus::kStorageFailed;
+  core::saveRecord(fileStore(), kBackupPath, rec, kSchema);
+  return IdentityStatus::kCreated;
 }

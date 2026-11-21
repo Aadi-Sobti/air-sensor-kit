@@ -7,7 +7,7 @@
 static bool gStaStarted = false;
 static bool gApLogged = false;
 static bool gNtpStarted = false;
-static std::string gSsid;
+static std::string gSsid, gPass;
 
 void netBegin() {
   WiFi.persistent(false);  // credentials live in our /config, not the SDK's flash sector
@@ -18,11 +18,14 @@ void netBegin() {
 void netApply(bool connectWifi, const DeviceConfig& cfg, bool apOn, uint32_t nowMs) {
   (void)nowMs;
   if (connectWifi && cfg.hasWifi()) {
-    if (!gStaStarted || gSsid != cfg.wifiSsid) {
+    if (!gStaStarted || gSsid != cfg.wifiSsid || gPass != cfg.wifiPass) {
+      if (gStaStarted) WiFi.disconnect();  // new password for the same network: start over
+      WiFi.forceSleepWake();
       WiFi.mode(WIFI_STA);
       WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPass.c_str());
       gStaStarted = true;
       gSsid = cfg.wifiSsid;
+      gPass = cfg.wifiPass;
       Serial.println("[net] connecting to saved WiFi");  // never log SSID/password
     }
   } else if (gStaStarted) {
@@ -30,6 +33,7 @@ void netApply(bool connectWifi, const DeviceConfig& cfg, bool apOn, uint32_t now
     WiFi.mode(WIFI_OFF);
     gStaStarted = false;
     gSsid.clear();
+    gPass.clear();
   }
   if (apOn != gApLogged) {
     gApLogged = apOn;
