@@ -22,8 +22,8 @@ jobs:
           key: pio-${{ runner.os }}-${{ hashFiles('firmware/platformio.ini') }}
       - name: Install PlatformIO and tool deps
         run: pip install platformio==6.2.0 -r tools/requirements.txt
-      - name: Build release + dev
-        run: pio run -d firmware -e release -e dev
+      - name: Build release + dev + dev-fake
+        run: pio run -d firmware -e release -e dev -e dev-fake
       - name: Native unit tests
         run: pio test -d firmware -e native
       - name: Release-build guard (no DEV_ flags, setInsecure, http://)
