@@ -37,3 +37,4 @@ tools/out/
 # Web build output
 web/dist/
 backend/functions/lib-test/
+backend/public/

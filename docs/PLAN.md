@@ -6,12 +6,11 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M4 (needs the founder's Firebase dev project) · M0–M3 done; M5/M7 groundwork next
 **Waiting on founder:**
-- [ ] Merge the stacked PRs in order (each builds on the previous one): #1 M0 → #2 M1 → later ones. The app blocked
-      the agent from merging. https://github.com/Aadi-Sobti/air-sensor-kit/pulls
-- [ ] 👤 M1 smoke check (2 min): with the board plugged in, blow out a match or candle ~1 m from the sensor, then tell
-      the agent. It should see PM2.5 jump from ~0 to well above 20 µg/m³ in the next capture.
+- [ ] Run the WiFi tool once the agent builds it (M4): one command in your own terminal; it asks for your WiFi
+      password hidden, and the agent never sees it.
+- [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
-- [ ] Review provisional decisions #3, #5, #6 (and #4 once the cost table is written) in docs/decisions.md.
+- [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
 
 ---
 
@@ -111,6 +110,11 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 ### M4 Device → backend
 - [ ] `dev` firmware posts to the emulator over LAN HTTP. Then 👤 the founder creates the `dev` Firebase project
       (Blaze + budget alert) and the device posts over TLS with pinned roots.
+      2026-11-21: founder created `prosefire-dev` (Blaze, $5 budget, Firestore Standard us-east1), ran `firebase
+      login`, registered `devices/esp8266-11001626` (status allowlisted). Agent deployed rules, indexes, functions
+      (`health`, `ingest`) and the placeholder Hosting site: https://prosefire-dev.web.app. Live checks:
+      `/api/v1/health` → ok; `/api/v1/ingest` unsigned → 401 bad_signature for the registered board.
+      Next: firmware upload client (TLS + pinned roots, HMAC, backoff + jitter), `tools/` WiFi tool for the founder.
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path

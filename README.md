@@ -29,7 +29,7 @@ export PATH="$(brew --prefix node@22)/bin:$PATH"   # backend + web use Node 22
 ```bash
 pio run -d firmware -e release -e dev && pio test -d firmware -e native && python3 tools/check_release.py
 tools/.venv/bin/python -m pytest -q tools/tests
-(cd backend && npm --prefix functions ci && firebase emulators:exec --only functions,firestore "npm --prefix functions test")
+(cd backend && npm --prefix functions ci && npm --prefix functions run build && firebase emulators:exec --only functions,firestore "npm --prefix functions test")
 (cd web && npm ci && npm test && npm run build)
 ```
 

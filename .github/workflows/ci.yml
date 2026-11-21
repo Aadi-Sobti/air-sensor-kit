@@ -47,8 +47,8 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-      - name: Install functions deps (also compiles TypeScript)
-        run: npm --prefix functions ci
+      - name: Install functions deps and compile TypeScript
+        run: npm --prefix functions ci && npm --prefix functions run build
       - name: Functions + rules tests + device simulator on the emulator (demo project, no login)
         run: >-
           npx --yes firebase-tools@15.37.0 emulators:exec --only functions,firestore
