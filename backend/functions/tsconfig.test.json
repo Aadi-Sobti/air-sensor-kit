@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "outDir": "lib-test", "rootDir": "test", "types": ["mocha", "node"] },
-  "include": ["test"]
+  "compilerOptions": { "outDir": "lib-test", "rootDir": ".", "types": ["mocha", "node"] },
+  "include": ["test", "src"]
 }
