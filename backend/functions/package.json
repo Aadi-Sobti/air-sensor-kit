@@ -7,7 +7,6 @@
     "node": "22"
   },
   "scripts": {
-    "postinstall": "tsc",
     "build": "tsc",
     "pretest": "tsc && tsc -p tsconfig.test.json",
     "test": "mocha --timeout 20000 \"lib-test/test/**/*.test.js\""

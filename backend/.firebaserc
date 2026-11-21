@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "demo-prosefire"
+    "default": "demo-prosefire",
+    "dev": "prosefire-dev"
   }
 }
