@@ -14,6 +14,7 @@
 #include "net.h"
 #include "pending_readings.h"
 #include "pms_driver.h"
+#include "setup_portal.h"
 #include "storage_fs.h"
 #include "upload_payload.h"
 #include "upload_policy.h"
@@ -60,6 +61,22 @@ static void saveUploadState() {
   r.setInt("enrolled", gUpload.enrolled() ? 1 : 0);
   r.set("claim_hash", gClaimHash);
   core::saveRecord(fileStore(), "/state", r, 1);
+}
+
+// Phone setup succeeded: save WiFi + setup info (address/ZIP/indoor), which goes out once in the next signed
+// upload and is then erased from the device (the backend keeps it in private_locations).
+static void onPortalSaved(const core::portal::Form& f) {
+  gCfg.wifiSsid = f.ssid;
+  gCfg.wifiPass = f.password;
+  gCfg.address = f.address;
+  gCfg.zip = f.zip;
+  gCfg.indoor = f.indoor;
+  gCfg.setupInfoPending = true;
+  bool saved = saveConfig(gCfg);
+  Serial.printf("[cfg] wifi+setup save=%s\n", saved ? "ok" : "FAIL");
+  gSm.wifiSettingsSaved(millis());
+  gUpload.requestSoon(millis());
+  logState("portal");
 }
 
 static void onImprovSaved(const std::string& ssid, const std::string& pass) {
@@ -109,7 +126,8 @@ static void closeAverage(uint32_t now) {
 
 static void maybeUpload(uint32_t now) {
   if (!gUpload.due(now)) return;
-  if (!identityUsable(gIdStatus) || !netConnected() || !timeValid() || improvBusy()) return;
+  // Not while the setup AP is up: TLS needs most of the free heap, and the AP is only up during setup.
+  if (!identityUsable(gIdStatus) || !netConnected() || !timeValid() || improvBusy() || portalActive()) return;
   // A claim page is waiting: send what we have now instead of at the end of the 2.5-min window, but only a
   // real average (>= 4 samples after warm-up). With nothing to report it goes out as a health-only upload.
   if (!gClaimHash.empty() && gPending.empty() && gPms->pendingSamples() >= 4) {
@@ -131,6 +149,13 @@ static void maybeUpload(uint32_t now) {
                  {"heap", ESP.getFreeHeap()}};
   std::string claimSent = gClaimHash;
   info.claimTokenHash = claimSent;
+  bool setupSent = gCfg.setupInfoPending;
+  if (setupSent) {
+    info.hasSetup = true;
+    info.address = gCfg.address;
+    info.zip = gCfg.zip;
+    info.indoor = gCfg.indoor;
+  }
   std::string body = core::buildUploadJson(info, gPending.items());
   bool enroll = !gUpload.enrolled();
   size_t sent = gPending.items().size();
@@ -142,6 +167,12 @@ static void maybeUpload(uint32_t now) {
     bool claimDone = !claimSent.empty() && claimSent == gClaimHash;
     if (claimDone) gClaimHash.clear();
     if (enroll || claimDone) saveUploadState();
+    if (setupSent) {  // delivered: the device doesn't need the address any more
+      gCfg.address.clear();
+      gCfg.zip.clear();
+      gCfg.setupInfoPending = false;
+      saveConfig(gCfg);
+    }
   } else {
     gUploadsFail++;
   }
@@ -179,6 +210,11 @@ void setup() {
   devLogBootDetails();
 
   improvBegin(&gId, onImprovSaved, makeClaimRedirect);
+  portalBegin(&gId, ESP.getChipId(), onPortalSaved);
+  improvSetSetupInfo([](std::string& ssid, std::string& pw) {
+    ssid = portalApSsid();
+    pw = gId.setupPassword;
+  });
   uploaderBegin();
 
   PmsLink* link = devPmsLink();
@@ -191,6 +227,7 @@ void setup() {
 
   gFlash.begin(digitalRead(PIN_FLASH_BUTTON) == LOW, now);
   gSm.begin({gCfg.hasWifi(), netConnected(), false}, now);
+  portalSetWanted(gSm.outputs().apOn && identityUsable(gIdStatus), now);
   netApply(gSm.outputs().connectWifi, gCfg, gSm.outputs().apOn, now);
   logState("boot");
 }
@@ -199,6 +236,7 @@ void loop() {
   uint32_t now = millis();
   gPms->poll(now);
   improvPoll(now, netConnected());
+  portalPoll(now);
 
   static bool lastHeld = false;
   bool fired = gFlash.update(digitalRead(PIN_FLASH_BUTTON) == LOW, now);
@@ -212,8 +250,10 @@ void loop() {
     Serial.printf("[reset] FLASH long-press: WiFi + setup info erased (%s), identity kept\n", ok ? "ok" : "FAIL");
     logState("long_press");
   }
-  if (gSm.update({gCfg.hasWifi(), netConnected(), false}, now)) logState("update");
+  if (gSm.update({gCfg.hasWifi(), netConnected(), portalClientSeen()}, now)) logState("update");
   netApply(gSm.outputs().connectWifi, gCfg, gSm.outputs().apOn, now);
+  // The AP needs the setup password, so it only runs with a usable identity.
+  portalSetWanted(gSm.outputs().apOn && identityUsable(gIdStatus), now);
 
   digitalWrite(PIN_LED, core::ledLit(core::ledPatternFor(gSm.state()), now) ? LED_ON : LED_OFF);
 

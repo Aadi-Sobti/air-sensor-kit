@@ -22,3 +22,5 @@ void netTestEnd();                    // back to the saved network (netApply tak
 const char* netTestReason();          // why the last test ended (diagnostics; never includes credentials)
 int netTestFailure();                 // core::improv::WifiFailure of the last failed test
 void netResyncTime();                 // re-run NTP (after the server reported clock skew)
+void netSetApActive(bool on);         // the setup portal's access point is up (radio mode AP / AP+STA)
+bool netTesting();                    // a credential test (Improv or portal) is running

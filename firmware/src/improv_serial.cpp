@@ -14,11 +14,44 @@
 namespace im = core::improv;
 
 static im::Parser gParser;
+
+
 static const Identity* gId = nullptr;
 static ImprovSavedFn gOnSaved = nullptr;
 static ImprovRedirectFn gRedirect = nullptr;
 static bool gTesting = false;
 static std::string gSsid, gPass;  // in RAM only during the test; never logged
+
+// Factory/setup-info line command (firmware spec "Identity and factory mode"): "PFCMD SETUPINFO\n" makes the
+// sensor print its setup AP name + password once, so tools/setup_info.py (run by the founder/volunteer, never in
+// logs we capture) can show them before QR stickers exist. Only while unprovisioned (no short code) or within
+// 60 s of boot: physical USB access = ownership.
+static char gLine[24];
+static size_t gLineLen = 0;
+static SetupInfoFn gSetupInfo = nullptr;
+
+static void feedLine(uint8_t b) {
+  if (b == '\n' || b == '\r') {
+    gLine[gLineLen] = 0;
+    if (gLineLen && strcmp(gLine, "PFCMD SETUPINFO") == 0 && gSetupInfo) {
+      bool allowed = (gId && gId->shortCode.empty()) || millis() < 60000;
+      if (allowed) {
+        std::string ssid, pw;
+        gSetupInfo(ssid, pw);
+        Serial.printf("[setupinfo] ap_ssid=%s ap_password=%s\n", ssid.c_str(), pw.c_str());
+      } else {
+        Serial.println("[setupinfo] not available (unplug and plug in the sensor, then run the tool within 60 s)");
+      }
+    }
+    gLineLen = 0;
+    return;
+  }
+  if (b >= 0x20 && b < 0x7F && gLineLen < sizeof gLine - 1) gLine[gLineLen++] = static_cast<char>(b);
+  else gLineLen = sizeof gLine;  // binary (Improv) or too long: ignore this line
+  if (gLineLen >= sizeof gLine) gLineLen = sizeof gLine - 1;
+}
+
+void improvSetSetupInfo(SetupInfoFn fn) { gSetupInfo = fn; }
 
 static void send(const std::vector<uint8_t>& f) {
   Serial.write(f.data(), f.size());
@@ -76,10 +109,16 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
   while (budget-- > 0 && Serial.available() > 0) {
     im::Rpc rpc;
     bool invalid = false;
-    if (gParser.feed(static_cast<uint8_t>(Serial.read()), rpc, invalid)) {
+    uint8_t byte = static_cast<uint8_t>(Serial.read());
+    feedLine(byte);
+    if (gParser.feed(byte, rpc, invalid)) {
       send(im::errorFrame(im::kNoError));
       switch (rpc.command) {
         case im::kWifiSettings:
+          if (netTesting()) {  // the phone portal is testing credentials right now
+            send(im::errorFrame(im::kUnknownError));
+            break;
+          }
           gSsid = rpc.ssid;
           gPass = rpc.password;
           gTesting = true;

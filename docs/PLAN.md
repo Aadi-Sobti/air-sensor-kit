@@ -161,7 +161,30 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Edge; Safari shows the phone-path fallback.
 
 ### M6 Phone setup (captive portal): backup path
-- [ ] Soft AP + captive portal + in-flash page (EN/ES), credential test with reconnect polling.
+- [x] Soft AP + captive portal + in-flash page (EN/ES), credential test with reconnect polling.
+      Firmware 0.5.0. `lib/core/src/portal.*`: EN+ES strings (kept in flash), form validation (WPA2 8–63 chars or
+      open, 5-digit ZIP, address), server-rendered pages that work with JS off and in iOS's captive mini-browser
+      (form POST → "Connecting…" page with meta refresh to /status, so a phone that drops during the AP channel
+      switch just reloads), HTML escaping of WiFi names, AP name `<Prefix>-Setup-<code>` (fallback code from the
+      chip ID until M9 assigns one). `src/setup_portal.cpp`: WPA2 AP with the per-device setup password (decision
+      #7), wildcard DNS → 192.168.4.1, Apple/Android/Windows probe URLs + unknown hosts → 302 to the portal, AP held
+      60 s after success; web/DNS servers exist only while the AP is up; radio mode (STA/AP/AP+STA) decided in one
+      place (`net.cpp applyMode`); Improv and the portal can't test credentials at the same time. Setup info is
+      saved with the WiFi only after it connects, sent once in the next signed upload, then erased from the device.
+      `tools/setup_info.py` shows the setup WiFi name + password (+ WiFi QR text) over USB, only within 60 s of boot
+      or while no short code is assigned. Release guard allowlists exactly `http://192.168.4.1/` (local AP).
+      `pio test` 75/75 (9 portal tests); tools 28/28 (the QR escaping test caught a real backslash bug).
+      Size: release RAM 44.6% (36,548 B; +2.5 KB vs M5), Flash 49.3% (515,035 B).
+      ⚠ Watch on hardware: free heap during TLS should stay ≥ 4 KB (was 8 KB in M4); if not, move the portal's HTML
+      fragments to flash too. ⚠ M9 risk: OTA needs free space ≥ the new image, and the sketch area is ~1 MB, so the
+      firmware must stay under ~520 KB (now 515 KB). Plan size cuts before M9 (e.g. drop HTTPClient for a raw POST).
+      Deviation until M7: phone-path addresses are geocoded by the M7 job (ingest stays lean), so these sensors
+      appear on the map only after M7.
+- 👤 Phone checklist (after the soak, once 0.5.0 is flashed; run `python3 tools/setup_info.py --port <port>` in your
+      own terminal for the network name + password): on an iPhone AND an Android, join the network → the setup page
+      opens by itself · WiFi list appears · wrong password → friendly retry · right password → "You're all set!" ·
+      the first upload carries the address (agent checks the log + private_locations). Also: with no saved WiFi, the
+      setup network stays up (SETUP never times out); after a successful setup it disappears ~60 s later.
 - **Done when:** 👤 phone-setup checklist passes on at least one iPhone and one Android.
 
 ### M7 Corrections, snapshot, map
@@ -206,6 +229,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M6 phone setup built (portal, AP, setup-info tool) · native 75/75, tools 28/28, release RAM 44.6% / Flash 49.3% · next: flash 0.5.0 after the soak; phone + browser checklists.
 - 2026-11-21 · M5 built + spec-reviewed + deployed to dev (setup/claim pages, claim endpoint, claim token) · backend 33, native 66, web 18, tools 25 · next: flash 0.4.0 after the soak, founder browser checklist.
 - 2026-11-21 · Founder back: decisions (startup-only AP fallback, LED = WiFi only, SETUP AP never times out, agent may merge) · M2 review fixes (secure RNG, identity backup) `logs/m2-fresh-1795282632.log` · PRs #1 #2 merged · M3 cost table + ingest: 21 backend tests, simulator 0 problems · next: M4 needs the dev Firebase project (founder); meanwhile M5/M7 groundwork.
 - 2026-11-21 · M2 device core + M1 review fixes · 46/46 native tests, board boots twice with persisted identity (`logs/m2-boot*-*.log`) · next: M3 cost table + ingest on emulator.
