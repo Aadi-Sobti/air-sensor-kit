@@ -7,6 +7,8 @@
 #include "pms5003.h"
 #include "pms_link.h"
 
+PmsLink* devPmsLink();
+
 namespace {
 class FakePmsLink : public PmsLink {
  public:

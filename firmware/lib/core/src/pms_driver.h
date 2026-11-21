@@ -15,13 +15,18 @@ class PmsDriver {
   const core::PmsStats& stats() const { return parser_.stats(); }
   uint32_t warmupDiscards() const { return avg_.warmupDiscards(); }
   uint32_t timeouts() const { return timeouts_; }
+  // Frames that arrived without a read request: the sensor rebooted into active mode (its power-up
+  // default). We switch it back to passive and restart the warm-up.
+  uint32_t unsolicited() const { return unsolicited_; }
   bool hasLast() const { return hasLast_; }
+  // A frame arrived recently (sensor wired, powered, and answering).
+  bool healthy(uint32_t nowMs) const { return hasLast_ && nowMs - lastGood_ < kSilenceMs; }
   const core::PmsFrame& last() const { return last_; }
   const char* linkName() const { return link_.name(); }
 
-  static const uint32_t kReadPeriodMs = 2500;  // passive-mode request period
-  static const uint32_t kSilenceMs = 15000;    // no frame this long -> re-init the sensor
-  static const uint32_t kGapResetMs = 200;     // a 32-byte frame takes ~33 ms at 9600; longer gap = drop partial
+  static constexpr uint32_t kReadPeriodMs = 2500;  // passive-mode request period
+  static constexpr uint32_t kSilenceMs = 15000;    // no frame this long -> re-init the sensor
+  static constexpr uint32_t kGapResetMs = 200;     // a 32-byte frame takes ~33 ms at 9600; longer gap = drop partial
 
  private:
   void send(core::PmsCommand c);
@@ -31,6 +36,9 @@ class PmsDriver {
   core::PmsFrame last_{};
   bool hasLast_ = false;
   bool asleep_ = false;
-  uint32_t lastRequest_ = 0, lastFrame_ = 0, lastByte_ = 0;
+  uint32_t lastRequest_ = 0, lastFrame_ = 0, lastByte_ = 0, lastGood_ = 0;
   uint32_t timeouts_ = 0;
+  uint32_t unsolicited_ = 0;
+  bool requestOutstanding_ = false;
+  void reinit(uint32_t nowMs);
 };

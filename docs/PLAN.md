@@ -4,10 +4,11 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M2 (M0 done, M1 done pending founder smoke check)
+**Current milestone:** M3 (M0 done; M1 + M2 done except founder hardware checks)
 **Waiting on founder:**
 - [ ] Merge the stacked PRs in order (each builds on the previous one): #1 M0 → #2 M1 → later ones. The app blocked
       the agent from merging. https://github.com/Aadi-Sobti/air-sensor-kit/pulls
+- [ ] 👤 M2 LED + button check (5 min, see M2 below): look at the blue LED, then hold FLASH for 5 s.
 - [ ] 👤 M1 smoke check (2 min): with the board plugged in, blow out a match or candle ~1 m from the sensor, then tell
       the agent. It should see PM2.5 jump from ~0 to well above 20 µg/m³ in the next capture.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -62,8 +63,25 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       plausible PM values and few or no checksum errors.
 
 ### M2 Device core
-- [ ] Identity + config in LittleFS (atomic writes, schema version), device ID, secret, setup password.
-- [ ] State machine + LED patterns, FLASH long-press reset, NTP, saved-WiFi retry rules.
+- [x] Identity + config in LittleFS (atomic writes, schema version), device ID, secret, setup password.
+      `lib/core/src/kvstore.*` (key=value + schema + CRC-32; tmp+rename; torn/unrenamed tmp recovery),
+      `codes.*` (31-char no-look-alike alphabet, unbiased), `src/identity.cpp` (32-byte secret + 12-char setup
+      password from the ESP8266 hardware RNG; never logged), `src/device_config.cpp`.
+- [x] State machine + LED patterns, FLASH long-press reset, NTP, saved-WiFi retry rules.
+      `lib/core/src/device_state.*`; `src/net.cpp` (WiFi.persistent(false), auto-reconnect, NTP pool.ntp.org +
+      time.google.com once connected). The setup AP is only tracked/logged until M6.
+      `pio test -d firmware -e native` → 46/46 (22 M2 tests: CRC check value, nasty SSIDs, corruption, power loss
+      mid-write and before rename, 3-min AP fallback while retrying, router-off → PROBLEM, WiFi never auto-erased,
+      15-min AP idle timeout, settings accepted in any state, long-press once/debounce/held-at-boot, millis wrap).
+      Size: release RAM 38.6% (31,596 B), Flash 30.7% (320,883 B) (+~44 KB: LittleFS + WiFi stack).
+- 👤 Board: `logs/m2-boot1-1795273043.log` + `logs/m2-boot2-1795273113.log`: `[identity] loaded … fs=ok`,
+      `[state] SETUP … ap=1` on both boots (identity persisted across reboots; no secret/password in logs),
+      heap ~45 KB. WiFi/NTP on hardware **unverified** (no credentials on the device until M5/M6 setup exists).
+      **Founder LED checklist pending:** right now (no WiFi saved) the blue LED should blink slowly (1 s on,
+      1 s off) = SETUP. Holding FLASH 5 s should log `[reset] FLASH long-press` (agent can capture it).
+- M1 review fixes (landed here): re-init after silence restarts warm-up; unsolicited frames (sensor rebooted into
+      active mode) re-assert passive mode + warm-up (seen live at boot: `unsolicited=1`); partial frames dropped by
+      the gap reset are counted (`partial=`); driver moved to `lib/core` with 6 mock-sensor tests.
 - **Done when:** state-machine tests pass; 👤 LED checklist (hardware-test skill) passes.
 
 ### M3 Backend ingest (emulator) 🚦 cost gate
@@ -127,3 +145,4 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M2 device core + M1 review fixes · 46/46 native tests, board boots twice with persisted identity (`logs/m2-boot*-*.log`) · next: M3 cost table + ingest on emulator.
