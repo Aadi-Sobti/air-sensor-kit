@@ -1,0 +1,39 @@
+# Secrets: never commit
+.env
+.env.*
+!.env.example
+secrets/
+*service-account*.json
+# Private signing keys only. Public keys and pinned root CAs ARE committed.
+*private*.key
+*private*.pem
+
+# Logs and captures
+logs/
+
+# PlatformIO
+firmware/.pio/
+.pio/
+
+# Node / Firebase
+node_modules/
+backend/functions/lib/
+.firebase/
+firebase-debug.log
+*-debug.log
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Factory station output (contains chip IDs)
+tools/out/
+
+# OS / editor
+.DS_Store
+.vscode/
+
+# Web build output
+web/dist/
+backend/functions/lib-test/
