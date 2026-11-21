@@ -4,14 +4,13 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M3 (M0 done; M1 + M2 done except founder hardware checks)
+**Current milestone:** M4 (needs the founder's Firebase dev project) · M0–M3 done; M5/M7 groundwork next
 **Waiting on founder:**
-- [ ] Merge the stacked PRs in order (each builds on the previous one): #1 M0 → #2 M1 → later ones. The app blocked
-      the agent from merging. https://github.com/Aadi-Sobti/air-sensor-kit/pulls
-- [ ] 👤 M1 smoke check (2 min): with the board plugged in, blow out a match or candle ~1 m from the sensor, then tell
-      the agent. It should see PM2.5 jump from ~0 to well above 20 µg/m³ in the next capture.
+- [ ] Run the WiFi tool once the agent builds it (M4): one command in your own terminal; it asks for your WiFi
+      password hidden, and the agent never sees it.
+- [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
-- [ ] Review provisional decisions #3, #5, #6 (and #4 once the cost table is written) in docs/decisions.md.
+- [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
 
 ---
 
@@ -94,13 +93,28 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** state-machine tests pass; 👤 LED checklist (hardware-test skill) passes.
 
 ### M3 Backend ingest (emulator) 🚦 cost gate
-- [ ] 🚦 Readings-storage cost table (100 / 1k / 10k sensors) → founder decision (decisions.md #4).
-- [ ] `ingest` (registry, HMAC, timestamp window, rate limit, idempotency), rules, privacy tests, `device_sim.py`.
+- [x] 🚦 Readings-storage cost table (100 / 1k / 10k sensors) → founder decision (decisions.md #4).
+      `docs/COSTS.md` (prices read 2026-11-21 from cloud.google.com/firestore/pricing + /run/pricing). Design B,
+      provisional under the founder's 2026-11-21 permission: ≈ $2 / $37 / $380 per month.
+- [x] `ingest` (registry, HMAC, timestamp window, rate limit, idempotency), rules, privacy tests, `device_sim.py`.
+      `backend/functions/src/ingest.ts` (+ `lib/hmac.ts`, `lib/payload.ts`, `lib/redact.ts`).
+      `firebase emulators:exec --only functions,firestore "npm --prefix functions test"` → 21 passing: enroll (TOFU,
+      allowlisted only), re-enroll attempt refused, bad + tampered signature, unknown + retired device, ±10 min skew
+      (with server_time), replay (old → 401, resend → idempotent duplicate), 60/h rate limit, oversize/malformed/
+      invalid, hour buckets, privacy (address only in private_locations; not in devices/hourly docs or responses),
+      log redaction at any depth, HTTP end-to-end through the functions emulator.
+      `python3 tools/device_sim.py --devices 2 --minutes 120 --scenario all --target emulator` → 14 runs, 0 problems
+      (normal, smoke, stuck, bad_signature, replay, skew, burst); also runs in CI.
 - **Done when:** emulator tests pass, including bad signature, replay, unknown device, and skew; privacy tests pass.
 
 ### M4 Device → backend
 - [ ] `dev` firmware posts to the emulator over LAN HTTP. Then 👤 the founder creates the `dev` Firebase project
       (Blaze + budget alert) and the device posts over TLS with pinned roots.
+      2026-11-21: founder created `prosefire-dev` (Blaze, $5 budget, Firestore Standard us-east1), ran `firebase
+      login`, registered `devices/esp8266-11001626` (status allowlisted). Agent deployed rules, indexes, functions
+      (`health`, `ingest`) and the placeholder Hosting site: https://prosefire-dev.web.app. Live checks:
+      `/api/v1/health` → ok; `/api/v1/ingest` unsigned → 401 bad_signature for the registered board.
+      Next: firmware upload client (TLS + pinned roots, HMAC, backoff + jitter), `tools/` WiFi tool for the founder.
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
@@ -154,4 +168,5 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · Founder back: decisions (startup-only AP fallback, LED = WiFi only, SETUP AP never times out, agent may merge) · M2 review fixes (secure RNG, identity backup) `logs/m2-fresh-1795282632.log` · PRs #1 #2 merged · M3 cost table + ingest: 21 backend tests, simulator 0 problems · next: M4 needs the dev Firebase project (founder); meanwhile M5/M7 groundwork.
 - 2026-11-21 · M2 device core + M1 review fixes · 46/46 native tests, board boots twice with persisted identity (`logs/m2-boot*-*.log`) · next: M3 cost table + ingest on emulator.

@@ -15,7 +15,7 @@ describe("firestore rules (emulator)", () => {
     env = await initializeTestEnvironment({
       projectId: process.env.GCLOUD_PROJECT ?? "demo-prosefire",
       firestore: {
-        rules: readFileSync(resolve(__dirname, "../../firestore.rules"), "utf8"),
+        rules: readFileSync(resolve(__dirname, "../../../firestore.rules"), "utf8"),
         host: "127.0.0.1",
         port: 8080,
       },
