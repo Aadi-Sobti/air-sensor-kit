@@ -1,0 +1,130 @@
+#include "improv_serial.h"
+
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+
+#include <algorithm>
+#include <string>
+#include <vector>
+
+#include "config.h"
+#include "improv.h"
+#include "net.h"
+
+namespace im = core::improv;
+
+static im::Parser gParser;
+static const Identity* gId = nullptr;
+static ImprovSavedFn gOnSaved = nullptr;
+static bool gTesting = false;
+static std::string gSsid, gPass;  // in RAM only during the test; never logged
+
+static void send(const std::vector<uint8_t>& f) {
+  Serial.write(f.data(), f.size());
+  Serial.write('\n');  // keeps the log readable; Improv clients ignore bytes between frames
+}
+
+static std::string redirectUrl() {
+  // M5: the claim page (https://<domain>/claim#d=<id>&t=<token>). Until then, the sensor's public page.
+  return std::string(SITE_URL) + "/";
+}
+
+static void sendDeviceInfo() {
+  std::string name = std::string(PROJECT_NAME) + " sensor " + (gId && !gId->shortCode.empty() ? gId->shortCode : "");
+  send(im::resultFrame(im::kGetDeviceInfo, {PROJECT_NAME, FW_VERSION, "ESP8266", name}));
+}
+
+static void sendNetworks() {
+  bool wasOff = WiFi.getMode() == WIFI_OFF;
+  if (wasOff) {
+    WiFi.forceSleepWake();
+    WiFi.mode(WIFI_STA);
+  }
+  int n = WiFi.scanNetworks(false, true);  // blocking ~2 s; yields internally
+  struct Net { std::string ssid; int rssi; bool secure; };
+  std::vector<Net> nets;
+  for (int i = 0; i < n; i++) {
+    std::string s = WiFi.SSID(i).c_str();
+    if (s.empty()) continue;  // hidden networks: the user types the name
+    auto it = std::find_if(nets.begin(), nets.end(), [&](const Net& x) { return x.ssid == s; });
+    if (it != nets.end()) {
+      it->rssi = std::max(it->rssi, (int)WiFi.RSSI(i));
+      continue;
+    }
+    nets.push_back({s, WiFi.RSSI(i), WiFi.encryptionType(i) != ENC_TYPE_NONE});
+  }
+  WiFi.scanDelete();
+  std::sort(nets.begin(), nets.end(), [](const Net& a, const Net& b) { return a.rssi > b.rssi; });
+  if (nets.size() > 20) nets.resize(20);
+  for (auto& x : nets) send(im::resultFrame(im::kGetWifiNetworks, {x.ssid, std::to_string(x.rssi), x.secure ? "YES" : "NO"}));
+  send(im::resultFrame(im::kGetWifiNetworks, {}));  // end of list
+  if (wasOff && !gTesting) WiFi.mode(WIFI_OFF);
+}
+
+void improvBegin(const Identity* id, ImprovSavedFn onSaved) {
+  gId = id;
+  gOnSaved = onSaved;
+}
+
+bool improvBusy() { return gTesting; }
+
+void improvPoll(uint32_t nowMs, bool wifiConnected) {
+  int budget = 64;
+  while (budget-- > 0 && Serial.available() > 0) {
+    im::Rpc rpc;
+    bool invalid = false;
+    if (gParser.feed(static_cast<uint8_t>(Serial.read()), rpc, invalid)) {
+      send(im::errorFrame(im::kNoError));
+      switch (rpc.command) {
+        case im::kWifiSettings:
+          gSsid = rpc.ssid;
+          gPass = rpc.password;
+          gTesting = true;
+          Serial.println("[improv] testing new WiFi settings");  // no SSID/password in logs
+          send(im::stateFrame(im::kProvisioning));
+          netTestBegin(gSsid, gPass);
+          break;
+        case im::kGetCurrentState:
+          if (wifiConnected && !gTesting) {
+            send(im::stateFrame(im::kProvisioned));
+            send(im::resultFrame(im::kWifiSettings, {redirectUrl()}));
+          } else {
+            send(im::stateFrame(gTesting ? im::kProvisioning : im::kReady));
+          }
+          break;
+        case im::kGetDeviceInfo:
+          sendDeviceInfo();
+          break;
+        case im::kGetWifiNetworks:
+          sendNetworks();
+          break;
+        default:
+          send(im::errorFrame(im::kUnknownRpc));
+      }
+    } else if (invalid) {
+      send(im::errorFrame(im::kInvalidRpc));
+    }
+  }
+  if (!gTesting) return;
+  NetTest t = netTestPoll(nowMs);
+  if (t == NetTest::kConnected) {
+    gTesting = false;
+    netTestEnd();
+    if (gOnSaved) gOnSaved(gSsid, gPass);  // save only after the credentials worked
+    Serial.println("[improv] new WiFi works; saved");
+    send(im::stateFrame(im::kProvisioned));
+    send(im::resultFrame(im::kWifiSettings, {redirectUrl()}));
+  } else if (t == NetTest::kFailed) {
+    gTesting = false;
+    netTestEnd();  // the old saved network (if any) is untouched and resumes
+    Serial.println("[improv] new WiFi did not connect; nothing saved");
+    send(im::errorFrame(im::kUnableToConnect));
+    send(im::stateFrame(im::kReady));
+  }
+  if (!gTesting) {
+    gSsid.assign(gSsid.size(), '\0');
+    gPass.assign(gPass.size(), '\0');
+    gSsid.clear();
+    gPass.clear();
+  }
+}

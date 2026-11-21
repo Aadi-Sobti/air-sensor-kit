@@ -2,6 +2,8 @@
 #pragma once
 #include <stdint.h>
 
+#include <string>
+
 #include "device_config.h"
 
 void netBegin();
@@ -11,3 +13,10 @@ bool netConnected();
 int netRssi();
 // True once NTP has set the clock (must be true before any TLS connection; see firmware rules).
 bool timeValid();
+// Credential test for setup (Improv / portal): connect with new credentials WITHOUT saving them. While a test
+// runs, netApply() leaves the radio alone. Saved WiFi is never erased by a failed test.
+void netTestBegin(const std::string& ssid, const std::string& pass);
+enum class NetTest { kIdle, kRunning, kConnected, kFailed };
+NetTest netTestPoll(uint32_t nowMs);  // kFailed after a wrong password or ~25 s
+void netTestEnd();                    // back to the saved network (netApply takes over again)
+void netResyncTime();                 // re-run NTP (after the server reported clock skew)
