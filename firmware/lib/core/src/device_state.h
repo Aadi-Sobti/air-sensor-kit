@@ -1,5 +1,5 @@
 // Device state machine, LED patterns, and FLASH-button long-press detection. Pure C++ (native-testable).
-// Spec: .claude/rules/firmware.md "States and LED" + "Setup: Both paths" + "Reset"; docs/USER_FLOW.md.
+// Spec: firmware spec "States and LED" + "Setup: Both paths" + "Reset"; docs/USER_FLOW.md.
 #pragma once
 #include <cstdint>
 
