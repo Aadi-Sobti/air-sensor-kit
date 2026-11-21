@@ -6,6 +6,9 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M0
 **Waiting on founder:**
+- [ ] **GitHub Actions is blocked:** every CI job fails with "The job was not started because your account is locked
+      due to a billing issue" (run 44889722682). Fix at https://github.com/settings/billing (public repos are free;
+      this is an account payment/lock problem). Then re-run CI on PR #1 (`gh run rerun --failed` or push again).
 - [ ] Review and merge PR #1 (M0) on GitHub once CI is green: https://github.com/Aadi-Sobti/air-sensor-kit/pull/1
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
 - [ ] Optional: glance at the board. The onboard blue LED should blink once a second with the M0 firmware.
@@ -31,7 +34,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       `(cd backend && npm --prefix functions ci && firebase emulators:exec --only functions,firestore "npm --prefix functions test")`
       → 7 passing (health GET/POST + deny-by-default rules). `(cd web && npm ci && npm test && npm run build)` → 5/5, built.
 - [ ] CI (GitHub Actions): firmware build (both envs), native tests, functions tests on emulator, web build,
-      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`). Workflow written; first run on PR #1.
+      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`). Workflow written; **unverified**: GitHub refused to start the jobs (account billing lock, founder action).
       `python3 tools/check_release.py` → OK locally.
 - 👤 Hardware: dev firmware flashed to the founder's NodeMCU (FTDI FT232R, `/dev/cu.usbserial-A5069RR4`;
       esptool "Chip is ESP8266EX … Hash of data verified"). `serial_capture.py --seconds 15 --reset` →
