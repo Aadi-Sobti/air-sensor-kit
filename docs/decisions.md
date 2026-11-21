@@ -21,16 +21,17 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | Dev tools via Homebrew (platformio, firebase-cli, node@22, python@3.12). Functions run on Node 22 (deprecated by Google 2027-04-30 → move to Node 24 before then) | Founder approved |
 | 2026-11-21 | Approved dependencies (none on the device): pyserial (BSD), pytest (MIT), firebase-functions/firebase-admin/firebase/@firebase/rules-unit-testing (Apache-2.0), TypeScript (Apache-2.0), mocha + @types/mocha + @types/node (MIT, type definitions only), Vite + Vitest (MIT) | Build/test/web only; $0 |
 | 2026-11-21 | Local dev-assistant config stays out of the public repo; no tool credit lines in commits/PRs | Founder request |
+| 2026-11-21 | **Provisional** (founder allowed the recommendation): #3 RUNNING light = short blip every ~5 s | Shows the sensor is alive |
+| 2026-11-21 | **Provisional**: #5 separate Firebase project from Fire Watch | Separate nonprofit |
+| 2026-11-21 | **Provisional**: #6 continuous measurement, uploads every ~2.5 min; PMS read in passive mode every 2.5 s | Simple; revisit for sensor lifespan |
+| 2026-11-21 | Merging PRs stays with the founder (the agent was not allowed to merge); milestone PRs are stacked | Founder reviews each milestone |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
 |---|---|---|---|
 | 1 | Final project/nonprofit name (ProseFire is a placeholder) | Before M9 labels | Used in AP name, domain, labels |
 | 2 | Wire colors in the kit (which jumper wires get bought) | M2/M10 | Red=VIN, black=G, two distinct colors for D1/D2; the guide shows colors |
-| 3 | RUNNING light: short blip vs off | M2 | Blip (shows it's alive) |
 | 4 | Readings storage design (cost table first) | M3 | Decide from the cost table |
-| 5 | Same Firebase project as Fire Watch, or separate | M4 | Separate (separate nonprofit) |
-| 6 | Upload interval + PMS duty-cycling | M4 | Continuous, ~2.5 min uploads; revisit for sensor lifespan |
 | 7 | Setup AP security: WPA2 password in QR vs open network | M6 | WPA2: an open AP would send the home WiFi password unencrypted |
 | 8 | Per-device QR stickers (needs a cheap label printer) vs generic card | M6/M9 | Per-device stickers: zero typing for phone users |
 | 9 | Map library + tile source | M7 | Compare cost + usage policies first |

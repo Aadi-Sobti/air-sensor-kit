@@ -3,7 +3,7 @@
 
 #define PROJECT_NAME "ProseFire"   // placeholder name (decisions.md #1)
 #define AP_PREFIX PROJECT_NAME     // soft AP: <AP_PREFIX>-Setup-<SHORTCODE>, must stay <= 32 chars
-#define FW_VERSION "0.0.1"
+#define FW_VERSION "0.1.0"
 
 #ifndef FW_ENV
 #define FW_ENV "unknown"
@@ -12,7 +12,8 @@
 // Serial (USB): logs + Improv setup + factory mode
 #define SERIAL_BAUD 115200
 
-// PMS5003 on EspSoftwareSerial at 9600
+// PMS5003 on EspSoftwareSerial at 9600 8N1 (datasheet)
+#define PMS_BAUD 9600
 #define PIN_PMS_RX 5   // D1: PMS TXD -> ESP
 #define PIN_PMS_TX 4   // D2: ESP -> PMS RXD
 

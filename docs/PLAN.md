@@ -4,14 +4,14 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M0
+**Current milestone:** M2 (M0 done, M1 done pending founder smoke check)
 **Waiting on founder:**
-- [ ] **GitHub Actions is blocked:** every CI job fails with "The job was not started because your account is locked
-      due to a billing issue" (run 44889722682). Fix at https://github.com/settings/billing (public repos are free;
-      this is an account payment/lock problem). Then re-run CI on PR #1 (`gh run rerun --failed` or push again).
-- [ ] Review and merge PR #1 (M0) on GitHub once CI is green: https://github.com/Aadi-Sobti/air-sensor-kit/pull/1
+- [ ] Merge the stacked PRs in order (each builds on the previous one): #1 M0 → #2 M1 → later ones. The app blocked
+      the agent from merging. https://github.com/Aadi-Sobti/air-sensor-kit/pulls
+- [ ] 👤 M1 smoke check (2 min): with the board plugged in, blow out a match or candle ~1 m from the sensor, then tell
+      the agent. It should see PM2.5 jump from ~0 to well above 20 µg/m³ in the next capture.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
-- [ ] Optional: glance at the board. The onboard blue LED should blink once a second with the M0 firmware.
+- [ ] Review provisional decisions #3, #5, #6 (and #4 once the cost table is written) in docs/decisions.md.
 
 ---
 
@@ -33,8 +33,9 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - [x] Functions skeleton + one emulator test via `firebase emulators:exec`. Web skeleton builds.
       `(cd backend && npm --prefix functions ci && firebase emulators:exec --only functions,firestore "npm --prefix functions test")`
       → 7 passing (health GET/POST + deny-by-default rules). `(cd web && npm ci && npm test && npm run build)` → 5/5, built.
-- [ ] CI (GitHub Actions): firmware build (both envs), native tests, functions tests on emulator, web build,
-      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`). Workflow written; **unverified**: GitHub refused to start the jobs (account billing lock, founder action).
+- [x] CI (GitHub Actions): firmware build (both envs), native tests, functions tests on emulator, web build,
+      and a release-build guard (fails on `setInsecure`, `http://`, `DEV_`). Green after the founder cleared the
+      GitHub billing lock: run 44889781985 on PR #1 (firmware, backend, web all ✓).
       `python3 tools/check_release.py` → OK locally.
 - 👤 Hardware: dev firmware flashed to the founder's NodeMCU (FTDI FT232R, `/dev/cu.usbserial-A5069RR4`;
       esptool "Chip is ESP8266EX … Hash of data verified"). `serial_capture.py --seconds 15 --reset` →
@@ -45,8 +46,18 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       and 👤 the blink firmware flashes and a capture shows its log line.
 
 ### M1 PMS5003 driver
-- [ ] Frame parser (checksum, resync after garbage, partial frames), averaging, warm-up discard, error counter.
-- [ ] Passive-mode/sleep/wake commands per the datasheet. `FAKE_PMS` generator.
+- [x] Frame parser (checksum, resync after garbage, partial frames), averaging, warm-up discard, error counter.
+      `firmware/lib/core/src/pms5003.{h,cpp}`, protocol verified against Plantower manual v2.3 (cited in header).
+- [x] Passive-mode/sleep/wake commands per the datasheet. `FAKE_PMS` generator (`fake_pms.{h,cpp}`, env `dev-fake`).
+      `pio test -d firmware -e native` → 18/18 (15 PMS tests: good/corrupt/partial/garbage/bad-length/dropped-byte
+      resync/ack frames/commands byte-exact/warm-up incl. millis wrap/fake stream). Release guard OK.
+      Size: release RAM 35.7% (29,216 B), Flash 26.5% (276,975 B) (+~8 KB flash vs M0).
+- 👤 Real sensor (D1/D2): `logs/m1-pms-1795254828.log`: 35 frames, **0 checksum errors**, 0 timeouts, passive-mode ack
+      seen; PM2.5 = 0.0 µg/m³ (CF=1 and ATM) with ~110–125 particles >0.3 µm per 0.1 L: plausible for clean indoor air,
+      but the sensor's response to smoke is not yet shown (founder smoke check above). Heap steady ~48 KB after
+      shrinking the SoftwareSerial buffer (256→64 bytes saved ~8 KB). `dev-fake` on the board:
+      `logs/m1-fake-1795254958.log` PM2.5 ≈ 8.2 (6–10).
+- Note: opening the FTDI port on macOS resets the board even without `--reset` (seen in captures). Harmless.
 - **Done when:** native tests cover good, corrupt, and partial frames; 👤 a 60 s capture with a real sensor shows
       plausible PM values and few or no checksum errors.
 
@@ -115,3 +126,4 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 - 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
+- 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
