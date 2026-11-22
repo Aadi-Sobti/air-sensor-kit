@@ -46,13 +46,16 @@ def sign(data: bytes, private_key: Path) -> bytes:
     return data + sig + struct.pack("<L", len(sig))
 
 
-def verify_signed(image: bytes, private_key: Path) -> bool:
-    """Checks the image the way the sensor will: split off the signature, verify it with the public key."""
+def public_from_private(private_key: Path) -> bytes:
+    return subprocess.run(["openssl", "rsa", "-in", str(private_key), "-pubout"], check=True, capture_output=True).stdout
+
+
+def verify_signed(image: bytes, public_pem: bytes) -> bool:
+    """Checks the image the way the sensor will: split off the signature, verify it with the sensor's public key."""
     (n,) = struct.unpack("<L", image[-4:])
     body, sig = image[:-4 - n], image[-4 - n:-4]
-    pub = subprocess.run(["openssl", "rsa", "-in", str(private_key), "-pubout"], check=True, capture_output=True).stdout
     with tempfile.TemporaryDirectory() as d:
-        (Path(d) / "pub.pem").write_bytes(pub)
+        (Path(d) / "pub.pem").write_bytes(public_pem)
         (Path(d) / "sig").write_bytes(sig)
         r = subprocess.run(["openssl", "dgst", "-sha256", "-verify", str(Path(d) / "pub.pem"), "-signature",
                             str(Path(d) / "sig")], input=body, capture_output=True)
@@ -60,7 +63,9 @@ def verify_signed(image: bytes, private_key: Path) -> bool:
 
 
 def build(binary: Path, version: str, key: Path | None, stage: str, canary_percent: int, bench: list[str],
-          out: Path, name: str, unsigned: bool = False) -> dict:
+          out: Path, name: str, unsigned: bool = False, device_public_pem: bytes | None = None) -> dict:
+    """device_public_pem: the key built into the sensors' firmware (firmware/keys/). The image is verified against IT,
+    so a regenerated private key that the firmware doesn't know can't be published by mistake."""
     data = binary.read_bytes()
     if not data or data[0] != 0xE9:
         raise SystemExit(f"{binary} doesn't look like an ESP8266 firmware image")
@@ -72,8 +77,10 @@ def build(binary: Path, version: str, key: Path | None, stage: str, canary_perce
         image, fname = data, f"{name}-{version}-UNSIGNED-test.bin"
     else:
         image = sign(data, key)
-        if not verify_signed(image, key):
-            raise SystemExit("signature check failed right after signing; nothing written")
+        pub = device_public_pem if device_public_pem is not None else public_from_private(key)
+        if not verify_signed(image, pub):
+            raise SystemExit("the signature doesn't match the key built into the firmware (firmware/keys/); "
+                             "nothing written. Was the key regenerated without rebuilding the firmware?")
         fname = f"{name}-{version}.bin.signed"
     if len(image) > MAX_IMAGE:
         raise SystemExit(f"image is {len(image)} bytes, over the {MAX_IMAGE}-byte limit")
@@ -108,8 +115,11 @@ def main(argv=None) -> int:
         raise SystemExit(f"{key} not found (create it with tools/ota_keys.py {args.env})")
     version = fw_version(ROOT / "firmware" / "src" / "config.h")
     binary = ROOT / "firmware" / ".pio" / "build" / args.env / "firmware.bin"
+    pub_file = ROOT / "firmware" / "keys" / f"ota_{'dev' if args.env == 'dev' else 'release'}_public.pem"
+    if not args.unsigned and not pub_file.exists():
+        raise SystemExit(f"{pub_file} not found: the firmware has no key for this build type")
     m = build(binary, version, None if args.unsigned else key, args.stage, args.canary_percent, args.bench,
-              Path(args.out), "prosefire", args.unsigned)
+              Path(args.out), "prosefire", args.unsigned, None if args.unsigned else pub_file.read_bytes())
     print(f"Wrote {m['path']} ({m['size']} bytes) and manifest.json: version {m['version']}, stage {m['stage']}"
           + (f" {m['canary_percent']}%" if m["stage"] == "canary" else "")
           + (f", bench {', '.join(m['bench'])}" if m["bench"] else ""))

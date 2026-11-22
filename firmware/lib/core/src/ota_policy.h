@@ -33,6 +33,23 @@ int otaBucket(const std::string& deviceId);
 // Should this device install the manifest's image now?
 bool otaEligible(const OtaManifest& m, const std::string& deviceId, const std::string& currentVersion);
 
+// What to do after a failed install. A bad image (wrong signature, not a firmware image, doesn't fit) is never
+// downloaded again; a network/TLS/flash-write problem is retried at the next daily check, up to kOtaMaxTries times.
+// Failures are remembered per image (path + size), so publishing a fixed image under a new name is tried right away.
+// Updater error codes from the ESP8266 core's Updater.h (0 = the failure happened before writing, e.g. HTTP/TLS).
+constexpr int kOtaMaxTries = 3;
+bool otaBadImageError(int updaterError);
+class OtaFailures {
+ public:
+  void record(const std::string& image, int updaterError);
+  bool blocks(const std::string& image) const;
+
+ private:
+  std::string image_;
+  int tries_ = 0;
+  bool bad_ = false;
+};
+
 // When to check: first check kFirstCheckMs after the device reaches RUNNING with valid time, then every 24 h plus a
 // per-device offset (0..59 min) so a whole neighborhood doesn't download at the same moment.
 constexpr uint32_t kOtaFirstCheckMs = 2UL * 60 * 1000;

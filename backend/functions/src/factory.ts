@@ -14,9 +14,12 @@
 //  - Chip already registered and never used in the field (status "allowlisted"): same short code, NEW owner code
 //    (old one stops working), and its enrolled secret is cleared (the board was re-flashed, so it has a new one).
 //    This covers "registration worked but printing failed / the laptop lost the answer" (tools.md).
-//  - Chip already used in the field (active/retired): only with reprovision=true, and never while a home address is
-//    still stored (the previous owner must use "Delete my data" first, or the founder handles it). Nothing is deleted
-//    here except the old secret and owner code.
+//  - Chip in use ("active"): always refused. The owner uses "Delete my data" first (or the founder handles it).
+//  - Chip whose owner deleted their data ("retired"): only with reprovision=true, only once no address is stored AND
+//    the nightly archive purge has finished (the purge works from the old enrollment date, so re-enrolling earlier
+//    would leave the old owner's archived readings behind). Every per-owner field is reset so nothing of the previous
+//    home carries over (name, inside/outside, Sensor.Community registration at the old cell, map entry).
+//    Nothing else is deleted here: only the old secret and owner code are replaced.
 import { createHash, randomInt } from "node:crypto";
 
 import { FieldValue, Firestore } from "firebase-admin/firestore";
@@ -103,9 +106,11 @@ export async function handleFactory(db: Firestore, cfg: FactoryConfig, req: Fact
     const [dev, loc] = await Promise.all([tx.get(devRef), tx.get(db.doc(`private_locations/${deviceId}`))]);
     const status = dev.exists ? String(dev.get("status") ?? "") : "";
     let shortCode = dev.exists ? (dev.get("shortCode") as string | undefined) : undefined;
-    if (dev.exists && status !== "allowlisted") {
-      if (!reprovision) return { status: 409, error: "already_in_use", shortCode };
+    const reused = dev.exists && status !== "allowlisted";
+    if (reused) {
+      if (status !== "retired" || !reprovision) return { status: 409, error: "already_in_use", shortCode };
       if (loc.exists) return { status: 409, error: "owner_data_present", shortCode };
+      if (dev.get("archivePurgePending") === true) return { status: 409, error: "purge_pending", shortCode };
     }
     if (!shortCode) {
       for (let i = 0; i < 5 && !shortCode; i++) {
@@ -119,10 +124,17 @@ export async function handleFactory(db: Firestore, cfg: FactoryConfig, req: Fact
     oldCodes.forEach((d) => tx.delete(d.ref));
     tx.set(db.doc(`owner_codes/${ownerHash}`), { deviceId, v, createdAt: FieldValue.serverTimestamp() });
     tx.delete(db.doc(`device_secrets/${deviceId}`)); // re-flashed board = new identity; enrolled again on first upload
+    if (reused) tx.delete(db.doc(`public_sensors/${deviceId}`)); // derived map entry (already gone after a deletion)
+    const del = FieldValue.delete();
+    const ownerReset = reused ? {
+      scRegistered: del, name: del, indoor: del, deletedAt: del, enrolledAt: del, archivePurgePending: del, claimedAt: del,
+      lastSeen: del, fw: del, rssi: del, clockSkewFlag: del, usedClaimTokenHash: del, locationPending: del,
+      publicCellPending: del, locationNotFound: del,
+    } : {};
     tx.set(devRef, {
       status: "allowlisted", shortCode, ownerCodeVersion: v, station, fwAtFactory: fw,
       registeredAt: FieldValue.serverTimestamp(), ...(dev.exists ? { reprovisionedAt: FieldValue.serverTimestamp() } : {}),
-      claimTokenHash: FieldValue.delete(), claimTokenExpires: FieldValue.delete(),
+      claimTokenHash: del, claimTokenExpires: del, ...ownerReset,
     }, { merge: true });
     return { shortCode, reprovisioned: dev.exists };
   });

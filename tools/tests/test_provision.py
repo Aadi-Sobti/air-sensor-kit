@@ -16,8 +16,10 @@ SITE = "https://example.test"
 class FakeBoard:
     """Simulates the firmware's USB line protocol (boot lines, SETUPINFO, SETCODE + restart)."""
 
-    def __init__(self, port, *, save_ok=True, code_after_restart=None):
-        self.code = ""
+    def __init__(self, port, *, save_ok=True, code_after_restart=None, env="release", code="", enrolled=0):
+        self.code = code
+        self.env = env
+        self.enrolled = enrolled
         self.save_ok = save_ok
         self.code_after_restart = code_after_restart
         self.out = ""
@@ -25,8 +27,9 @@ class FakeBoard:
         self.sent = []
 
     def _boot(self):
-        self.out += "garbage\x00\xff[boot] ProseFire fw=0.7.2 env=release id=esp8266-11001626 reset=External\r\n"
-        self.out += f"[identity] loaded short_code={self.code or '(unassigned)'} fs=ok\r\n"
+        self.out += f"garbage\x00\xff[boot] ProseFire fw=0.7.2 env={self.env} id=esp8266-11001626 reset=External\r\n"
+        self.out += (f"[identity] loaded short_code={self.code or '(unassigned)'} fs=ok config=loaded "
+                     f"enrolled={self.enrolled}\r\n")
 
     def reset(self):
         self._boot()
@@ -57,23 +60,26 @@ class FakeBoard:
         self.closed = True
 
 
-def reg_ok(site, key, device_id, fw):
+def reg_ok(site, key, device_id, fw, reprovision=False):
     assert key == "k" * 64 and device_id == "esp8266-11001626" and fw == "0.7.2"
     return {"ok": True, "shortCode": "K7Q2MX", "ownerCode": "7KQ2-MX4P-R9"}
 
 
-def run(tmp_path, board=FakeBoard, register_fn=reg_ok, size=4, firmware=True):
+def run(tmp_path, board=FakeBoard, register_fn=reg_ok, size=4, firmware=True, fw_bytes=b"\xe9 release image",
+        **kw):
     flashed = []
     boards = []
+    fw = tmp_path / "fw.bin"
+    fw.write_bytes(fw_bytes)
 
     def factory(port):
         b = board(port)
         boards.append(b)
         return b
 
-    r = pv.provision("/dev/fake", firmware=Path("fw.bin") if firmware else None, site=SITE, key="k" * 64, row=1,
+    r = pv.provision("/dev/fake", firmware=fw if firmware else None, site=SITE, key="k" * 64, row=1,
                      out=tmp_path, board_factory=factory, flash_fn=lambda p, f: flashed.append(f),
-                     size_fn=lambda p: size, register_fn=register_fn, say=lambda m: None)
+                     size_fn=lambda p: size, register_fn=register_fn, say=lambda m: None, **kw)
     return r, flashed, boards
 
 
@@ -83,7 +89,7 @@ def test_happy_path_registers_confirms_and_makes_labels(tmp_path):
     assert flashed and r.steps == ["flashed", "registered", "confirmed"]
     assert (r.device_id, r.short_code, r.fw) == ("esp8266-11001626", "K7Q2MX", "0.7.2")
     assert r.label.exists() and r.label.name == "labels-K7Q2MX.pdf"
-    assert "PFCMD SETCODE K7Q2MX" in boards[0].sent and boards[0].closed
+    assert "PFCMD SETCODE K7Q2MX" in boards[-1].sent and all(b.closed for b in boards)
 
 
 def test_no_label_when_registration_fails(tmp_path):
@@ -92,7 +98,7 @@ def test_no_label_when_registration_fails(tmp_path):
     r, _, boards = run(tmp_path, register_fn=refuse)
     assert not r.ok and "401" in r.reason
     assert not list(tmp_path.glob("*.pdf"))
-    assert not any(s.startswith("PFCMD SETCODE") for s in boards[0].sent)
+    assert not any(s.startswith("PFCMD SETCODE") for b in boards for s in b.sent)
 
 
 def test_no_label_when_the_board_cant_save_or_reports_another_code(tmp_path):
@@ -113,6 +119,34 @@ def test_reprint_without_flashing(tmp_path):
     assert r.ok and not flashed and r.steps == ["registered", "confirmed"]
 
 
+def test_board_already_in_a_kit_or_home_is_never_erased(tmp_path):
+    for kw in ({"code": "K7Q2MX"}, {"enrolled": 1}):
+        r, flashed, _ = run(tmp_path, board=lambda p, kw=kw: FakeBoard(p, **kw))
+        assert not r.ok and "already belongs" in r.reason and not flashed, kw
+    # Reprint mode on a board that has sent readings from a home: refused too.
+    r, _, _ = run(tmp_path, board=lambda p: FakeBoard(p, enrolled=1), firmware=False)
+    assert not r.ok and "readings" in r.reason
+
+
+def test_reprovision_flag_reaches_the_server(tmp_path):
+    seen = []
+
+    def reg(site, key, device_id, fw, reprovision=False):
+        seen.append(reprovision)
+        return reg_ok(site, key, device_id, fw)
+    r, flashed, _ = run(tmp_path, board=lambda p: FakeBoard(p, code="K7Q2MX"), register_fn=reg, reprovision=True)
+    assert r.ok and flashed and seen == [True]
+
+
+def test_kits_get_release_firmware_only(tmp_path):
+    r, flashed, _ = run(tmp_path, fw_bytes=b"\xe9 ... http://example.test/ingest ...")
+    assert not r.ok and "release build" in r.reason and not flashed
+    r, _, _ = run(tmp_path, board=lambda p: FakeBoard(p, env="dev"))
+    assert not r.ok and "dev build" in r.reason
+    r, _, _ = run(tmp_path, board=lambda p: FakeBoard(p, env="dev"), allow_dev=True)
+    assert r.ok
+
+
 def test_csv_log_never_has_secrets(tmp_path):
     r, _, _ = run(tmp_path)
     pv.log_csv(tmp_path / "log.csv", r)
@@ -124,7 +158,8 @@ def test_csv_log_never_has_secrets(tmp_path):
 def test_patterns_match_real_firmware_lines():
     assert pv.BOOT_RE.search("[boot] ProseFire fw=0.7.2 env=dev id=esp8266-11001626 reset=External System").group(3) \
         == "esp8266-11001626"
-    assert pv.IDENTITY_RE.search("[identity] loaded short_code=(unassigned) fs=ok").group(2) == "(unassigned)"
+    m = pv.IDENTITY_RE.search("[identity] loaded short_code=(unassigned) fs=ok config=loaded enrolled=1\r\n")
+    assert m.group(2) == "(unassigned)" and m.group(3) == "1"
     assert pv.SAVED_RE.search("[factory] short_code=K7Q2MX saved=1").groups() == ("K7Q2MX", "1")
     assert pv.SETUPINFO_RE.search("[setupinfo] ap_ssid=ProseFire-Setup-K7Q2MX ap_password=ABC") is None  # no line end
 

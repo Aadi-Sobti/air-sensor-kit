@@ -26,7 +26,7 @@ static std::string gDeviceId;
 static bool gOn = false;
 static bool gScheduled = false;
 static uint32_t gNextCheck = 0;
-static std::string gFailedVersion;  // don't download the same bad image again until the next restart
+static core::OtaFailures gFailures;  // bad images are skipped; network problems retried up to 3 times
 
 static BearSSL::PublicKey* loadKey(const char* pem) {
   size_t n = strlen_P(pem);
@@ -97,7 +97,8 @@ static bool fetchManifest(core::OtaManifest& m) {
 static void check(const std::string& currentVersion) {
   core::OtaManifest m;
   if (!fetchManifest(m)) return;
-  if (!core::otaEligible(m, gDeviceId, currentVersion) || m.version == gFailedVersion) {
+  std::string image = m.path + ":" + std::to_string(m.size);
+  if (!core::otaEligible(m, gDeviceId, currentVersion) || gFailures.blocks(image)) {
     LOGF("[ota] up to date (have %s, published %s stage=%s)\n", currentVersion.c_str(), m.version.c_str(),
                   m.stage.c_str());
     return;
@@ -121,7 +122,7 @@ static void check(const std::string& currentVersion) {
     return;
   }
   Update.installSignature(nullptr, nullptr);  // the checker objects die with this function
-  gFailedVersion = m.version;
+  gFailures.record(image, Update.getError());
   // UPDATE_ERROR_SIGN (12) = the image wasn't signed with our key: it is never booted.
   LOGF("[ota] failed result=%d err=%d update_err=%u (%s); still on %s\n", (int)r, ESPhttpUpdate.getLastError(),
                 Update.getError(), ESPhttpUpdate.getLastErrorString().c_str(), currentVersion.c_str());

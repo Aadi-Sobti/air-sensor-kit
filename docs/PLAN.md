@@ -341,19 +341,26 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       installed (`logs/m9-ota-recover-*.log`). Only 1 bench board exists → the "2 bench boards" check is half done.
       RAM: log format strings + setup-page HTML moved to flash (static RAM 37.6 → 34.5 KB); idle heap 36.9 KB (0.6.1:
       33.8 KB); free heap during an upload 7.6 KB (was 5.3 KB). Size: release Flash 539,847 B (52 %).
-- [x] Factory provisioning. Backend `POST /api/v1/factory/register` (`src/factory.ts`, 8 emulator tests): per-station
+- [ ] Factory provisioning: **built + tested in software; the success path is UNVERIFIED on hardware** (needs a fresh
+      board: SETCODE save → restart → code read back → label). Backend `POST /api/v1/factory/register` (`src/factory.ts`, 8 emulator tests): per-station
       keys (SHA-256 hashes in the `FACTORY_KEY_HASHES` secret; `tools/factory_station.py new|revoke`), unique 6-char
       short code (reserved in `short_codes/`), owner code stored only as a keyed hash; re-registering an unused board
-      keeps its code and issues a new owner code (reprints); a board used in the field needs `reprovision` and no stored
-      address (nothing is deleted). Deployed to **dev**; live: no key → 401, valid key → passes auth.
+      keeps its code and issues a new owner code (reprints); a board in use is always refused; a board whose owner used
+      "Delete my data" needs `reprovision`, no stored address, and a finished archive purge, and every per-owner field is
+      reset (nothing is deleted). Deployed to **dev**; live: no key → 401, valid key → passes auth.
       Firmware: `PFCMD SETCODE <code>` (same 60 s / unprovisioned gate as setup info) saves the code to /identity (+ backup)
       and restarts. `tools/provision.py`: detect (CH340/FTDI/CP210x) → flash-size check → erase + flash (esptool) →
       chip ID + setup WiFi over USB → register → set code → confirm from the restart → labels → CSV log (no secrets);
       batch = one worker per port; `--no-flash` reprint. `tools/labels.py`: SETUP + OWNER labels on one row of a 4"×2"
       (10/sheet) letter sticker sheet; QR via segno; PDF written in-house; QR codes verified with Apple's CoreImage reader
-      in the tests. Hardware: on the bench board (already in use) the tool read boot/identity/setup info and the dev
-      server refused it (409 already_in_use), no label (`logs/prov-test/provision-log.csv`).
-      Tools tests 48/48, native 89/89, backend 100/100.
+      in the tests. Safety (spec review): kits get release firmware only (`--allow-dev` for tests; the file is scanned
+      with the release guard first); a board that has a code or has uploaded is never erased (checked over USB before
+      flashing); `--reprovision` is founder-only. Hardware: on the bench board the tool read boot/identity/setup info;
+      the dev server refused it (409 already_in_use) and, after the review fixes, the tool refused it locally before
+      erasing or registering ("already sent readings from a home"); no label (`logs/prov-test/provision-log.csv`).
+      Spec-review fixes also: OTA retries network failures at the next daily check (max 3) and skips only bad images
+      (per image file); `ota_publish.py` verifies against the key built into the firmware. Board updated over WiFi
+      0.7.2 → 0.7.3 with these fixes (`logs/m9-ota-073-*.log`). Tools tests 52/52, native 90/90, backend 101/101.
 - 👤 Pending: (1) a second bench board for the 2-board OTA check; (2) a volunteer provisions a **fresh** board in < 2 min
       from printed instructions (needs a new NodeMCU; the bench board is in use); (3) approve label wording (draft) and
       pick the sticker product; (4) production OTA key (M11).

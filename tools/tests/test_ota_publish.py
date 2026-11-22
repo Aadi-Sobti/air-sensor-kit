@@ -32,10 +32,11 @@ def test_signed_image_layout_and_manifest(tmp_path, key):
     (n,) = struct.unpack("<L", img[-4:])
     assert n == 256  # RSA-2048
     assert img[:len(raw)] == raw and len(img) == len(raw) + 256 + 4
-    assert op.verify_signed(img, key)
+    pub = op.public_from_private(key)
+    assert op.verify_signed(img, pub)
     tampered = bytearray(img)
     tampered[50] ^= 1
-    assert not op.verify_signed(bytes(tampered), key)
+    assert not op.verify_signed(bytes(tampered), pub)
     man = json.loads((out / "manifest.json").read_text())
     assert man == m
     assert man["path"] == "/fw/prosefire-0.7.1.bin.signed" and man["size"] == len(img)
@@ -82,3 +83,15 @@ def test_key_source_file_is_public_only(key):
 def test_release_key_needs_the_founder(capsys):
     assert ota_keys.main(["release"]) == 2
     assert "founder" in capsys.readouterr().out
+
+
+def test_refuses_a_key_the_firmware_does_not_know(tmp_path, key):
+    other = tmp_path / "other-private.pem"
+    subprocess.run(["openssl", "genrsa", "-out", str(other), "2048"], check=True, capture_output=True)
+    with pytest.raises(SystemExit):
+        op.build(fake_bin(tmp_path), "0.7.1", key, "all", 0, [], tmp_path / "o", "p",
+                 device_public_pem=op.public_from_private(other))
+    assert not (tmp_path / "o" / "manifest.json").exists()
+    m = op.build(fake_bin(tmp_path), "0.7.1", key, "all", 0, [], tmp_path / "o", "p",
+                 device_public_pem=op.public_from_private(key))
+    assert m["stage"] == "all"

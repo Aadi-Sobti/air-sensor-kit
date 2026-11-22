@@ -3,7 +3,7 @@
 
 #define PROJECT_NAME "ProseFire"   // placeholder name (decisions.md #1)
 #define AP_PREFIX PROJECT_NAME     // soft AP: <AP_PREFIX>-Setup-<SHORTCODE>, must stay <= 32 chars
-#define FW_VERSION "0.7.2"
+#define FW_VERSION "0.7.3"
 
 #ifndef FW_ENV
 #define FW_ENV "unknown"

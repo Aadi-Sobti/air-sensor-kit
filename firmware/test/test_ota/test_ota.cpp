@@ -87,6 +87,23 @@ static void test_jitter_spreads_checks() {
   TEST_ASSERT_EQUAL_UINT32(a, otaJitterMs("esp8266-1"));
 }
 
+static void test_failed_installs() {
+  OtaFailures f;
+  const std::string a = "/fw/p-0.7.2.bin.signed:546148", fixed = "/fw/p-0.7.3.bin.signed:546200";
+  TEST_ASSERT_FALSE(f.blocks(a));
+  f.record(a, 6);   // stream error (network): retry later
+  f.record(a, 0);   // HTTP/TLS failure before writing
+  TEST_ASSERT_FALSE(f.blocks(a));
+  f.record(a, 14);  // out of memory
+  TEST_ASSERT_TRUE(f.blocks(a));  // 3 tries: stop until restart
+  TEST_ASSERT_FALSE(f.blocks(fixed));
+  f.record(fixed, 12);  // bad signature: never again
+  TEST_ASSERT_TRUE(f.blocks(fixed));
+  TEST_ASSERT_FALSE(f.blocks(a));  // only the latest image is remembered
+  TEST_ASSERT_TRUE(otaBadImageError(12) && otaBadImageError(10) && otaBadImageError(4));
+  TEST_ASSERT_FALSE(otaBadImageError(0) || otaBadImageError(6) || otaBadImageError(14) || otaBadImageError(1));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_parse_good_manifest);
@@ -94,5 +111,6 @@ int main(int, char**) {
   RUN_TEST(test_versions);
   RUN_TEST(test_rollout_stages);
   RUN_TEST(test_jitter_spreads_checks);
+  RUN_TEST(test_failed_installs);
   return UNITY_END();
 }

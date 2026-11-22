@@ -8,7 +8,7 @@ import { logger } from "firebase-functions";
 
 import { FactoryRequest, handleFactory, newShortCode, parseKeyHashes, stationKeyHash } from "../src/factory";
 import { formatOwnerCode, normalizeOwnerCode, ownerCodeHash } from "../src/lib/ownerCode";
-import { checkOwnerCode } from "../src/owner/api";
+import { checkOwnerCode, deleteSensorData } from "../src/owner/api";
 
 const PROJECT = process.env.GCLOUD_PROJECT ?? "demo-prosefire";
 const PEPPER = "test-pepper-0123456789abcdef0123456789abcdef";
@@ -105,25 +105,47 @@ describe("factory register (emulator)", () => {
     assert.equal((await db.collection("owner_codes").where("deviceId", "==", id).get()).size, 1);
   });
 
-  it("a chip used in the field needs reprovision=true and no stored address", async () => {
+  it("a chip in use is always refused; nothing is deleted", async () => {
     const id = newId();
     const first = await handleFactory(db, cfg, req({ deviceId: id }));
     await db.doc(`devices/${id}`).set({ status: "active" }, { merge: true });
     await db.doc(`private_locations/${id}`).set({ address: "123 Example Street", zip: "10027" });
-    const r1 = await handleFactory(db, cfg, req({ deviceId: id }));
-    assert.equal(r1.status, 409);
-    assert.equal(r1.body.error, "already_in_use");
-    const r2 = await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }));
-    assert.equal(r2.status, 409);
-    assert.equal(r2.body.error, "owner_data_present");
-    assert.ok((await db.doc(`private_locations/${id}`).get()).exists, "nothing is deleted");
+    for (const reprovision of [false, true]) {
+      const r = await handleFactory(db, cfg, req({ deviceId: id, reprovision }));
+      assert.equal(r.status, 409);
+      assert.equal(r.body.error, "already_in_use");
+    }
+    await db.doc(`private_locations/${id}`).delete();
+    assert.equal((await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }))).body.error, "already_in_use");
     assert.equal(typeof await checkOwnerCode(db, PEPPER, "203.0.113.52", String(first.body.ownerCode), Date.now()), "object");
-    await db.doc(`private_locations/${id}`).delete(); // owner used "Delete my data"
-    await db.doc(`devices/${id}`).set({ status: "retired" }, { merge: true });
-    const r3 = await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }));
-    assert.equal(r3.status, 200);
-    assert.equal((await db.doc(`devices/${id}`).get()).get("status"), "allowlisted");
-    assert.equal(r3.body.shortCode, first.body.shortCode);
+  });
+
+  it("after Delete my data: only with reprovision, after the archive purge, with every per-owner field reset", async () => {
+    const id = newId();
+    const first = await handleFactory(db, cfg, req({ deviceId: id }));
+    await db.doc(`devices/${id}`).set({ status: "active", name: "Porch", indoor: true, scRegistered: true,
+      enrolledAt: new Date(), fw: "0.7.0", rssi: -50 }, { merge: true });
+    await db.doc(`private_locations/${id}`).set({ address: "123 Example Street", zip: "10027" });
+    await db.doc(`readings_hourly/${id}_2026112210`).set({ deviceId: id, r: { "1": { pm25_cf1: 5 } } });
+    await deleteSensorData(db, id, Date.now()); // the owner's "Delete my data"
+    assert.equal((await handleFactory(db, cfg, req({ deviceId: id }))).body.error, "already_in_use"); // needs the flag
+    const pending = await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }));
+    assert.equal(pending.status, 409);
+    assert.equal(pending.body.error, "purge_pending"); // old archived readings not purged yet
+    await db.doc(`devices/${id}`).set({ archivePurgePending: false }, { merge: true }); // nightly purge done
+    await db.doc(`private_locations/${id}`).set({ address: "x" }); // (if an address somehow exists: refused)
+    assert.equal((await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }))).body.error, "owner_data_present");
+    await db.doc(`private_locations/${id}`).delete();
+    const r = await handleFactory(db, cfg, req({ deviceId: id, reprovision: true }));
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.shortCode, first.body.shortCode);
+    const dev = (await db.doc(`devices/${id}`).get()).data()!;
+    assert.equal(dev.status, "allowlisted");
+    for (const f of ["scRegistered", "name", "indoor", "deletedAt", "enrolledAt", "archivePurgePending", "fw", "rssi"]) {
+      assert.ok(!(f in dev), `${f} must be reset`);
+    }
+    assert.equal((await db.doc(`public_sensors/${id}`).get()).exists, false);
+    assert.equal(typeof await checkOwnerCode(db, PEPPER, "203.0.113.53", String(r.body.ownerCode), Date.now()), "object");
   });
 
   it("formats owner codes the way the card prints them", () => {

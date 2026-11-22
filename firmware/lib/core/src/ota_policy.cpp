@@ -182,6 +182,25 @@ bool otaEligible(const OtaManifest& m, const std::string& deviceId, const std::s
   return m.stage == "canary" && otaBucket(deviceId) < m.canaryPercent;
 }
 
+bool otaBadImageError(int e) {
+  // 4 SPACE, 5 SIZE, 9 NEW_FLASH_CONFIG, 10 MAGIC_BYTE, 11 BOOTSTRAP, 12 SIGN
+  return e == 4 || e == 5 || e == 9 || e == 10 || e == 11 || e == 12;
+}
+
+void OtaFailures::record(const std::string& image, int updaterError) {
+  if (image != image_) {
+    image_ = image;
+    tries_ = 0;
+    bad_ = false;
+  }
+  if (otaBadImageError(updaterError)) bad_ = true;
+  else tries_++;
+}
+
+bool OtaFailures::blocks(const std::string& image) const {
+  return image == image_ && (bad_ || tries_ >= kOtaMaxTries);
+}
+
 uint32_t otaJitterMs(const std::string& deviceId) { return (fnv1a("ota:" + deviceId) % 3600u) * 1000u; }
 
 }  // namespace core

@@ -37,6 +37,7 @@ _venv.ensure("serial")
 import serial  # noqa: E402
 import serial.tools.list_ports  # noqa: E402
 
+import check_release  # noqa: E402
 import labels  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -46,7 +47,7 @@ MIN_FLASH_MB = 4  # the firmware's 4m1m layout (platformio.ini)
 GREEN, RED, RESET = "\033[1;32m", "\033[1;31m", "\033[0m"
 
 BOOT_RE = re.compile(r"\[boot\] \S+ fw=(\d+\.\d+\.\d+) env=(\w+) id=(esp8266-\d+)")
-IDENTITY_RE = re.compile(r"\[identity\] (\w+) short_code=(\S+)")
+IDENTITY_RE = re.compile(r"\[identity\] (\w+) short_code=(\S+)[^\n]*?(?:enrolled=(\d))?\r?\n")
 SETUPINFO_RE = re.compile(r"\[setupinfo\] ap_ssid=(\S+) ap_password=(\S+)\r?\n")  # full line only (see setup_info.py)
 SAVED_RE = re.compile(r"\[factory\] short_code=([A-Z0-9]{6}) saved=([01])")
 
@@ -141,9 +142,9 @@ class SerialBoard:
         raise Fail(f"no answer from the board ({pattern.pattern[:30]}...)")
 
 
-def register(site: str, key: str, device_id: str, fw: str, timeout: float = 30) -> dict:
+def register(site: str, key: str, device_id: str, fw: str, reprovision: bool = False, timeout: float = 30) -> dict:
     req = urllib.request.Request(f"{site.rstrip('/')}/api/v1/factory/register", method="POST",
-                                 data=json.dumps({"deviceId": device_id, "fw": fw}).encode(),
+                                 data=json.dumps({"deviceId": device_id, "fw": fw, "reprovision": reprovision}).encode(),
                                  headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
@@ -155,7 +156,8 @@ def register(site: str, key: str, device_id: str, fw: str, timeout: float = 30) 
             err = ""
         hints = {"bad_station_key": "this laptop's station key isn't accepted (ask the founder)",
                  "already_in_use": "this board was already used in the field (ask the founder)",
-                 "owner_data_present": "this board still has its previous owner's data (ask the founder)"}
+                 "owner_data_present": "this board still has its previous owner's data (ask the founder)",
+                 "purge_pending": "the previous owner's data is still being deleted; try again tomorrow"}
         raise Fail(f"registration refused (HTTP {e.code} {err}): {hints.get(err, 'try again')}") from None
     except (urllib.error.URLError, TimeoutError) as e:
         raise Fail(f"couldn't reach the server ({e}); check the internet and try again") from None
@@ -166,13 +168,45 @@ def register(site: str, key: str, device_id: str, fw: str, timeout: float = 30) 
 
 # ---- The flow ----
 
-def provision(port: str, *, firmware: Path | None, site: str, key: str, row: int, out: Path,
-              board_factory=SerialBoard, flash_fn=flash, size_fn=flash_size_mb, register_fn=register,
-              say=print) -> Result:
+def check_not_in_use(board, reprovision: bool) -> None:
+    """Before erasing anything: a board that already has a code or has uploaded belongs to a kit or a home. Erasing it
+    would give it a new identity the server doesn't know, so the owner's sensor would stop working."""
+    board.reset()
+    try:
+        ident = board.wait(IDENTITY_RE, 8)
+    except Fail:
+        return  # blank board or other firmware: nothing to protect
+    assigned = ident.group(2) != "(unassigned)"
+    if (assigned or ident.group(3) == "1") and not reprovision:
+        raise Fail("this board already belongs to a kit or a home (it has a code or has sent readings). "
+                   "Set it aside for the founder.")
+
+
+def check_firmware_file(firmware: Path, allow_dev: bool) -> None:
+    """Kits get release firmware only: the same checks CI runs on the release build."""
+    if allow_dev:
+        return
+    problems = check_release.scan_file(firmware, check_release.BIN_FORBIDDEN)
+    marker = check_release.dev_key_marker(ROOT / "firmware")
+    if marker and marker in firmware.read_bytes():
+        problems.append("contains the dev OTA key")
+    if problems:
+        raise Fail("this firmware file isn't a release build (" + "; ".join(problems) + ")")
+
+
+def provision(port: str, *, firmware: Path | None, site: str, key: str, row: int, out: Path, allow_dev: bool = False,
+              reprovision: bool = False, board_factory=SerialBoard, flash_fn=flash, size_fn=flash_size_mb,
+              register_fn=register, say=print) -> Result:
     res = Result(port=port)
     board = None
     try:
         if firmware:
+            check_firmware_file(firmware, allow_dev)
+            pre = board_factory(port)
+            try:
+                check_not_in_use(pre, reprovision)
+            finally:
+                pre.close()
             say(f"[{port}] checking the board")
             if size_fn(port) < MIN_FLASH_MB:
                 raise Fail(f"flash is smaller than {MIN_FLASH_MB} MB (wrong board type)")
@@ -183,10 +217,14 @@ def provision(port: str, *, firmware: Path | None, site: str, key: str, row: int
         board.reset()
         boot = board.wait(BOOT_RE, 25)
         res.fw, env, res.device_id = boot.group(1), boot.group(2), boot.group(3)
-        board.wait(IDENTITY_RE, 25)
+        if env != "release" and not allow_dev:
+            raise Fail(f"the board runs a {env} build; kits must have release firmware (or use --allow-dev for tests)")
+        ident = board.wait(IDENTITY_RE, 25)
+        if not firmware and not reprovision and ident.group(3) == "1":
+            raise Fail("this board has already sent readings from a home; set it aside for the founder")
         board.wait(SETUPINFO_RE, 15, resend="PFCMD SETUPINFO")  # proves the factory command channel works
         say(f"[{port}] registering {res.device_id} (fw {res.fw}, {env})")
-        reg = register_fn(site, key, res.device_id, res.fw)
+        reg = register_fn(site, key, res.device_id, res.fw, reprovision)
         res.short_code, owner_code = reg["shortCode"], reg["ownerCode"]
         res.steps.append("registered")
         board.send(f"PFCMD SETCODE {res.short_code}")
@@ -240,6 +278,9 @@ def main(argv=None) -> int:
     ap.add_argument("--env", choices=["release", "dev"], default="release", help="which firmware build to flash")
     ap.add_argument("--firmware", help="firmware .bin to flash (default: the --env build)")
     ap.add_argument("--no-flash", action="store_true", help="skip flashing (reprint labels with a new owner code)")
+    ap.add_argument("--allow-dev", action="store_true", help="test only: allow dev firmware (never for real kits)")
+    ap.add_argument("--reprovision", action="store_true",
+                    help="founder only: re-use a board whose owner deleted their data")
     ap.add_argument("--key", help="station key file (default: the only secrets/factory-*.key)")
     ap.add_argument("--site", default=None, help="website (default: SITE_URL in firmware/src/config.h)")
     ap.add_argument("--row", type=int, default=1, help="sticker-sheet row to print on (1-5)")
@@ -258,6 +299,12 @@ def main(argv=None) -> int:
         if not firmware.exists():
             print(f"Firmware not found: {firmware}. Build it first: pio run -d firmware -e {args.env}")
             return 2
+    if args.env == "dev" and not args.allow_dev:
+        print("Dev firmware is for tests only. Add --allow-dev if that's what you want.")
+        return 2
+    if not args.allow_dev and not (ROOT / "firmware" / "src" / "ota_key_release.cpp").exists():
+        print("WARNING: no production update key yet (tools/ota_keys.py release), so these kits can only be updated "
+              "over USB. Fine for test kits; for real kits, ask the founder first.")
     ports = args.port or [p for p, _ in find_ports()]
     if not ports:
         print("No board found. Use a data cable (some cables only charge) and check the board's light is on.")
@@ -272,7 +319,8 @@ def main(argv=None) -> int:
     results: list[Result] = []
 
     def work(port: str, row: int) -> None:
-        r = provision(port, firmware=firmware, site=site, key=key, row=row, out=out, say=say)
+        r = provision(port, firmware=firmware, site=site, key=key, row=row, out=out, say=say, allow_dev=args.allow_dev,
+                      reprovision=args.reprovision)
         with lock:
             results.append(r)
             log_csv(out / "provision-log.csv", r)
