@@ -1,3 +1,5 @@
 # Pinned. Install into tools/.venv:  python3.12 -m venv tools/.venv && tools/.venv/bin/pip install -r tools/requirements.txt
 pyserial==3.5
 pytest==8.3.4
+esptool==5.6.0   # GPL-2.0-or-later; packing laptop only (founder decision 2026-11-22)
+segno==1.6.6     # BSD-3-Clause; QR codes for kit labels (founder decision 2026-11-22)
