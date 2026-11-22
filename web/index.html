@@ -5,14 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ProseFire</title>
   </head>
-  <body>
-    <main>
-      <h1 data-i18n="site.title"></h1>
-      <p data-i18n="site.comingSoon"></p>
-    </main>
+  <body class="map-page">
+    <header>
+      <h1 data-i18n="map.title">Air quality near you</h1>
+      <p class="hint" data-i18n="map.note"></p>
+      <p class="hint" id="updated"></p>
+    </header>
+    <div id="map" role="region" aria-label="Map"></div>
+    <div id="error" class="error" role="alert" hidden></div>
+    <p id="empty" class="hint" hidden data-i18n="map.empty"></p>
+    <section id="legend" aria-label="AQI"></section>
     <footer>
       <p data-i18n="safety.notSmokeAlarm">This is not a smoke alarm. It does not replace official warnings or evacuation orders.</p>
     </footer>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/map.ts"></script>
   </body>
 </html>

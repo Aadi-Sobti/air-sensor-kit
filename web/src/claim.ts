@@ -73,12 +73,15 @@ async function finish(ev: Event) {
       }
       if (res.status === 200) {
         try { sessionStorage.removeItem(KEY); } catch { /* ignore */ }
-        // ATM values (the sensor's own ambient estimate) read closer to reality than raw CF=1 at low levels.
-        // The EPA-corrected value and AQI arrive with the map (M7). Provisional choice: see decisions.md.
-        const latest = res.body.latest as { pm25_atm?: number } | null;
-        $("reading").textContent = latest && typeof latest.pm25_atm === "number"
-          ? t(lang, "claim.firstReading", { value: latest.pm25_atm.toFixed(1) })
+        // EPA-corrected first reading + AQI, and the sensor's own page (web.md: ends on the sensor's page).
+        const latest = res.body.latest as { pm25?: number; aqi?: number; cat?: string } | null;
+        $("reading").textContent = latest && typeof latest.pm25 === "number"
+          ? t(lang, "claim.firstReading", { value: latest.pm25.toFixed(1), aqi: String(latest.aqi) })
           : t(lang, "claim.noReadingYet");
+        const code = typeof res.body.code === "string" && /^[A-Z0-9]{4,12}$/.test(res.body.code) ? res.body.code : "";
+        const link = $<HTMLAnchorElement>("sensor-link");
+        link.hidden = !code;
+        link.href = `/s/${code}`;
         show("step-form", false);
         show("waiting", false);
         show("step-done");

@@ -1,10 +1,16 @@
+import { gunzipSync } from "node:zlib";
+
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
 
+import { runArchive } from "./archive";
 import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
+import { runPublish } from "./publish";
 
 // One region for everything; near NYC users. Keep in sync with firebase.json hosting rewrites.
 setGlobalOptions({ region: "us-east1", maxInstances: 10 });
@@ -45,3 +51,31 @@ export const claim = onRequest({ memory: "256MiB", maxInstances: 5, timeoutSecon
   res.set("Cache-Control", "no-store");
   res.status(out.status).json(out.body);
 });
+
+/** Every 5 min: place new sensors on the map (public cell), hourly rollup + NowCast, public snapshot. */
+export const publish = onSchedule({ schedule: "every 5 minutes", memory: "256MiB", timeoutSeconds: 240, maxInstances: 1 },
+  async () => {
+    await runPublish(getFirestore());
+  });
+
+/** GET /api/v1/snapshot.json : the public map data (CDN-cached; never exact locations). */
+export const snapshot = onRequest({ memory: "256MiB", maxInstances: 10 }, async (req, res) => {
+  if (req.method !== "GET") {
+    res.status(405).json({ ok: false });
+    return;
+  }
+  const doc = await getFirestore().doc("public/snapshot").get();
+  res.set("Cache-Control", "public, max-age=60, s-maxage=120"); // keeps "on the map in ~10 min"
+  res.set("Content-Type", "application/json; charset=utf-8");
+  const gz = doc.exists ? (doc.get("gz") as Buffer | undefined) : undefined;
+  res.status(200).send(gz ? gunzipSync(gz).toString("utf8") : JSON.stringify({ v: 2, generated: 0, sensors: [] }));
+});
+
+/** Nightly: raw readings of each finished UTC day -> gzipped NDJSON in the private Storage bucket (kept forever). */
+export const archive = onSchedule({ schedule: "30 3 * * *", timeZone: "UTC", memory: "512MiB", timeoutSeconds: 540, maxInstances: 1 },
+  async () => {
+    const bucket = getStorage().bucket();
+    await runArchive(getFirestore(), async (path, data) => {
+      await bucket.file(path).save(data, { contentType: "application/x-ndjson", metadata: { contentEncoding: "gzip" }, resumable: false });
+    });
+  });

@@ -6,7 +6,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] Keep the board plugged in (USB + iPhone hotspot on with Maximize Compatibility) for the 24 h soak.
+- [ ] When the board is back (≈ 1 day): plug it in and tell the agent → flash 0.5.0, Chrome setup checklist (M5),
+      iPhone setup checklist (M6), smoke test (M1), then a full 24 h soak (keep it plugged in + hotspot on).
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -127,7 +128,10 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       dips to ~8 KB during the TLS handshake (Google's front end doesn't support MFLN): watch it in the soak.
       Bugs found on hardware and fixed: credential test timed out instantly (millis wrap-around; also guarded in the
       state machine with a regression test), and the tool now echoes the sensor's status lines.
-- [ ] 24 h soak (uptime, heap, ≥ 99% uploads): started after this commit.
+- [ ] 24 h soak (uptime, heap, ≥ 99% uploads). **Partial run 2026-11-21 (2.3 h; founder had to unplug):**
+      `logs/m4-soak-1795287726.log` (fw 0.3.0, iPhone hotspot): 1 boot / 0 reboots over 8,347 s, **54/54 uploads OK**,
+      heap 36.5–37.4 KB (stable), min 7.4 KB during TLS, 0 checksum errors, 0 sensor timeouts, no secrets in the log.
+      Full 24 h re-run pending when the board is back (on 0.5.0, together with the browser/phone checklists).
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
@@ -201,8 +205,42 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** 👤 phone-setup checklist passes on at least one iPhone and one Android.
 
 ### M7 Corrections, snapshot, map
-- [ ] EPA correction (+ extended) with paper-value tests, RH from weather, AQI, H3 cells, snapshot, map + `/s/<code>`.
+- [x] EPA correction (+ extended) with paper-value tests, RH from weather, AQI, H3 cells, snapshot, map + `/s/<code>`.
+      Facts verified 2026-11-21 from primary sources (cited in code): Barkjohn 2021 AMT Eq. 10 (read in the article's
+      MathML), Barkjohn 2022 Sensors Eqs. 1–3 (transition at PA_cf1 570–611, NOT the AirNow fire-map formula I'd have
+      guessed), EPA AQI TAD EPA-403/B-26-003 (May 2026) Table 6 + Eq. 1 + NowCast, NWS API docs, Protomaps CLI docs,
+      H3 resolution table. `backend/functions/src/lib/{correction,aqi,cells,rh,shortcode}.ts`; `publish.ts` (every
+      5 min: place new sensors incl. phone-path geocoding → public H3 res-9 cell, NWS station from the cell center only,
+      hourly rollup + NowCast, snapshot; indoor = no location; offline after 30 min; RH fallback cached ≤3 h → 50 %);
+      `GET /api/v1/snapshot.json` (CDN cache 60 s / 240 s). Web: MapLibre + self-hosted PMTiles NYC basemap (36 MB,
+      `tools/make_basemap.sh`, not in git) + self-hosted fonts, AQI-colored dots + legend + popups, `/s/<code>` page.
+      Tests: backend 53 passing (17 math incl. TAD example 35.9→102 and the paper checkpoints PA 570→~300, 611→~400;
+      3 publish tests incl. "no address/exact coordinates in the snapshot"), web 21, tools 28, native 80.
+      Local demo (emulator + `backend/functions/scripts/seed-demo.mjs`): map + popup + sensor page checked in the
+      browser. One map visit ≈ 1.1 MB (tiles 712 KB, fonts 95 KB, code 296 KB), 0 third-party requests.
+      Deployed to dev: real Hosting serves range requests (206); live map loads under the CSP with no console errors.
+      Founder decisions 2026-11-21: deps approved, H3 res 9, RH from NWS.
+      M7 spec-review fixes (2026-11-21): snapshot stored gzip-compressed and without 24 h history (10K sensors ≈ 264 KB;
+      size budget + test); publish is time-boxed (locate ≤ 60 s, stops geocoding during a Census outage), reads in
+      batches, handles errors per sensor, and always writes the snapshot; "current value" needs a reading < 30 min old
+      (health-only uploads stay online without a stale value; the page says "check the wires"); NowCast uses hourly
+      means (current hour only with ≥ 4 readings); missed hours are caught up (≤ 12) + one late re-roll; a claimed
+      address that doesn't geocode stops retrying and hides the old placement; unplaced sensors are public by code
+      right away (page works); missing NWS stations are retried; rh source recorded; popup shows corrected PM2.5;
+      NowCast note only when used; CDN s-maxage 120 s (worst case ≈ 2.5 + 5 + 2 min ≈ 10 min to appear); claim page
+      shows the EPA-corrected first reading + AQI and links to `/s/<code>` (resolves the M5 deviations); predeploy
+      refuses to ship without the basemap; basemap build pinned (20261121). Nightly raw archive built (`archive.ts`,
+      03:30 UTC, catch-up, never skips a day; tests) + deny-all Storage rules. Backend 61 passing, web 22.
+      2026-11-21: founder enabled Cloud Storage on prosefire-dev; agent deployed the deny-all Storage rules and
+      redeployed `archive` so it sees the bucket. `publish` runs in the cloud every 5 min (`firebase functions:log
+      --only publish`: publish_ok, 0 errors). **Unverified:** the first archive run (03:30 UTC 2026-11-22): check
+      `firebase functions:log --project dev --only archive` for `archive_day_ok`.
+- [ ] QC before the map goes public (backend.md): range checks + stuck-value flags (needed before launch), neighbor
+      comparison later. Indoor sensors are already excluded from the map.
+- [ ] Measure "set up → visible on the map" on dev with the real board (target ≤ 10 min).
 - **Done when:** tests pass (incl. "no exact location in snapshot"); 👤 founder approves map look + wording.
+      👤 Pending: founder review of https://prosefire-dev.web.app (with a real sensor once the board is claimed after
+      the soak) and the wording on the map/sensor pages. Spanish AQI names ("Insalubre…") need a native speaker.
 
 ### M7b "My sensor": checking and managing your device
 - [ ] `/s/<code>` (public): live reading, AQI, 24 h / 7 d chart, online/offline + last seen.
@@ -242,6 +280,8 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M7 review fixes (snapshot gzip/size budget, time-boxed publish, freshness, hourly NowCast, rollup catch-up, nightly archive, claim → sensor page) deployed to dev · backend 61, web 22 · partial soak 2.3 h: 54/54 uploads, 0 reboots · board unplugged ~1 day.
+- 2026-11-21 · M7 corrections/AQI/NowCast/H3/snapshot/map + sensor page, deployed to dev · backend 53, web 21 · next: founder map review; after the soak flash 0.5.0 + browser/phone checklists.
 - 2026-11-21 · M6 phone setup built (portal, AP, setup-info tool) · native 75/75, tools 28/28, release RAM 44.6% / Flash 49.3% · next: flash 0.5.0 after the soak; phone + browser checklists.
 - 2026-11-21 · M5 built + spec-reviewed + deployed to dev (setup/claim pages, claim endpoint, claim token) · backend 33, native 66, web 18, tools 25 · next: flash 0.4.0 after the soak, founder browser checklist.
 - 2026-11-21 · Founder back: decisions (startup-only AP fallback, LED = WiFi only, SETUP AP never times out, agent may merge) · M2 review fixes (secure RNG, identity backup) `logs/m2-fresh-1795282632.log` · PRs #1 #2 merged · M3 cost table + ingest: 21 backend tests, simulator 0 problems · next: M4 needs the dev Firebase project (founder); meanwhile M5/M7 groundwork.
