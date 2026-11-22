@@ -6,15 +6,42 @@ import { getStorage } from "firebase-admin/storage";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { defineSecret } from "firebase-functions/params";
+import webpush from "web-push";
 
-import { runArchive } from "./archive";
+import { runArchive, runArchivePurge } from "./archive";
+import { clientIp, handleOwner, sensorHistory } from "./owner/api";
+import { PushSender } from "./publish";
 import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
-import { runPublish } from "./publish";
+import { defaultDeps, runPublish } from "./publish";
 
 // One region for everything; near NYC users. Keep in sync with firebase.json hosting rewrites.
 setGlobalOptions({ region: "us-east1", maxInstances: 10 });
 initializeApp();
+
+// Secrets (Google Secret Manager; founder decision 2026-11-21). Never logged.
+const OWNER_PEPPER = defineSecret("OWNER_PEPPER"); // keyed hash for owner codes + session signing
+const VAPID_PUBLIC = defineSecret("VAPID_PUBLIC"); // web push (not secret, but kept with its private half)
+const VAPID_PRIVATE = defineSecret("VAPID_PRIVATE");
+
+function pushSender(): PushSender | undefined {
+  try {
+    webpush.setVapidDetails("https://github.com/Aadi-Sobti/air-sensor-kit", VAPID_PUBLIC.value(), VAPID_PRIVATE.value());
+  } catch {
+    return undefined; // bad/missing keys must never stop the map update; notices are skipped
+  }
+  return async (sub, payload) => {
+    try {
+      await webpush.sendNotification(sub, payload, { TTL: 6 * 3600, timeout: 5000 });
+      return { gone: false };
+    } catch (e) {
+      const code = (e as { statusCode?: number }).statusCode;
+      if (code === 404 || code === 410) return { gone: true };
+      throw e;
+    }
+  };
+}
 
 export const FUNCTIONS_VERSION = "0.1.0";
 
@@ -53,9 +80,10 @@ export const claim = onRequest({ memory: "256MiB", maxInstances: 5, timeoutSecon
 });
 
 /** Every 5 min: place new sensors on the map (public cell), hourly rollup + NowCast, public snapshot. */
-export const publish = onSchedule({ schedule: "every 5 minutes", memory: "256MiB", timeoutSeconds: 240, maxInstances: 1 },
+export const publish = onSchedule({ schedule: "every 5 minutes", memory: "256MiB", timeoutSeconds: 240, maxInstances: 1,
+  secrets: [VAPID_PUBLIC, VAPID_PRIVATE] },
   async () => {
-    await runPublish(getFirestore());
+    await runPublish(getFirestore(), { ...defaultDeps, push: pushSender() });
   });
 
 /** GET /api/v1/snapshot.json : the public map data (CDN-cached; never exact locations). */
@@ -75,7 +103,36 @@ export const snapshot = onRequest({ memory: "256MiB", maxInstances: 10 }, async 
 export const archive = onSchedule({ schedule: "30 3 * * *", timeZone: "UTC", memory: "512MiB", timeoutSeconds: 540, maxInstances: 1 },
   async () => {
     const bucket = getStorage().bucket();
-    await runArchive(getFirestore(), async (path, data) => {
-      await bucket.file(path).save(data, { contentType: "application/x-ndjson", metadata: { contentEncoding: "gzip" }, resumable: false });
-    });
+    const store = {
+      // Stored as plain gzip bytes (no Content-Encoding), read back raw (decompress: false) for the purge.
+      save: async (path: string, data: Buffer) => {
+        await bucket.file(path).save(data, { contentType: "application/gzip", resumable: false });
+      },
+      read: async (path: string) => {
+        const f = bucket.file(path);
+        return (await f.exists())[0] ? (await f.download({ decompress: false }))[0] : null;
+      },
+      list: async (prefix: string) => (await bucket.getFiles({ prefix }))[0].map((f) => f.name),
+    };
+    await runArchive(getFirestore(), store.save);
+    await runArchivePurge(getFirestore(), store); // "Delete my data" also removes archived raw readings
   });
+
+/** Owner API: /api/v1/owner/** (sessions from owner codes; no accounts). */
+export const owner = onRequest({ memory: "256MiB", maxInstances: 10, secrets: [OWNER_PEPPER, VAPID_PUBLIC] }, async (req, res) => {
+  const out = await handleOwner(getFirestore(), { pepper: OWNER_PEPPER.value(), vapidPublic: VAPID_PUBLIC.value() }, {
+    method: req.method, path: req.path, headers: req.headers as Record<string, string | string[] | undefined>,
+    rawBody: req.rawBody, ip: clientIp(req.headers as Record<string, string | string[] | undefined>, req.ip),
+    query: req.query as Record<string, unknown>,
+  });
+  res.set("Cache-Control", "no-store");
+  res.status(out.status).json(out.body);
+});
+
+/** GET /api/v1/sensor/<CODE>/history : public hourly history for the sensor page chart (no location). */
+export const history = onRequest({ memory: "256MiB", maxInstances: 10 }, async (req, res) => {
+  const code = (req.path.match(/\/sensor\/([A-Za-z0-9]{4,12})\/history$/)?.[1] ?? "").toUpperCase();
+  const out = await sensorHistory(getFirestore(), code);
+  res.set("Cache-Control", out.status === 200 ? "public, max-age=120, s-maxage=300" : "no-store");
+  res.status(out.status).json(out.body);
+});

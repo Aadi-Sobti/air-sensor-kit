@@ -17,7 +17,7 @@ import { shortCodeFor } from "./lib/shortcode";
 export const PUBLISH = {
   offlineAfterMs: 30 * 60e3, // no upload for 30 min -> offline
   staleReadingMs: 30 * 60e3, // newest reading older than this -> no current value (e.g. sensor unplugged)
-  keepHours: 24,
+  keepHours: 168, // 7 days for the owner and sensor-page charts (M7b)
   rhMaxAgeMs: 3 * 3600e3,
   locateBudgetMs: 60e3,
   locateMax: 50,
@@ -29,11 +29,41 @@ export const PUBLISH = {
   readChunk: 200,
 };
 
+// Web push sender (decision #14). Returns gone=true when the browser dropped the subscription (404/410).
+export type PushSender = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string) => Promise<{ gone: boolean }>;
+
 export interface PublishDeps {
   geocode: Geocoder;
   nws: Fetcher;
+  push?: PushSender;
 }
 export const defaultDeps: PublishDeps = { geocode: censusGeocoder, nws: httpFetcher };
+
+// Every alert carries the safety line (project safety rule), even device-status notices.
+const OFFLINE_MSG = {
+  en: (code: string) => ({ title: "Air sensor offline",
+    body: `Your sensor ${code} stopped sending readings. Check its power and WiFi. (This is not a smoke alarm.)` }),
+  es: (code: string) => ({ title: "Sensor de aire desconectado",
+    body: `Tu sensor ${code} dejó de enviar lecturas. Revisa la corriente y el WiFi. (Esto no es una alarma de humo.)` }),
+};
+
+/** Sends the "offline" notice once per online -> offline change, to every subscribed browser of that sensor. */
+async function notifyOffline(db: Firestore, push: PushSender, deviceId: string, code: string): Promise<number> {
+  let sent = 0;
+  const subs = await db.collection(`devices/${deviceId}/push_subs`).get();
+  for (const s of subs.docs) {
+    const lang = s.get("lang") === "es" ? "es" : "en";
+    const msg = { ...OFFLINE_MSG[lang](code), url: "/my" };
+    try {
+      const r = await push(s.get("sub"), JSON.stringify(msg));
+      if (r.gone) await s.ref.delete();
+      else sent++;
+    } catch {
+      /* try again on the next state change */
+    }
+  }
+  return sent;
+}
 
 export function hourKeyUtc(ms: number): string {
   return new Date(ms).toISOString().replace(/[-T:]/g, "").slice(0, 10);
@@ -78,7 +108,8 @@ async function locate(db: Firestore, deps: PublishDeps, nowMs: number): Promise<
       const devRef = db.doc(`devices/${id}`);
       const dev = await devRef.get();
       const pubRef = db.doc(`public_sensors/${id}`);
-      const base = { code: shortCodeFor(id, dev.get("shortCode") as string | undefined), indoor: Boolean(dev.get("indoor")) };
+      const base = { code: shortCodeFor(id, dev.get("shortCode") as string | undefined), indoor: Boolean(dev.get("indoor")),
+        notifyOffline: dev.get("notifyOffline") === true };
       const locRef = db.doc(`private_locations/${id}`);
       const loc = await locRef.get();
       if (!loc.exists) continue;
@@ -190,6 +221,7 @@ export async function runPublish(db: Firestore, deps: PublishDeps = defaultDeps,
   const curKey = hourKeyUtc(nowMs);
   const curDocs = await getAllChunked(db, fresh.map((s) => `readings_hourly/${s.id}_${curKey}`));
   const entries: Record<string, unknown>[] = [];
+  const toNotify: { id: string; code: string }[] = [];
   let errors = 0;
   for (let i = 0; i < fresh.length; i++) {
     const s = fresh[i];
@@ -238,6 +270,12 @@ export async function runPublish(db: Firestore, deps: PublishDeps = defaultDeps,
       for (let k = 1; k < 12; k++) series.push(byHour.get(hourKeyUtc(nowMs - k * 3600e3)) ?? null);
       const nc = freshReading ? nowcast(series) : null;
       const aqi = nc !== null ? aqiFromPm25(nc) : nowPm !== null ? aqiFromPm25(nowPm) : null;
+      // Offline notices (web push): only on a change from online to offline, once; sent after the snapshot.
+      if (s.get("notifyOffline") && deps.push) {
+        const wasOnline = s.get("lastOnline");
+        if (wasOnline === true && !online) toNotify.push({ id: s.id, code: String(s.get("code")) });
+        if (wasOnline !== online) update.lastOnline = online;
+      }
       if (Object.keys(update).length) await s.ref.set({ ...update, correctionVersion: CORRECTION_VERSION }, { merge: true });
 
       const indoor = Boolean(s.get("indoor"));
@@ -271,6 +309,13 @@ export async function runPublish(db: Firestore, deps: PublishDeps = defaultDeps,
   } else {
     await db.doc("public/snapshot").set({ gz, bytes: json.length, generatedAt: Timestamp.fromMillis(nowMs) });
   }
-  logEvent("publish_ok", { placed, sensors: entries.length, stations: stations.size, errors, bytes: json.length, gzBytes: gz.length });
+  // Notices last, so a slow push service can never hold up the map (each send also has a 5 s timeout).
+  let notified = 0;
+  for (const n of toNotify) {
+    try {
+      notified += await notifyOffline(db, deps.push!, n.id, n.code);
+    } catch { /* next change */ }
+  }
+  logEvent("publish_ok", { placed, sensors: entries.length, stations: stations.size, errors, bytes: json.length, gzBytes: gz.length, notified });
   return snapshot;
 }

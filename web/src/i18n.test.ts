@@ -10,7 +10,7 @@ describe("i18n", () => {
     for (const v of Object.values(STRINGS[lang])) expect(v.trim()).not.toBe("");
   });
 
-  const PAGES = ["index.html", "setup.html", "claim.html", "s.html"];
+  const PAGES = ["index.html", "setup.html", "claim.html", "s.html", "my.html"];
   const read = (p: string) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
 
   it.each(PAGES)("every data-i18n key in %s exists", (page) => {
@@ -26,8 +26,8 @@ describe("i18n", () => {
   });
 
   it("every t() key used in the scripts exists", () => {
-    for (const f of ["src/setup.ts", "src/claim.ts", "src/map.ts", "src/sensor.ts"]) {
-      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety|map|sensor|aqi)\.[a-zA-Z_.]+)"/g)].map((m) => m[1]);
+    for (const f of ["src/setup.ts", "src/claim.ts", "src/map.ts", "src/sensor.ts", "src/my.ts"]) {
+      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety|map|sensor|aqi|my|pwa)\.[a-zA-Z_.]+)"/g)].map((m) => m[1]);
       for (const k of used) expect(enKeys, `${f}: ${k}`).toContain(k);
     }
   });

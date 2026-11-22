@@ -8,7 +8,7 @@ const lang = applyI18n();
 document.title = t(lang, "setup.pageTitle");
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const show = (id: string, on = true) => ($(id).hidden = !on);
-const STEPS = ["unsupported", "step-connect", "step-wifi", "step-done", "busy"];
+const STEPS = ["unsupported", "step-connect", "step-wifi", "step-done", "busy", "step-newcode"];
 
 function only(...ids: string[]) {
   STEPS.forEach((s) => show(s, ids.includes(s)));
@@ -168,12 +168,55 @@ async function submitWifiInner() {
   setTimeout(() => location.assign(next ?? "/"), 1500);
 }
 
+// "Get a new owner code": USB access proves ownership. The sensor gives a fresh claim token over USB, uploads its
+// hash, and the backend swaps the owner code (the old one and its sessions stop working).
+async function newOwnerCode() {
+  setError(null);
+  only("step-newcode");
+  let port: SerialPort;
+  try {
+    port = await navigator.serial!.requestPort({ filters: USB_FILTERS });
+  } catch {
+    setError("setup.err.emptyPicker");
+    return;
+  }
+  transport = new SerialTransport(port);
+  try {
+    await transport.open();
+    client = new ImprovClient(transport);
+    $("newcode-status").textContent = t(lang, "setup.newCode.working");
+    const claim = await client.freshClaim();
+    await closePort();
+    if (!claim) return setError("setup.newCode.failed");
+    const start = Date.now();
+    for (;;) {
+      const r = await fetch("/api/v1/owner/rotate", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(claim), cache: "no-store", credentials: "omit" });
+      const b = (await r.json().catch(() => ({}))) as { ownerCode?: string };
+      if (r.ok && b.ownerCode) {
+        $("newcode").textContent = b.ownerCode;
+        $<HTMLAnchorElement>("newcode-open").href = `/my#owner=${encodeURIComponent(b.ownerCode)}`;
+        $("newcode-status").hidden = true;
+        $("newcode-result").hidden = false;
+        return;
+      }
+      if (r.status !== 409 || Date.now() - start > 120000) return setError("setup.newCode.failed");
+      await new Promise((res) => setTimeout(res, 5000)); // the sensor uploads the token's hash within ~1 upload
+    }
+  } catch {
+    await closePort();
+    setError("setup.newCode.failed");
+  }
+}
+
 function init() {
   if (!("serial" in navigator) || !navigator.serial) {
     only("unsupported"); // Safari, Firefox, iPhone/iPad: phone path, no dead end
+    $("newcode-link-wrap").hidden = true;
     return;
   }
   only("step-connect");
+  $("newcode-link").addEventListener("click", () => void newOwnerCode());
   $("connect").addEventListener("click", () => void connect());
   $("retry").addEventListener("click", () => void connect());
   $("wifi-form").addEventListener("submit", (e) => void submitWifi(e));

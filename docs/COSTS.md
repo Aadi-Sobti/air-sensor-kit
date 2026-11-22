@@ -55,3 +55,12 @@ lands on the same map key.
   gzipped file per day (≈ 3 KB/sensor/day compressed → ≈ 11 GB/year at 10K sensors; Storage ≈ $0.026/GB-month).
 - Cloud Scheduler: 2 jobs (publish, archive): free (3 jobs free per billing account, https://cloud.google.com/scheduler/pricing).
 - External calls: NWS once per station per run (a handful for NYC), Census once per newly set-up sensor.
+
+## Owner page + notices (M7b, 2026-11-21)
+- Owner page loads: 1 session check (1–2 reads) + 26 reads per sensor view (24 hourly docs for "uploads received",
+  location, map entry) → ≈ $0.000008 per view; negligible.
+- Web push: free (browser push services). Sending happens inside the publish job; only on online → offline changes.
+- Secret Manager: 3 secrets (owner key, VAPID public/private); within the free tier (6 active versions, 10K accesses/month;
+  https://cloud.google.com/secret-manager/pricing). Each cold start reads them once.
+- Delete my data: a batch of deletes (≈ 720 hourly docs per month of history) + the archive purge rewrites one file per
+  archived day once (Storage ops ≈ $0.005/1,000).

@@ -49,6 +49,8 @@ jobs:
           java-version: "21"
       - name: Install functions deps and compile TypeScript
         run: npm --prefix functions ci && npm --prefix functions run build
+      - name: Fake secrets for the emulator only (real ones live in Secret Manager)
+        run: printf 'OWNER_PEPPER=ci-only-not-a-real-secret-0123456789abcdef\nVAPID_PUBLIC=ci\nVAPID_PRIVATE=ci\n' > functions/.secret.local
       - name: Functions + rules tests + device simulator on the emulator (demo project, no login)
         run: >-
           npx --yes firebase-tools@15.37.0 emulators:exec --only functions,firestore

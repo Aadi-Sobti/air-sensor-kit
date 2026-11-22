@@ -1,6 +1,7 @@
 // "/s/<CODE>" : one sensor's public page (current AQI, corrected PM2.5, online/offline). Charts come in M7b.
 import "./style.css";
 
+import { HourPoint, renderChart } from "./chart";
 import { applyI18n, Key, t } from "./i18n";
 import { CAT_COLORS, loadSnapshot, relTime, textOn } from "./snapshot";
 
@@ -42,4 +43,20 @@ function err(key: Key) {
     : !s.on ? t(lang, "sensor.offline", { ago: relTime(lang, seen) })
     : s.pm === null ? t(lang, "sensor.noFreshReading") // uploading, but the dust sensor isn't answering
     : t(lang, "sensor.working", { ago: relTime(lang, s.upd ?? seen) });
+  // 24 h / 7 d chart from the public history (no location in it)
+  try {
+    const r = await fetch(`/api/v1/sensor/${encodeURIComponent(code)}/history`);
+    const h = r.ok ? ((await r.json()).h as HourPoint[]) : [];
+    if (h.some(([, v]) => v !== null)) {
+      $("tabs").hidden = false;
+      const draw = (hours: 24 | 168) => {
+        renderChart($("chart"), h, hours, lang, t(lang, "my.chartLabel"));
+        $("t24").classList.toggle("active", hours === 24);
+        $("t7d").classList.toggle("active", hours === 168);
+      };
+      $("t24").onclick = () => draw(24);
+      $("t7d").onclick = () => draw(168);
+      draw(24);
+    }
+  } catch { /* chart is optional */ }
 })();
