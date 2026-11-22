@@ -54,13 +54,16 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | Only **outdoor** sensors are forwarded to Sensor.Community | Founder |
 | 2026-11-22 | Sensor.Community registrations use the **public map cell center**, never the address | Founder |
 | 2026-11-22 | (Agent, within spec) While a phone is on the setup WiFi and used the page in the last 5 min, the sensor **pauses retrying an unreachable saved WiFi**; retries resume when the phone leaves or goes idle. The setup WiFi opens on the home network's channel (saved one if nearby, else strongest; US channels 1–11 only) | Founder's iPhone dropped off the setup WiFi after a wrong password and couldn't rejoin: the one radio kept leaving the setup channel to search. A working connection is never paused; spec's "keep retrying" still holds whenever nobody is using setup |
+| 2026-11-22 | #8 **Per-device stickers**: each kit card gets its own setup WiFi QR + owner QR (letter-size sticker sheets now, label printer later) | Founder; phone users type nothing |
+| 2026-11-22 | Labels: **segno** (BSD-3, pure Python, packing-laptop tool only) for QR codes; PDF layout written in-house (no PDF library) | Founder |
+| 2026-11-22 | Packing-laptop flasher: **esptool** via pip (GPL-2.0, Espressif's official tool; laptop only, nothing on the sensor). Recipients never flash anything | Founder |
+| 2026-11-22 | `factory/register` auth: **per-station keys** (long random key file per packing laptop, stored hashed in the backend, revocable one by one). No accounts | Founder |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
 |---|---|---|---|
 | 1 | Final project/nonprofit name (ProseFire is a placeholder) | Before M9 labels | Used in AP name, domain, labels |
 | 2 | Wire colors in the kit (which jumper wires get bought) | M2/M10 | Red=VIN, black=G, two distinct colors for D1/D2; the guide shows colors |
-| 8 | Per-device QR stickers (needs a cheap label printer) vs generic card | M6/M9 | Per-device stickers: zero typing for phone users |
 | 11 | Include a USB wall charger in the kit? | M10 | Adds per-kit cost; most homes have a phone charger |
 | 12 | Pre-attach jumpers to the adapter at packing time? | M10 | Fewer recipient mistakes, more volunteer time |
 | 13 | Languages beyond EN + ES | M10 | NYC: Haitian Creole, Chinese, Bengali, Russian… |

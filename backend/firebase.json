@@ -57,6 +57,13 @@
         }
       },
       {
+        "source": "/api/v1/factory/**",
+        "function": {
+          "functionId": "factory",
+          "region": "us-east1"
+        }
+      },
+      {
         "source": "/api/v1/sensor/**",
         "function": {
           "functionId": "history",

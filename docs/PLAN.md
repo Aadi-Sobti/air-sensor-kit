@@ -185,7 +185,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Size: release RAM 44.6% (36,548 B; +2.5 KB vs M5), Flash 49.3% (515,035 B).
       ⚠ Watch on hardware: free heap during TLS should stay ≥ 4 KB (was 8 KB in M4); if not, move the portal's HTML
       fragments to flash too. ⚠ M9 risk: OTA needs free space ≥ the new image, and the sketch area is ~1 MB, so the
-      firmware must stay under ~520 KB (now 515 KB). Plan size cuts before M9 (e.g. drop HTTPClient for a raw POST).
+      firmware must stay under ~520 KB (now 515 KB). Plan size cuts before M9 (e.g. drop HTTPClient for a raw POST). (Corrected 2026-11-22: that ceiling was wrong. With the 4m1m layout the update is staged just below the filesystem at 3 MB (core `Updater.cpp`: current sketch + new image ≤ 3 MB), so the real limit is the 1,044,464 B max program size.)
       Deviation until M7: phone-path addresses are geocoded by the M7 job (ingest stays lean), so these sensors
       appear on the map only after M7. M7 acceptance: that job runs often enough to keep "on the map in about
       10 minutes" true.
@@ -208,7 +208,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       page (blue header, numbered cards, WiFi list with signal bars, show-password button, Outside/Inside tiles,
       spinner + check-mark pages), same wording, still works with JS off; 11.3 KB with 20 networks.
       Evidence: native 83/83, tools 29/29, release guard OK, boot capture `logs/serial-*.log` (1 boot, RUNNING, heap 33.8 KB).
-      Size: release Flash 521,915 B (+6.9 KB vs 0.5.0): **317 B under the ~522 KB OTA ceiling** → size cuts are M9's first task.
+      Size: release Flash 521,915 B (+6.9 KB vs 0.5.0): 50% of the 1 MB program limit; OTA has room (the earlier ~520 KB ceiling was a mistake, see M6 note above).
       Note: a new kit opens its setup WiFi within seconds; only a sensor with saved WiFi it can't reach waits ~3 min.
 - 👤 Founder has an iPhone only (2026-11-21): the iPhone run counts; the **Android** run stays open (unverified)
       until someone can lend one (a volunteer or friend in M10 works too).
@@ -277,7 +277,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       its sessions stop working.
       Tests: backend 75 (owner 14 incl. brute force, rotation, masked address, delete, logs; notices; purge), web 30,
       native 81, tools 28. Deployed to dev: owner/history live; /my registers its service worker, no console errors.
-      Firmware 0.6.0: Flash 49.4% (515,951 B) ⚠ ~4 KB under the OTA ceiling: size cuts are the first M9 task.
+      Firmware 0.6.0: Flash 49.4% (515,951 B) (OTA room: fine, see the corrected M6 note.)
       M7b spec-review fixes (2026-11-21): client IP from the right X-Forwarded-For position (Hosting vs direct, checked
       live on dev) + IPv6 /64; guesses counted first in a transaction (parallel-safe), correct codes refunded, global
       surge only alerts; shared `checkOwnerCode` helper (partner links later); rotation atomic; push endpoints limited
