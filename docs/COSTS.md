@@ -64,3 +64,9 @@ lands on the same map key.
   https://cloud.google.com/secret-manager/pricing). Each cold start reads them once.
 - Delete my data: a batch of deletes (≈ 720 hourly docs per month of history) + the archive purge rewrites one file per
   archived day once (Storage ops ≈ $0.005/1,000).
+
+## Sensor.Community forwarding (M8, 2026-11-22)
+- One Cloud Tasks task per accepted upload from a registered sensor when the flag is on (≈ 17,280/sensor/month).
+  Cloud Tasks: first 1M operations/month free, then $0.40/M (https://cloud.google.com/tasks/pricing) → free up to
+  ~55 sensors, ≈ $0.007/sensor/month beyond. Plus one small function run per task (inside the Cloud Run free tier at
+  small scale). Flag OFF (now): $0.

@@ -277,7 +277,21 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Screen → turn on offline notices → unplug the board 35 min → a notice arrives.
 
 ### M8 Sensor.Community forwarding (flag OFF by default)
-- [ ] Task-queue forwarder + payload tests. 👤 Founder confirms forwarding/bulk registration with Sensor.Community.
+- [x] Task-queue forwarder + payload tests. 👤 Founder confirms forwarding/bulk registration with Sensor.Community.
+      Facts verified 2026-11-21: push API (opendata-stuttgart meta wiki EN-APIs: endpoint, X-Sensor, X-Pin 1 for PMS,
+      P1 = PM10 / P2 = PM2.5, no timestamp — the server stamps arrival); airrohr source read via the GitHub API
+      (`defines.h` "#define PMS_API_PIN 1"; it reads PMS frame bytes 10–15 = the atmospheric PM1/PM2.5/PM10 per the
+      Plantower datasheet, sent as P0/P2/P1). `backend/functions/src/forward.ts` + task-queue worker
+      `forwardSensorCommunity` (retries 5×, 30–300 s backoff, ≤ 5/s); ingest enqueues only when SC_FORWARD_ENABLED
+      is true AND `devices.scRegistered` is true, only the newest reading < 5 min old, and a queue failure never fails
+      an upload. No location is sent (Sensor.Community gets one only at registration). Tests: backend 90 (5 new).
+      Deployed to dev 2026-11-22 with SC_FORWARD_ENABLED=false (Cloud Tasks API enabled; nothing is queued).
+      Unverified: Sensor.Community's data license (their FAQ blocks automated reads).
+- 👤 To finish M8 (founder): (1) contact Sensor.Community to confirm forwarding from a fleet of non-airrohr
+      sensors, bulk registration, and their data license; (2) register the test sensor `esp8266-11001626` at
+      https://devices.sensor.community (PMS5003, outdoor) with the **public cell center** as its location, not the
+      home address; (3) in the Firebase console set `devices/esp8266-11001626.scRegistered = true` (boolean) and
+      tell the agent, who turns the flag on for dev and checks maps.sensor.community.
 - **Done when:** one test sensor shows on maps.sensor.community.
 
 ### M9 OTA + factory provisioning
@@ -305,6 +319,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-22 · M7b review fixes deployed · M8 Sensor.Community forwarder built (flag OFF) + deployed to dev · backend 90 · next: founder contacts Sensor.Community; board back → flash 0.6.0 + checklists.
 - 2026-11-21 · M7b owner page, owner codes (keyed hash in Secret Manager), web push notices, delete + archive purge, PWA, sensor-page chart; firmware 0.6.0 NEWCLAIM · backend 75, web 30, native 81 · deployed to dev · next: board back → flash 0.6.0, founder checklists.
 - 2026-11-21 · M7 review fixes (snapshot gzip/size budget, time-boxed publish, freshness, hourly NowCast, rollup catch-up, nightly archive, claim → sensor page) deployed to dev · backend 61, web 22 · partial soak 2.3 h: 54/54 uploads, 0 reboots · board unplugged ~1 day.
 - 2026-11-21 · M7 corrections/AQI/NowCast/H3/snapshot/map + sensor page, deployed to dev · backend 53, web 21 · next: founder map review; after the soak flash 0.5.0 + browser/phone checklists.
