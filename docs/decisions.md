@@ -46,6 +46,9 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | "Delete my data" also deletes archived raw readings (archive files rewritten by the nightly job) | Founder |
 | 2026-11-21 | Owner codes stored as a keyed hash; key (OWNER_PEPPER) + VAPID keys in Google Secret Manager | Founder; leaked DB can't be brute-forced offline |
 | 2026-11-21 | Dependency: web-push (**MPL-2.0**, backend only, unmodified). I first called it MIT by mistake; founder approved MPL-2.0 | Founder |
+| 2026-11-21 | Implementation (agent): owner API paths are session-scoped (`/owner/sensor`, `/owner/sensor/data`) instead of `/owner/sensors/{id}` (the session names the sensor). Sessions: 7-day sliding, **90-day absolute** limit. No per-sensor guess limit (a wrong code names no sensor); per-IP limit + global alert instead | M7b review |
+| 2026-11-21 | **Residual risk (agent, for founder awareness):** the per-IP guess limit relies on Firebase Hosting's headers; someone calling the function URL directly and forging CDN headers can rotate IPs. Owner codes have ~49.5 bits, so even a month of non-stop guessing at the function's capped rate has ≈ 0.3 % chance of hitting any of 10K codes; a guessing surge logs an alert. Stronger option later: Cloud Armor / App Check | Verified the header behavior on dev 2026-11-21 |
+| 2026-11-21 | Offline push notices include the safety line ("This is not a smoke alarm.") like every alert | Project safety rule |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |

@@ -148,6 +148,7 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
   let duplicates = 0;
   let rateLimited = false;
   let newHour = false;
+  let retired = false;
   // Health-only uploads (readings: []) are allowed: they keep "last seen" + sensor health fresh when the PMS
   // has nothing to report (warm-up, unplugged sensor) and still deliver a pending claim hash.
   const latest = up.readings.length ? up.readings.reduce((a, b) => (b.ts > a.ts ? b : a)) : null;
@@ -160,7 +161,13 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     const refs = [...byHour.keys()].map((h) => db.doc(`readings_hourly/${id}_${h}`));
     const snaps = await tx.getAll(...refs);
     // Only needed (1 extra read) when the upload carries a claim hash: refuse to revive a used one.
-    const devSnap = up.claim_token_hash ? await tx.get(db.doc(`devices/${id}`)) : undefined;
+    // Needed (1 extra read) only for uploads carrying a claim hash or setup info: refuse to revive a used claim, and
+    // never store setup info for a sensor whose owner deleted its data (ingest caches device status for 5 min).
+    const devSnap = up.claim_token_hash || up.setup ? await tx.get(db.doc(`devices/${id}`)) : undefined;
+    if (devSnap && devSnap.get("status") === "retired") {
+      retired = true;
+      return;
+    }
     const cur = snaps.find((s) => s.id === `${id}_${currentHour}`);
     const uploads = Number(cur?.exists ? cur.get("uploads") ?? 0 : 0);
     if (uploads >= INGEST.maxUploadsPerHour) {
@@ -223,6 +230,10 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     if (Object.keys(devUpdate).length) tx.set(db.doc(`devices/${id}`), devUpdate, { merge: true });
   });
 
+  if (retired) {
+    registryCache.delete(id);
+    return { status: 403, body: { ok: false, error: "not_registered" } };
+  }
   if (rateLimited) {
     logWarn("ingest_reject", { device: id, reason: "rate_limited" });
     return { status: 429, body: { ok: false, error: "rate_limited", retry_after_s: 600 } };

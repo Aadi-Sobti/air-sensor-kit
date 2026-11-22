@@ -1,10 +1,19 @@
 // Service worker: offline shell for the installed app + web push notices. Never caches API responses
 // (owner data stays fresh and private). Bump VERSION to roll out a new shell.
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL = ["/my", "/manifest.webmanifest", "/icons/icon-192.png"];
 
+// Cache the /my page AND the built JS/CSS it loads (hashed /assets/ files), so the installed app opens offline.
+async function cacheShell() {
+  const c = await caches.open(VERSION);
+  await c.addAll(SHELL);
+  const html = await (await fetch("/my", { cache: "no-store" })).text();
+  const assets = [...html.matchAll(/(?:src|href)="(\/assets\/[^"]+)"/g)].map((m) => m[1]);
+  await c.addAll(assets);
+}
+
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(cacheShell().then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== VERSION).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
@@ -15,6 +24,9 @@ self.addEventListener("fetch", (e) => {
   if (e.request.mode === "navigate" && url.pathname === "/my") {
     // Network first, so updates arrive; cached shell when offline.
     e.respondWith(fetch(e.request).catch(() => caches.match("/my")));
+  } else if (url.pathname.startsWith("/assets/")) {
+    // Hashed build files never change: cache first.
+    e.respondWith(caches.match(e.request).then((hit) => hit || fetch(e.request)));
   }
 });
 self.addEventListener("push", (e) => {

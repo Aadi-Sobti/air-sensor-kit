@@ -5,11 +5,31 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { FieldValue, Firestore, Timestamp } from "firebase-admin/firestore";
 
 import { sha256Hex } from "../lib/hmac";
-import { formatOwnerCode, maskAddress, newOwnerCode, normalizeOwnerCode, ownerCodeHash, SESSION_TTL_S, signSession, verifySession } from "../lib/ownerCode";
+import { formatOwnerCode, maskAddress, newOwnerCode, normalizeOwnerCode, ownerCodeHash, SESSION_MAX_S, SESSION_TTL_S, signSession, verifySession } from "../lib/ownerCode";
 import { logEvent, logWarn } from "../lib/redact";
 import { shortCodeFor } from "../lib/shortcode";
 
+// Known browser push services only (the backend POSTs to these): Chrome/Android, Firefox, Safari/iOS, Edge.
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /(^|\.)push\.services\.mozilla\.com$/, /(^|\.)push\.apple\.com$/, /(^|\.)notify\.windows\.com$/];
+export function isPushServiceUrl(u: string): boolean {
+  if (u.length > 1000) return false;
+  try {
+    const url = new URL(u);
+    return url.protocol === "https:" && PUSH_HOSTS.some((r) => r.test(url.hostname));
+  } catch {
+    return false;
+  }
+}
+export function endpointId(endpoint: string): string {
+  return createHash("sha256").update(endpoint).digest("hex");
+}
+function b64urlLen(s: unknown): number {
+  if (typeof s !== "string" || !/^[A-Za-z0-9_-]+=*$/.test(s)) return -1;
+  return Buffer.from(s, "base64url").length;
+}
+
 export const OWNER = {
+  maxPushSubs: 10,
   wrongPerIpPerHour: 10,
   wrongGlobalPerHour: 2000,
   maxBodyBytes: 4096,
@@ -18,8 +38,30 @@ export const OWNER = {
 };
 
 export interface OwnerConfig { pepper: string; vapidPublic: string }
-export interface OwnerRequest { method: string; path: string; headers: Record<string, string | string[] | undefined>; rawBody?: Buffer; ip: string }
+export interface OwnerRequest {
+  method: string; path: string; headers: Record<string, string | string[] | undefined>; rawBody?: Buffer; ip: string;
+  query?: Record<string, unknown>;
+}
 export interface OwnerResponse { status: number; body: Record<string, unknown> }
+
+/**
+ * Client IP for rate limiting. Checked on dev 2026-11-21: through Firebase Hosting (CDN headers present, e.g.
+ * `cdn-loop`), Hosting replaces any client-sent X-Forwarded-For with "<client>, <cdn>", so the FIRST entry is the
+ * client. Direct calls to the function URL get "<whatever the client sent>, <client>" from Google's front end,
+ * so the LAST entry is the client. IPv6 is keyed by its /64 (one household/network).
+ * Residual risk (recorded in decisions.md): a direct caller who forges the CDN headers can pick the first entry.
+ */
+export function clientIp(headers: Record<string, string | string[] | undefined>, fallback?: string): string {
+  const h = (n: string) => { const v = headers[n]; return (Array.isArray(v) ? v[0] : v) ?? ""; };
+  const parts = h("x-forwarded-for").split(",").map((p) => p.trim()).filter(Boolean);
+  const viaHosting = /fastly/i.test(h("cdn-loop"));
+  const ip = (viaHosting ? parts[0] : parts[parts.length - 1]) || fallback || "unknown";
+  if (ip.includes(":")) {
+    const groups = ip.split("::")[0].split(":").filter(Boolean);
+    return `${groups.slice(0, 4).join(":")}::/64`;
+  }
+  return ip;
+}
 
 const NOT_FOUND = { status: 404, body: { ok: false, error: "not_found" } };
 const NO_SESSION = { status: 401, body: { ok: false, error: "session" } };
@@ -56,27 +98,47 @@ export async function issueOwnerCode(db: Firestore, pepper: string, deviceId: st
   return code;
 }
 
-async function countWrong(db: Firestore, ipKey: string, nowMs: number, bump: boolean): Promise<boolean> {
+/**
+ * The owner-code check (reusable for partner links, backend.md). Every attempt is counted BEFORE the code is
+ * checked, in a transaction, so parallel guesses can't slip past the limit; a correct code refunds its attempt.
+ * Per-IP limit: OWNER.wrongPerIpPerHour. The global count never locks out correct codes; it only raises an alert.
+ */
+export async function checkOwnerCode(db: Firestore, pepper: string, ipKey: string, raw: string, nowMs: number):
+  Promise<{ deviceId: string; v: number; shortCode?: string; name?: string } | "rate_limited" | "wrong"> {
   const hour = Math.floor(nowMs / 3600e3);
   const ipRef = db.doc(`owner_attempts/${ipKey}_${hour}`);
   const gRef = db.doc(`owner_attempts/global_${hour}`);
-  const [ip, g] = await db.getAll(ipRef, gRef);
-  const limited = Number(ip.get("n") ?? 0) >= OWNER.wrongPerIpPerHour || Number(g.get("n") ?? 0) >= OWNER.wrongGlobalPerHour;
-  if (bump && !limited) {
-    const exp = Timestamp.fromMillis((hour + 2) * 3600e3);
-    await ipRef.set({ n: FieldValue.increment(1), expireAt: exp }, { merge: true });
-    await gRef.set({ n: FieldValue.increment(1), expireAt: exp }, { merge: true });
+  const exp = Timestamp.fromMillis((hour + 2) * 3600e3);
+  const n = await db.runTransaction(async (tx) => {
+    const cur = Number((await tx.get(ipRef)).get("n") ?? 0) + 1;
+    tx.set(ipRef, { n: cur, expireAt: exp }, { merge: true });
+    return cur;
+  });
+  if (n > OWNER.wrongPerIpPerHour) return "rate_limited";
+  const code = normalizeOwnerCode(raw);
+  const entry = code ? await db.doc(`owner_codes/${ownerCodeHash(pepper, code)}`).get() : null;
+  const dev = entry?.exists ? await db.doc(`devices/${entry.get("deviceId")}`).get() : null;
+  if (!entry?.exists || !dev?.exists || dev.get("status") === "retired" || Number(dev.get("ownerCodeVersion")) !== Number(entry.get("v"))) {
+    const g = await db.runTransaction(async (tx) => {
+      const cur = Number((await tx.get(gRef)).get("n") ?? 0) + 1;
+      tx.set(gRef, { n: cur, expireAt: exp }, { merge: true });
+      return cur;
+    });
+    if (g === OWNER.wrongGlobalPerHour) logWarn("owner_guessing_surge", { wrongThisHour: g }); // alert once per hour
+    return "wrong";
   }
-  return limited;
+  await ipRef.set({ n: FieldValue.increment(-1) }, { merge: true }); // a correct code doesn't count as a guess
+  return { deviceId: String(entry.get("deviceId")), v: Number(entry.get("v")), shortCode: dev.get("shortCode"), name: dev.get("name") };
 }
 
 async function session(db: Firestore, cfg: OwnerConfig, req: OwnerRequest, nowS: number) {
   const auth = header(req, "authorization").replace(/^Bearer\s+/i, "");
   const p = auth ? verifySession(cfg.pepper, auth, nowS) : null;
   if (!p) return null;
+  if (p.iat !== undefined && nowS - p.iat > SESSION_MAX_S) return null; // absolute limit; then the code is needed again
   const dev = await db.doc(`devices/${p.d}`).get();
   if (!dev.exists || dev.get("status") === "retired" || Number(dev.get("ownerCodeVersion") ?? 0) !== p.v) return null;
-  return { p, dev, fresh: signSession(cfg.pepper, { d: p.d, v: p.v, exp: nowS + SESSION_TTL_S }) };
+  return { p, dev, fresh: signSession(cfg.pepper, { d: p.d, v: p.v, exp: nowS + SESSION_TTL_S, iat: p.iat ?? nowS }) };
 }
 
 export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerRequest, nowMs = Date.now()): Promise<OwnerResponse> {
@@ -88,19 +150,15 @@ export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerReq
 
   if (route === "POST /session") {
     const b = json(req);
-    const code = normalizeOwnerCode(String(b?.code ?? ""));
-    if (await countWrong(db, ipKey, nowMs, false)) return { status: 429, body: { ok: false, error: "rate_limited" } };
-    const entry = code ? await db.doc(`owner_codes/${ownerCodeHash(cfg.pepper, code)}`).get() : null;
-    const dev = entry?.exists ? await db.doc(`devices/${entry.get("deviceId")}`).get() : null;
-    if (!entry?.exists || !dev?.exists || dev.get("status") === "retired" || Number(dev.get("ownerCodeVersion")) !== Number(entry.get("v"))) {
-      await countWrong(db, ipKey, nowMs, true);
-      logWarn("owner_session_reject", { reason: code ? "wrong_code" : "malformed" });
+    const r = await checkOwnerCode(db, cfg.pepper, ipKey, String(b?.code ?? ""), nowMs);
+    if (r === "rate_limited") return { status: 429, body: { ok: false, error: "rate_limited" } };
+    if (r === "wrong") {
+      logWarn("owner_session_reject", { reason: "wrong_code" });
       return { status: 401, body: { ok: false, error: "wrong_code" } };
     }
-    const d = String(entry.get("deviceId"));
-    const token = signSession(cfg.pepper, { d, v: Number(entry.get("v")), exp: nowS + SESSION_TTL_S });
-    logEvent("owner_session_ok", { device: d });
-    return { status: 200, body: { ok: true, token, code: shortCodeFor(d, dev.get("shortCode")), name: dev.get("name") ?? null } };
+    const token = signSession(cfg.pepper, { d: r.deviceId, v: r.v, exp: nowS + SESSION_TTL_S, iat: nowS });
+    logEvent("owner_session_ok", { device: r.deviceId });
+    return { status: 200, body: { ok: true, token, code: shortCodeFor(r.deviceId, r.shortCode), name: r.name ?? null } };
   }
 
   if (route === "POST /rotate") {
@@ -110,18 +168,22 @@ export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerReq
     if (!/^esp8266-\d{1,10}$/.test(d) || !/^[0-9a-f]{32}$/.test(t)) return { status: 400, body: { ok: false, error: "bad_link" } };
     const devRef = db.doc(`devices/${d}`);
     const want = sha256Hex(t);
-    let ok = false;
-    await db.runTransaction(async (tx) => {
+    // One transaction: consume the token AND issue the new code, so a failure can't lose both.
+    const code = await db.runTransaction(async (tx) => {
       const dev = await tx.get(devRef);
       const stored = String(dev.get("claimTokenHash") ?? "");
       const exp = (dev.get("claimTokenExpires") as Timestamp | undefined)?.toMillis() ?? 0;
-      if (!dev.exists || dev.get("status") !== "active" || stored.length !== 64 || exp < nowMs) return;
-      if (!timingSafeEqual(Buffer.from(stored, "hex"), Buffer.from(want, "hex"))) return;
-      tx.set(devRef, { claimTokenHash: FieldValue.delete(), claimTokenExpires: FieldValue.delete(), usedClaimTokenHash: want }, { merge: true });
-      ok = true;
+      if (!dev.exists || dev.get("status") !== "active" || stored.length !== 64 || exp < nowMs) return null;
+      if (!timingSafeEqual(Buffer.from(stored, "hex"), Buffer.from(want, "hex"))) return null;
+      const old = await tx.get(db.collection("owner_codes").where("deviceId", "==", d));
+      const fresh = newOwnerCode();
+      const v = Number(dev.get("ownerCodeVersion") ?? 0) + 1;
+      old.forEach((o) => tx.delete(o.ref));
+      tx.set(db.doc(`owner_codes/${ownerCodeHash(cfg.pepper, fresh)}`), { deviceId: d, v, createdAt: FieldValue.serverTimestamp() });
+      tx.set(devRef, { claimTokenHash: FieldValue.delete(), claimTokenExpires: FieldValue.delete(), usedClaimTokenHash: want, ownerCodeVersion: v }, { merge: true });
+      return fresh;
     });
-    if (!ok) return { status: 409, body: { ok: false, error: "not_ready" } }; // the page polls until the sensor uploads
-    const code = await issueOwnerCode(db, cfg.pepper, d);
+    if (!code) return { status: 409, body: { ok: false, error: "not_ready" } }; // the page polls until the sensor uploads
     logEvent("owner_code_rotated", { device: d });
     return { status: 200, body: { ok: true, ownerCode: formatOwnerCode(code), code: shortCodeFor(d, (await devRef.get()).get("shortCode")) } };
   }
@@ -141,7 +203,9 @@ export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerReq
     const uploads = hours.reduce((a, h) => a + Number(h.exists ? h.get("uploads") ?? 0 : 0), 0);
     const minutesSoFar = new Date(nowMs).getUTCMinutes();
     const expected = 23 * OWNER.expectedUploadsPerHour + Math.max(1, Math.floor((minutesSoFar / 60) * OWNER.expectedUploadsPerHour));
-    const pushCount = (await devRef.collection("push_subs").count().get()).data().count;
+    // Notices for THIS browser: the page sends a hash of its own push endpoint (?ep=), if it has one.
+    const ep = /^[0-9a-f]{64}$/.test(String(req.query?.ep ?? "")) ? String(req.query!.ep) : "";
+    const thisBrowser = ep ? (await devRef.collection("push_subs").doc(ep).get()).exists : false;
     return {
       status: 200,
       body: {
@@ -160,7 +224,7 @@ export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerReq
         } : null,
         uploadSuccess: Math.min(1, uploads / expected),
         chart: ((pub.exists ? pub.get("hourly") : []) as { h: string; pm: number | null }[]).slice(0, OWNER.chartHours).map((p) => [p.h, p.pm]),
-        notices: pushCount > 0,
+        notices: thisBrowser,
       },
     };
   }
@@ -204,19 +268,24 @@ export async function handleOwner(db: Firestore, cfg: OwnerConfig, req: OwnerReq
     const b = json(req);
     const sub = b?.subscription as { endpoint?: string; keys?: { p256dh?: string; auth?: string } } | undefined;
     const endpoint = String(sub?.endpoint ?? "");
-    if (!/^https:\/\//.test(endpoint) || endpoint.length > 1000) return { status: 400, body: { ok: false, error: "bad_subscription" } };
-    const ref = devRef.collection("push_subs").doc(createHash("sha256").update(endpoint).digest("hex"));
+    if (!isPushServiceUrl(endpoint)) return { status: 400, body: { ok: false, error: "bad_subscription" } };
+    const ref = devRef.collection("push_subs").doc(endpointId(endpoint));
     if (route === "DELETE /push") {
       await ref.delete();
     } else {
-      if (!sub?.keys?.p256dh || !sub.keys.auth) return { status: 400, body: { ok: false, error: "bad_subscription" } };
+      // Browser push keys: P-256 public key (65 bytes) and auth secret (16 bytes), base64url.
+      if (b64urlLen(sub?.keys?.p256dh) !== 65 || b64urlLen(sub?.keys?.auth) !== 16) return { status: 400, body: { ok: false, error: "bad_subscription" } };
+      const count = (await devRef.collection("push_subs").count().get()).data().count;
+      if (count >= OWNER.maxPushSubs && !(await ref.get()).exists) return { status: 400, body: { ok: false, error: "too_many_devices" } };
       const lang = String(b?.lang ?? "en") === "es" ? "es" : "en";
-      await ref.set({ sub: { endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, lang, createdAt: Timestamp.fromMillis(nowMs) });
+      await ref.set({ sub: { endpoint, keys: { p256dh: sub!.keys!.p256dh, auth: sub!.keys!.auth } }, lang, createdAt: Timestamp.fromMillis(nowMs) });
     }
     const n = (await devRef.collection("push_subs").count().get()).data().count;
+    // Flag on the device (copied to the map entry by publish, even if the sensor isn't placed yet).
+    await devRef.set({ notifyOffline: n > 0 }, { merge: true });
     const pub = db.doc(`public_sensors/${d}`);
     if ((await pub.get()).exists) await pub.set({ notifyOffline: n > 0 }, { merge: true });
-    return { status: 200, body: { ok: true, token: s.fresh, notices: n > 0 } };
+    return { status: 200, body: { ok: true, token: s.fresh, notices: route === "POST /push" } };
   }
 
   if (route === "DELETE /sensor/data") {

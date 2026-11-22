@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "pretest": "tsc && tsc -p tsconfig.test.json",
+    "pretest": "rm -rf lib-test && tsc && tsc -p tsconfig.test.json",
     "test": "mocha --timeout 20000 \"lib-test/test/**/*.test.js\""
   },
   "dependencies": {

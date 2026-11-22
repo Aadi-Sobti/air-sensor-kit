@@ -10,7 +10,7 @@ import { defineSecret } from "firebase-functions/params";
 import webpush from "web-push";
 
 import { runArchive, runArchivePurge } from "./archive";
-import { handleOwner, sensorHistory } from "./owner/api";
+import { clientIp, handleOwner, sensorHistory } from "./owner/api";
 import { PushSender } from "./publish";
 import { handleClaim } from "./claim";
 import { handleIngest } from "./ingest";
@@ -25,11 +25,15 @@ const OWNER_PEPPER = defineSecret("OWNER_PEPPER"); // keyed hash for owner codes
 const VAPID_PUBLIC = defineSecret("VAPID_PUBLIC"); // web push (not secret, but kept with its private half)
 const VAPID_PRIVATE = defineSecret("VAPID_PRIVATE");
 
-function pushSender(): PushSender {
-  webpush.setVapidDetails("https://github.com/Aadi-Sobti/air-sensor-kit", VAPID_PUBLIC.value(), VAPID_PRIVATE.value());
+function pushSender(): PushSender | undefined {
+  try {
+    webpush.setVapidDetails("https://github.com/Aadi-Sobti/air-sensor-kit", VAPID_PUBLIC.value(), VAPID_PRIVATE.value());
+  } catch {
+    return undefined; // bad/missing keys must never stop the map update; notices are skipped
+  }
   return async (sub, payload) => {
     try {
-      await webpush.sendNotification(sub, payload, { TTL: 6 * 3600 });
+      await webpush.sendNotification(sub, payload, { TTL: 6 * 3600, timeout: 5000 });
       return { gone: false };
     } catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
@@ -100,12 +104,13 @@ export const archive = onSchedule({ schedule: "30 3 * * *", timeZone: "UTC", mem
   async () => {
     const bucket = getStorage().bucket();
     const store = {
+      // Stored as plain gzip bytes (no Content-Encoding), read back raw (decompress: false) for the purge.
       save: async (path: string, data: Buffer) => {
-        await bucket.file(path).save(data, { contentType: "application/x-ndjson", resumable: false });
+        await bucket.file(path).save(data, { contentType: "application/gzip", resumable: false });
       },
       read: async (path: string) => {
         const f = bucket.file(path);
-        return (await f.exists())[0] ? (await f.download())[0] : null;
+        return (await f.exists())[0] ? (await f.download({ decompress: false }))[0] : null;
       },
       list: async (prefix: string) => (await bucket.getFiles({ prefix }))[0].map((f) => f.name),
     };
@@ -115,10 +120,10 @@ export const archive = onSchedule({ schedule: "30 3 * * *", timeZone: "UTC", mem
 
 /** Owner API: /api/v1/owner/** (sessions from owner codes; no accounts). */
 export const owner = onRequest({ memory: "256MiB", maxInstances: 10, secrets: [OWNER_PEPPER, VAPID_PUBLIC] }, async (req, res) => {
-  const fwd = String(req.headers["x-forwarded-for"] ?? "").split(",")[0].trim();
   const out = await handleOwner(getFirestore(), { pepper: OWNER_PEPPER.value(), vapidPublic: VAPID_PUBLIC.value() }, {
     method: req.method, path: req.path, headers: req.headers as Record<string, string | string[] | undefined>,
-    rawBody: req.rawBody, ip: fwd || req.ip || "unknown",
+    rawBody: req.rawBody, ip: clientIp(req.headers as Record<string, string | string[] | undefined>, req.ip),
+    query: req.query as Record<string, unknown>,
   });
   res.set("Cache-Control", "no-store");
   res.status(out.status).json(out.body);
