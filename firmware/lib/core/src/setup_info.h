@@ -18,9 +18,13 @@ class CommandLine {
  public:
   // Returns true when a complete, clean line equal to `command` just ended.
   bool feed(uint8_t b, const char* command);
+  // Returns true when any complete, clean line just ended; the line is then in text() until the next byte.
+  bool feedLine(uint8_t b);
+  const char* text() const { return last_; }
 
  private:
   char buf_[24] = {0};
+  char last_[24] = {0};
   size_t len_ = 0;
   bool bad_ = false;
 };

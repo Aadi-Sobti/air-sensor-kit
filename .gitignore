@@ -40,3 +40,4 @@ backend/functions/lib-test/
 backend/public/
 web/public/tiles/
 web/public/fonts/
+backend/functions/.secret.local

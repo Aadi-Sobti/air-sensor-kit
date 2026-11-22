@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#1557a0" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <title>ProseFire</title>
+  </head>
+  <body>
+    <main>
+      <h1 data-i18n="my.title">My sensor</h1>
+      <div id="install" class="hint-box" hidden>
+        <p id="install-text"></p>
+        <button id="install-btn" type="button" hidden data-i18n="pwa.install"></button>
+        <button id="install-dismiss" type="button" class="link" data-i18n="pwa.dismiss"></button>
+      </div>
+      <div id="sensors"></div>
+      <section id="add">
+        <form id="code-form" autocomplete="off">
+          <p id="add-intro" data-i18n="my.enterCode"></p>
+          <label for="code" data-i18n="my.codeLabel"></label>
+          <input id="code" type="text" maxlength="14" autocapitalize="characters" spellcheck="false" placeholder="7KQ2-MX4P-R9" />
+          <button type="submit" data-i18n="my.open"></button>
+        </form>
+        <div id="error" class="error" role="alert" hidden></div>
+      </section>
+      <template id="card">
+        <article class="sensor-card">
+          <h2 class="s-name"></h2>
+          <p class="s-status"></p>
+          <p class="s-aqi" hidden></p>
+          <p class="error s-fault" hidden data-i18n="my.sensorFault"></p>
+          <div class="chart-tabs">
+            <button type="button" class="tab t24" data-i18n="my.chart24"></button>
+            <button type="button" class="tab t7d" data-i18n="my.chart7d"></button>
+          </div>
+          <div class="s-chart"></div>
+          <ul class="s-health hint"></ul>
+          <details>
+            <summary data-i18n="my.settings"></summary>
+            <form class="s-settings">
+              <label data-i18n="my.name"></label>
+              <input class="f-name" type="text" maxlength="40" />
+              <label class="choice"><input type="radio" class="f-out" value="outside" /> <span data-i18n="claim.outside"></span></label>
+              <label class="choice"><input type="radio" class="f-in" value="inside" /> <span data-i18n="claim.inside"></span></label>
+              <button type="submit" data-i18n="my.save"></button>
+              <p class="hint s-saved" hidden data-i18n="my.saved"></p>
+            </form>
+            <form class="s-address">
+              <p class="s-addr"></p>
+              <p class="hint s-addr-status"></p>
+              <label data-i18n="my.addressNew"></label>
+              <input class="f-address" type="text" maxlength="200" autocomplete="street-address" />
+              <label data-i18n="claim.zip"></label>
+              <input class="f-zip" type="text" maxlength="5" inputmode="numeric" />
+              <button type="submit" data-i18n="my.addressSave"></button>
+            </form>
+            <div class="s-notices">
+              <p><strong data-i18n="my.notices"></strong></p>
+              <p class="hint s-notices-text"></p>
+              <button type="button" class="b-notices"></button>
+            </div>
+            <p><a class="s-public"></a></p>
+            <button type="button" class="danger b-delete" data-i18n="my.delete"></button>
+            <button type="button" class="link b-forget" data-i18n="my.forget"></button>
+          </details>
+        </article>
+      </template>
+    </main>
+    <footer>
+      <p data-i18n="safety.notSmokeAlarm">This is not a smoke alarm. It does not replace official warnings or evacuation orders.</p>
+    </footer>
+    <script type="module" src="/src/my.ts"></script>
+  </body>
+</html>

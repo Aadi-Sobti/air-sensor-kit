@@ -3,14 +3,19 @@
 //   archive/raw/v1/YYYY/MM/DD.ndjson.gz   (one line per reading: device, ts, and the raw sensor fields)
 // Corrections are versioned and can be re-run from this. No locations or personal data are in readings.
 // Catches up on missed days (up to 5 per run), well inside the 35-day TTL.
-import { gzipSync } from "node:zlib";
+import { gunzipSync, gzipSync } from "node:zlib";
 
-import { Firestore, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Firestore, Timestamp } from "firebase-admin/firestore";
 
 import { logEvent, logWarn } from "./lib/redact";
 
-export const ARCHIVE = { maxDaysPerRun: 5, firstDayLookback: 2 };
+export const ARCHIVE = { maxDaysPerRun: 5, firstDayLookback: 2, maxPurgeFilesPerRun: 400 };
 export type SaveFile = (path: string, data: Buffer) => Promise<void>;
+export interface ArchiveStore {
+  save: SaveFile;
+  read: (path: string) => Promise<Buffer | null>;
+  list: (prefix: string) => Promise<string[]>;
+}
 
 export function dayKey(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
@@ -56,4 +61,49 @@ export async function runArchive(db: Firestore, save: SaveFile, nowMs = Date.now
     day = dayKey(Date.parse(`${day}T00:00:00Z`) + 86400e3);
   }
   return done;
+}
+
+/**
+ * "Delete my data" (founder decision 2026-11-21: delete archived raw readings too): rewrite every archive file that
+ * may contain the retired device, without its lines. Budgeted per run; resumes next night until done.
+ */
+export async function runArchivePurge(db: Firestore, store: ArchiveStore, nowMs = Date.now()) {
+  const pending = await db.collection("devices").where("archivePurgePending", "==", true).limit(20).get();
+  let files = 0;
+  const purged: string[] = [];
+  for (const dev of pending.docs) {
+    const d = dev.id;
+    const from = dayKey((dev.get("enrolledAt") as Timestamp | undefined)?.toMillis() ?? 0);
+    const resume = String(dev.get("archivePurgedThrough") ?? "");
+    const paths = (await store.list("archive/raw/v1/")).filter((p) => /\/\d{4}\/\d{2}\/\d{2}\.ndjson\.gz$/.test(p)).sort();
+    let done = true;
+    for (const p of paths) {
+      const day = p.replace(/^.*v1\/(\d{4})\/(\d{2})\/(\d{2}).*$/, "$1-$2-$3");
+      if (day < from || (resume && day <= resume)) continue;
+      if (files >= ARCHIVE.maxPurgeFilesPerRun) {
+        done = false;
+        break;
+      }
+      const buf = await store.read(p);
+      files++;
+      if (buf) {
+        const lines = gunzipSync(buf).toString("utf8").split("\n").filter(Boolean);
+        const kept = lines.filter((l) => {
+          try {
+            return JSON.parse(l).device !== d;
+          } catch {
+            return true;
+          }
+        });
+        if (kept.length !== lines.length) await store.save(p, gzipSync(Buffer.from(kept.join("\n") + (kept.length ? "\n" : ""), "utf8")));
+      }
+      await dev.ref.set({ archivePurgedThrough: day }, { merge: true });
+    }
+    if (done) {
+      await dev.ref.set({ archivePurgePending: false, archivePurgedAt: Timestamp.fromMillis(nowMs), archivePurgedThrough: FieldValue.delete() }, { merge: true });
+      purged.push(d);
+      logEvent("archive_purge_done", { device: d });
+    }
+  }
+  return purged;
 }

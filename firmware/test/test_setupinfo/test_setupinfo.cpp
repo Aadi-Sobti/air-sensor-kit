@@ -36,6 +36,20 @@ static void test_binary_or_long_lines_never_match_and_never_replay() {
   TEST_ASSERT_EQUAL(1, feedAll(c, "PFCMD SETUPINFO\n"));  // a clean line works again
 }
 
+static void test_feed_line_returns_any_clean_command() {
+  CommandLine c;
+  int hits = 0;
+  std::string got;
+  for (unsigned char b : std::string("noise\x01x\nPFCMD NEWCLAIM\n")) {
+    if (c.feedLine(b)) {
+      hits++;
+      got = c.text();
+    }
+  }
+  TEST_ASSERT_EQUAL(1, hits);
+  TEST_ASSERT_EQUAL_STRING("PFCMD NEWCLAIM", got.c_str());
+}
+
 static void test_setup_info_gate() {
   TEST_ASSERT_TRUE(setupInfoAllowed(false, 10 * 60000));  // unprovisioned: any time
   TEST_ASSERT_TRUE(setupInfoAllowed(true, 59999));         // provisioned: within 60 s of boot
@@ -65,6 +79,7 @@ int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_command_matches_clean_line_only);
   RUN_TEST(test_binary_or_long_lines_never_match_and_never_replay);
+  RUN_TEST(test_feed_line_returns_any_clean_command);
   RUN_TEST(test_setup_info_gate);
   RUN_TEST(test_setup_info_sent_once_cleared_only_after_ok);
   return UNITY_END();

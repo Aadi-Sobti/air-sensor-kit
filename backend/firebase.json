@@ -50,8 +50,26 @@
         }
       },
       {
+        "source": "/api/v1/owner/**",
+        "function": {
+          "functionId": "owner",
+          "region": "us-east1"
+        }
+      },
+      {
+        "source": "/api/v1/sensor/**",
+        "function": {
+          "functionId": "history",
+          "region": "us-east1"
+        }
+      },
+      {
         "source": "/s/**",
         "destination": "/s.html"
+      },
+      {
+        "source": "/my",
+        "destination": "/my.html"
       }
     ],
     "predeploy": [

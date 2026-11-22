@@ -41,6 +41,11 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | Public map cells: **H3 resolution 9** (~0.105 km², a few NYC blocks) | Founder: safer while sensors are few |
 | 2026-11-21 | RH for the EPA correction: **nearest NWS station** to the public cell center (User-Agent = repo URL), cached fallback ≤ 3 h, then 50 % (per Barkjohn 2021) | Founder |
 | 2026-11-21 | Implementation (agent): AQI = EPA NowCast when 2 of the last 3 hours exist, else the current corrected value; offline after 30 min without a reading; indoor sensors have no public location (page by code only) | EPA TAD; privacy |
+| 2026-11-21 | #14 Owner notices: **web push** from /my (no email, no account); offline notice once per online → offline change | Founder |
+| 2026-11-21 | #20 Owner page shows status, 24 h / 7 d chart, WiFi signal, firmware, uploads received; allows rename, inside/outside, address update (masked display), offline notices, delete my data. Never the full address | Founder |
+| 2026-11-21 | "Delete my data" also deletes archived raw readings (archive files rewritten by the nightly job) | Founder |
+| 2026-11-21 | Owner codes stored as a keyed hash; key (OWNER_PEPPER) + VAPID keys in Google Secret Manager | Founder; leaked DB can't be brute-forced offline |
+| 2026-11-21 | Dependency: web-push (**MPL-2.0**, backend only, unmodified). I first called it MIT by mistake; founder approved MPL-2.0 | Founder |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
@@ -51,10 +56,8 @@ Never act on an Open item without asking (the founder makes these calls).
 | 11 | Include a USB wall charger in the kit? | M10 | Adds per-kit cost; most homes have a phone charger |
 | 12 | Pre-attach jumpers to the adapter at packing time? | M10 | Fewer recipient mistakes, more volunteer time |
 | 13 | Languages beyond EN + ES | M10 | NYC: Haitian Creole, Chinese, Bengali, Russian… |
-| 14 | Owner notices ("sensor offline", later smoke): email vs web push from the owner page | M7b | Web push: free, and works on Android and on iPhone home-screen web apps (verify current iOS support); email as an option |
 | 15 | Open-source license for code; license for published data | M11 | |
 | 16 | Phase 2 humidity sensor: DHT22 vs cheaper I2C part | Phase 2 | |
 | 17 | Android household alerts (Fire Watch is iOS-only) | Phase 3 | Web push from the owner page may cover this |
 | 18 | Optional sign-in (email link) on top of owner codes | M7b | Owner code only in v1; add sign-in when someone has many sensors (schools, groups) |
 | 19 | Card layout with two QR codes (setup QR on front, "Manage my sensor" QR on back) | M9 | Test with first-time users in M10 that nobody scans the wrong one |
-| 20 | What the owner page shows and allows | M7b | Status, charts, device health, rename, indoor/outdoor, move, offline notices, delete my data; never the full address |

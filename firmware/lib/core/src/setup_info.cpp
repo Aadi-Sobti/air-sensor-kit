@@ -5,12 +5,18 @@
 namespace core {
 
 bool CommandLine::feed(uint8_t b, const char* command) {
+  return feedLine(b) && std::strcmp(last_, command) == 0;
+}
+
+bool CommandLine::feedLine(uint8_t b) {
+  last_[0] = 0;
   if (b == '\n' || b == '\r') {
-    bool match = !bad_ && len_ > 0 && std::strcmp(buf_, command) == 0;
+    bool clean = !bad_ && len_ > 0;
+    if (clean) std::memcpy(last_, buf_, len_ + 1);
     len_ = 0;
     bad_ = false;
     buf_[0] = 0;
-    return match;
+    return clean;
   }
   if (bad_) return false;
   if (b < 0x20 || b >= 0x7F || len_ >= sizeof buf_ - 1) {

@@ -243,13 +243,30 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       the soak) and the wording on the map/sensor pages. Spanish AQI names ("Insalubre…") need a native speaker.
 
 ### M7b "My sensor": checking and managing your device
-- [ ] `/s/<code>` (public): live reading, AQI, 24 h / 7 d chart, online/offline + last seen.
-- [ ] `/my` (owner): enter or scan the owner code → device health (WiFi strength, firmware, last restart, upload
+- [x] `/s/<code>` (public): live reading, AQI, 24 h / 7 d chart, online/offline + last seen.
+      Chart from `GET /api/v1/sensor/<CODE>/history` (no location; CDN 5 min); public_sensors keeps 168 hours.
+- [x] `/my` (owner): enter or scan the owner code → device health (WiFi strength, firmware, last restart, upload
       success), rename, indoor/outdoor, update address, offline notices (decision #14), delete my data. Supports several sensors per browser.
-- [ ] Installable web app (manifest + service worker) with an "Add to Home Screen" hint on iPhone and Android.
-- [ ] Owner-code endpoints + rate limiting + rotation ("new owner code" via computer setup = physical access).
+      `backend/functions/src/owner/api.ts`: sessions (signed, 7-day sliding, bound to the code version), sensor
+      data with a masked address only, settings, address update (old exact location dropped, re-placed by publish),
+      web-push subscriptions, delete my data (readings, location, map entry, codes, notices, device secret; device
+      retired) + archive purge (`runArchivePurge`, nightly, resumable). Offline notice: one web push on each
+      online → offline change, in the subscriber's language; dead subscriptions removed.
+- [x] Installable web app (manifest + service worker) with an "Add to Home Screen" hint on iPhone and Android.
+      `public/manifest.webmanifest`, `public/sw.js` (shell only; never caches /api), icons from `tools/make_icons.py`
+      (placeholder design until the final name/branding).
+- [x] Owner-code endpoints + rate limiting + rotation ("new owner code" via computer setup = physical access).
+      Codes: 10 chars, keyed hash HMAC(OWNER_PEPPER) in Secret Manager (created 2026-11-21 with VAPID keys; values
+      never printed). 10 wrong tries/IP/hour (+ a global cap); IPs stored only as keyed hashes. Rotation: /setup
+      "Get a new owner code" → firmware 0.6.0 `PFCMD NEWCLAIM` → fresh claim token → `/owner/rotate` → old code and
+      its sessions stop working.
+      Tests: backend 75 (owner 14 incl. brute force, rotation, masked address, delete, logs; notices; purge), web 30,
+      native 81, tools 28. Deployed to dev: owner/history live; /my registers its service worker, no console errors.
+      Firmware 0.6.0: Flash 49.4% (515,951 B) ⚠ ~4 KB under the OTA ceiling: size cuts are the first M9 task.
 - **Done when:** tests pass (incl. brute-force rate limit, rotated code stops working, owner page never shows
       the full address); 👤 founder checks both pages on a phone and installs the app to the home screen.
+      👤 Pending (needs the board on 0.6.0): /setup → "Get a new owner code" → open /my on the iPhone → Add to Home
+      Screen → turn on offline notices → unplug the board 35 min → a notice arrives.
 
 ### M8 Sensor.Community forwarding (flag OFF by default)
 - [ ] Task-queue forwarder + payload tests. 👤 Founder confirms forwarding/bulk registration with Sensor.Community.
@@ -280,6 +297,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M7b owner page, owner codes (keyed hash in Secret Manager), web push notices, delete + archive purge, PWA, sensor-page chart; firmware 0.6.0 NEWCLAIM · backend 75, web 30, native 81 · deployed to dev · next: board back → flash 0.6.0, founder checklists.
 - 2026-11-21 · M7 review fixes (snapshot gzip/size budget, time-boxed publish, freshness, hourly NowCast, rollup catch-up, nightly archive, claim → sensor page) deployed to dev · backend 61, web 22 · partial soak 2.3 h: 54/54 uploads, 0 reboots · board unplugged ~1 day.
 - 2026-11-21 · M7 corrections/AQI/NowCast/H3/snapshot/map + sensor page, deployed to dev · backend 53, web 21 · next: founder map review; after the soak flash 0.5.0 + browser/phone checklists.
 - 2026-11-21 · M6 phone setup built (portal, AP, setup-info tool) · native 75/75, tools 28/28, release RAM 44.6% / Flash 49.3% · next: flash 0.5.0 after the soak; phone + browser checklists.

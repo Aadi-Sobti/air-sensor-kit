@@ -19,6 +19,9 @@ export class ImprovClient {
   private queue: Frame[] = [];
   private waiters: (() => void)[] = [];
   private closed = false;
+  private lineBuf = "";
+  private lines: string[] = [];
+  private dec = new TextDecoder();
 
   /** True once the transport stopped delivering data (board unplugged, port error). */
   get isClosed(): boolean {
@@ -38,8 +41,37 @@ export class ImprovClient {
         return;
       }
       this.queue.push(...this.parser.feed(chunk));
+      this.collectLines(chunk);
       this.wake();
     }
+  }
+
+  private collectLines(chunk: Uint8Array) {
+    // Printable text only (Improv frames are binary); keep a short window of recent lines.
+    this.lineBuf += this.dec.decode(chunk.filter((b) => b === 10 || (b >= 32 && b < 127)), { stream: true });
+    const parts = this.lineBuf.split("\n");
+    this.lineBuf = parts.pop()!.slice(-200);
+    this.lines.push(...parts.map((l) => l.trim()).filter(Boolean));
+    if (this.lines.length > 50) this.lines = this.lines.slice(-50);
+  }
+
+  /**
+   * Asks the sensor for a fresh single-use claim token (to get a new owner code; physical access = ownership).
+   * Returns {d, t} or undefined. Firmware 0.6.0+ answers "[claim] d=<deviceId> t=<token>".
+   */
+  async freshClaim(ms = 5000): Promise<{ d: string; t: string } | undefined> {
+    this.lines = [];
+    await this.t.write(new TextEncoder().encode("\nPFCMD NEWCLAIM\n"));
+    const end = Date.now() + ms;
+    while (Date.now() < end && !this.closed) {
+      const hit = this.lines.map((l) => l.match(/^\[claim\] d=(esp8266-\d{1,10}) t=([0-9a-f]{32})$/)).find(Boolean);
+      if (hit) return { d: hit[1], t: hit[2] };
+      await new Promise<void>((res) => {
+        const timer = setTimeout(res, 100);
+        this.waiters.push(() => { clearTimeout(timer); res(); });
+      });
+    }
+    return undefined;
   }
 
   private wake() {

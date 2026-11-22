@@ -31,7 +31,18 @@ static core::CommandLine gCmd;
 static SetupInfoFn gSetupInfo = nullptr;
 
 static void feedLine(uint8_t b) {
-  if (!gCmd.feed(b, "PFCMD SETUPINFO") || !gSetupInfo) return;
+  if (!gCmd.feedLine(b)) return;
+  if (strcmp(gCmd.text(), "PFCMD NEWCLAIM") == 0 && gRedirect) {
+    // "Get a new owner code" on /setup: a fresh single-use claim token for the page that has the USB port
+    // (physical access = ownership). Same token channel as the Improv redirect; never stored or logged otherwise.
+    std::string url = gRedirect(true);
+    size_t d = url.find("#d="), t = url.find("&t=");
+    if (d != std::string::npos && t != std::string::npos) {
+      Serial.printf("[claim] d=%s t=%s\n", url.substr(d + 3, t - d - 3).c_str(), url.substr(t + 3).c_str());
+    }
+    return;
+  }
+  if (strcmp(gCmd.text(), "PFCMD SETUPINFO") != 0 || !gSetupInfo) return;
   if (core::setupInfoAllowed(gId && !gId->shortCode.empty(), millis())) {
     std::string ssid, pw;
     gSetupInfo(ssid, pw);

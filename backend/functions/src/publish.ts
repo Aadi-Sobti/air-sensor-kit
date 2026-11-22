@@ -17,7 +17,7 @@ import { shortCodeFor } from "./lib/shortcode";
 export const PUBLISH = {
   offlineAfterMs: 30 * 60e3, // no upload for 30 min -> offline
   staleReadingMs: 30 * 60e3, // newest reading older than this -> no current value (e.g. sensor unplugged)
-  keepHours: 24,
+  keepHours: 168, // 7 days for the owner and sensor-page charts (M7b)
   rhMaxAgeMs: 3 * 3600e3,
   locateBudgetMs: 60e3,
   locateMax: 50,
@@ -29,11 +29,38 @@ export const PUBLISH = {
   readChunk: 200,
 };
 
+// Web push sender (decision #14). Returns gone=true when the browser dropped the subscription (404/410).
+export type PushSender = (sub: { endpoint: string; keys: { p256dh: string; auth: string } }, payload: string) => Promise<{ gone: boolean }>;
+
 export interface PublishDeps {
   geocode: Geocoder;
   nws: Fetcher;
+  push?: PushSender;
 }
 export const defaultDeps: PublishDeps = { geocode: censusGeocoder, nws: httpFetcher };
+
+const OFFLINE_MSG = {
+  en: (code: string) => ({ title: "Air sensor offline", body: `Your sensor ${code} stopped sending readings. Check its power and WiFi.` }),
+  es: (code: string) => ({ title: "Sensor de aire desconectado", body: `Tu sensor ${code} dejó de enviar lecturas. Revisa la corriente y el WiFi.` }),
+};
+
+/** Sends the "offline" notice once per online -> offline change, to every subscribed browser of that sensor. */
+async function notifyOffline(db: Firestore, push: PushSender, deviceId: string, code: string): Promise<number> {
+  let sent = 0;
+  const subs = await db.collection(`devices/${deviceId}/push_subs`).get();
+  for (const s of subs.docs) {
+    const lang = s.get("lang") === "es" ? "es" : "en";
+    const msg = { ...OFFLINE_MSG[lang](code), url: "/my" };
+    try {
+      const r = await push(s.get("sub"), JSON.stringify(msg));
+      if (r.gone) await s.ref.delete();
+      else sent++;
+    } catch {
+      /* try again on the next state change */
+    }
+  }
+  return sent;
+}
 
 export function hourKeyUtc(ms: number): string {
   return new Date(ms).toISOString().replace(/[-T:]/g, "").slice(0, 10);
@@ -238,6 +265,12 @@ export async function runPublish(db: Firestore, deps: PublishDeps = defaultDeps,
       for (let k = 1; k < 12; k++) series.push(byHour.get(hourKeyUtc(nowMs - k * 3600e3)) ?? null);
       const nc = freshReading ? nowcast(series) : null;
       const aqi = nc !== null ? aqiFromPm25(nc) : nowPm !== null ? aqiFromPm25(nowPm) : null;
+      // Offline notices (web push): only on a change from online to offline, once.
+      if (s.get("notifyOffline") && deps.push) {
+        const wasOnline = s.get("lastOnline");
+        if (wasOnline === true && !online) await notifyOffline(db, deps.push, s.id, String(s.get("code")));
+        if (wasOnline !== online) update.lastOnline = online;
+      }
       if (Object.keys(update).length) await s.ref.set({ ...update, correctionVersion: CORRECTION_VERSION }, { merge: true });
 
       const indoor = Boolean(s.get("indoor"));
