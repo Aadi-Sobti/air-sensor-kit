@@ -6,8 +6,9 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] When the board is back (≈ 1 day): plug it in and tell the agent → flash 0.5.0, Chrome setup checklist (M5),
-      iPhone setup checklist (M6), smoke test (M1), then a full 24 h soak (keep it plugged in + hotspot on).
+- [ ] 👤 iPhone re-test of phone setup on firmware 0.6.1 (≈ 10 min, see M6): hold FLASH 5 s, join the setup WiFi,
+      try a wrong password first, then the right one. Then the 7-day soak on home WiFi starts (board stays plugged in).
+- [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -195,6 +196,20 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       (incl. a fix: a binary line could re-trigger the old command). Native 80/80.
       Watch on hardware: only WL_WRONG_PASSWORD shows the password message; if the ESP8266 reports a wrong
       password as CONNECT_FAILED/timeout, people see "couldn't reach that WiFi".
+- [x] iPhone run #1 on 0.6.0 (2026-11-22, founder): setup worked ("You're all set!", board RUNNING on home WiFi,
+      upload http=200; sensor FDK7NA on the public map 4 min later: pl=1, PM2.5 12.2, AQI 57). Founder found 3 problems:
+      (1) wrong password → phone dropped off the setup WiFi and couldn't rejoin; (2) after rejoining, the page didn't
+      pop up by itself (had to open a browser); (3) page looks too plain. Also `setup_info.py` printed a cut-off
+      password (fixed: waits for a full line; regression test).
+- [ ] Fixes in 0.6.1 (built + flashed 2026-11-22; **phone re-test pending**): (1) pause saved-WiFi retries while a
+      phone uses setup + open the setup WiFi on the home network's channel, so the password test doesn't switch
+      channels (`core::portal::pauseSavedWifi/pickApChannel`, 2 new tests); (2) dev builds log each setup-page request
+      (host + path only, capped) so the next run shows what iOS asks for if the page doesn't pop up; (3) redesigned
+      page (blue header, numbered cards, WiFi list with signal bars, show-password button, Outside/Inside tiles,
+      spinner + check-mark pages), same wording, still works with JS off; 11.3 KB with 20 networks.
+      Evidence: native 83/83, tools 29/29, release guard OK, boot capture `logs/serial-*.log` (1 boot, RUNNING, heap 33.8 KB).
+      Size: release Flash 521,915 B (+6.9 KB vs 0.5.0): **317 B under the ~522 KB OTA ceiling** → size cuts are M9's first task.
+      Note: a new kit opens its setup WiFi within seconds; only a sensor with saved WiFi it can't reach waits ~3 min.
 - 👤 Founder has an iPhone only (2026-11-21): the iPhone run counts; the **Android** run stays open (unverified)
       until someone can lend one (a volunteer or friend in M10 works too).
 - 👤 Phone checklist (after the soak, once 0.5.0 is flashed; run `python3 tools/setup_info.py --port <port>` in your
@@ -328,6 +343,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-22 · Board back: 0.6.0 phone setup worked on iPhone, sensor on the map · 0.6.1 portal fixes (stable setup WiFi, request logging, redesign) · native 83, tools 29, flashed + boot capture · next: founder iPhone re-test, then 7-day soak; M9 must cut size first.
 - 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.

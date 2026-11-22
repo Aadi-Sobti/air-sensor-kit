@@ -53,6 +53,7 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | Recipients are told during setup (computer + phone, EN/ES): "Your sensor's readings (never your address) appear on our public map and are shared as open data with Sensor.Community." | Founder |
 | 2026-11-22 | Only **outdoor** sensors are forwarded to Sensor.Community | Founder |
 | 2026-11-22 | Sensor.Community registrations use the **public map cell center**, never the address | Founder |
+| 2026-11-22 | (Agent, within spec) While a phone is on the setup WiFi and used the page in the last 5 min, the sensor **pauses retrying an unreachable saved WiFi**; retries resume when the phone leaves or goes idle. The setup WiFi opens on the home network's channel (saved one if nearby, else strongest; US channels 1–11 only) | Founder's iPhone dropped off the setup WiFi after a wrong password and couldn't rejoin: the one radio kept leaving the setup channel to search. A working connection is never paused; spec's "keep retrying" still holds whenever nobody is using setup |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |

@@ -1,5 +1,6 @@
 #include <unity.h>
 
+#include <cstdio>
 #include <cstring>
 #include <string>
 
@@ -101,7 +102,8 @@ static void test_pages_work_without_js_and_are_small() {
   std::vector<Network> nets;
   for (int i = 0; i < 20; i++) nets.push_back({"Network number " + std::to_string(i) + " with a long name", -40 - i, true});
   std::string f = formPage(Lang::kEs, nets, Form{}, {kErrNeedSsid, kErrZip});
-  TEST_ASSERT_TRUE(has(f, "<form method=\"post\" action=\"/connect\">"));
+  TEST_ASSERT_TRUE(has(f, "<form method=\"post\" action=\"/connect\""));  // plain POST: works with JS off
+  printf("page sizes: form(20 nets)=%u connecting=%u done=%u\n", (unsigned)f.size(), (unsigned)connectingPage(Lang::kEn).size(), (unsigned)donePage(Lang::kEn).size());
   TEST_ASSERT_TRUE(has(f, "Sensor.Community"));  // sharing notice before the Connect button
   TEST_ASSERT_TRUE(has(f, "lang=\"es\""));
   TEST_ASSERT_FALSE(has(f, "http://") || has(f, "https://"));  // no external assets
@@ -123,6 +125,25 @@ static void test_ap_name() {
   TEST_ASSERT_TRUE(apSsid(std::string(40, 'x'), "K7Q2MX").size() <= 32);
 }
 
+static void test_pause_saved_wifi_only_while_a_phone_uses_setup() {
+  TEST_ASSERT_TRUE(pauseSavedWifi(true, 1, false, 0));
+  TEST_ASSERT_TRUE(pauseSavedWifi(true, 2, false, kPortalIdleMs - 1));
+  TEST_ASSERT_FALSE(pauseSavedWifi(true, 1, false, kPortalIdleMs));  // phone left joined, page idle: retry again
+  TEST_ASSERT_FALSE(pauseSavedWifi(true, 0, false, 0));              // nobody on the setup WiFi
+  TEST_ASSERT_FALSE(pauseSavedWifi(false, 1, false, 0));             // setup WiFi off
+  TEST_ASSERT_FALSE(pauseSavedWifi(true, 1, true, 0));               // never drop a working connection
+}
+
+static void test_ap_channel_follows_home_wifi() {
+  std::vector<Network> nets = {{"Strong", -40, true, 6}, {"Home", -70, true, 11}, {"Far", -90, true, 3}};
+  TEST_ASSERT_EQUAL(11, pickApChannel(nets, "Home"));    // saved network nearby wins
+  TEST_ASSERT_EQUAL(6, pickApChannel(nets, ""));         // else the strongest
+  TEST_ASSERT_EQUAL(6, pickApChannel(nets, "Missing"));  // saved one not seen: strongest
+  TEST_ASSERT_EQUAL(0, pickApChannel({}, "Home"));
+  TEST_ASSERT_EQUAL(0, pickApChannel({{"EU", -30, true, 13}}, ""));  // not allowed in the US: keep current
+  TEST_ASSERT_EQUAL(0, pickApChannel({{"X", -30, true, 0}}, ""));    // unknown
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_every_string_exists_in_both_languages);
@@ -135,5 +156,7 @@ int main(int, char**) {
   RUN_TEST(test_form_keeps_values_but_never_the_password);
   RUN_TEST(test_pages_work_without_js_and_are_small);
   RUN_TEST(test_ap_name);
+  RUN_TEST(test_pause_saved_wifi_only_while_a_phone_uses_setup);
+  RUN_TEST(test_ap_channel_follows_home_wifi);
   return UNITY_END();
 }

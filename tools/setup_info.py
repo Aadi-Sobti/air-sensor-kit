@@ -63,7 +63,10 @@ def main(argv=None) -> int:
             if m:
                 ssid, pw = m.group(1), m.group(2)
                 print(f"Phone setup WiFi:  {ssid}\nPassword:          {pw}   ({len(pw)} characters: capital letters and digits 2-9)")
-                print("The setup network appears about 3 minutes from now (this tool restarted the sensor).")
+                # New sensors (no saved WiFi) open it right away; one with saved WiFi it can't reach waits ~3 min
+                # first, in case the router is just restarting (firmware state machine, kApFallbackMs).
+                print("The setup network appears within a few seconds on a new sensor. If this sensor already has a")
+                print("home WiFi saved, it first tries that for about 3 minutes (this tool restarted the sensor).")
                 print(f"(QR text for a label maker: {wifi_qr_payload(ssid, pw)})")
                 print("On the phone: WiFi settings -> join that network -> type the password. The setup page opens.")
                 return 0
