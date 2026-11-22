@@ -16,5 +16,8 @@ struct UploadResult {
 };
 
 void uploaderBegin();
+namespace BearSSL { class X509List; }
+// The pinned root CAs (parsed once), shared with OTA downloads.
+BearSSL::X509List* pinnedTrust();
 UploadResult uploadNow(const std::string& deviceId, const std::string& secretHex, bool sendEnrollSecret,
                        const std::string& body);

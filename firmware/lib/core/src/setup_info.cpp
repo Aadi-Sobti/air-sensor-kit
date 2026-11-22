@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "codes.h"
+
 namespace core {
 
 bool CommandLine::feed(uint8_t b, const char* command) {
@@ -38,6 +40,19 @@ bool attachSetupInfo(UploadInfo& info, bool pending, const std::string& address,
   info.address = address;
   info.zip = zip;
   info.indoor = indoor;
+  return true;
+}
+
+bool parseSetCodeCommand(const char* line, std::string& code) {
+  static const char kPrefix[] = "PFCMD SETCODE ";
+  const size_t n = sizeof kPrefix - 1;
+  if (!line || std::strncmp(line, kPrefix, n) != 0) return false;
+  const char* c = line + n;
+  if (std::strlen(c) != 6) return false;
+  for (size_t i = 0; i < 6; i++) {
+    if (!std::memchr(kCodeAlphabet, c[i], kCodeAlphabetLen)) return false;
+  }
+  code.assign(c, 6);
   return true;
 }
 

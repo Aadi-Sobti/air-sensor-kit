@@ -16,11 +16,14 @@ static std::string fromFlash(const char* p) {
   if (!s.empty()) memcpy_P(&s[0], p, s.size());
   return s;
 }
+// Page fragments: kept in flash on the device (literals would otherwise sit in RAM), plain strings on the host.
+#define PS(lit) fromFlash(PSTR(lit))
 #else
 #include <cstring>
 #define PF_PROGMEM
 static size_t flashLen(const char* p) { return std::strlen(p); }
 static std::string fromFlash(const char* p) { return std::string(p); }
+#define PS(lit) std::string(lit)
 #endif
 
 namespace core {
@@ -199,48 +202,48 @@ static const char kLogo[] PF_PROGMEM =
     "fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>";
 
 // `sub` is the line under the title in the blue header (may be empty).
-static std::string head(Lang l, const std::string& sub, const char* extraHead = "") {
+static std::string head(Lang l, const std::string& sub, const std::string& extraHead = std::string()) {
   std::string h;
   h.reserve(9000);
-  h += "<!doctype html><html lang=\"";
+  h += PS("<!doctype html><html lang=\"");
   h += l == Lang::kEs ? "es" : "en";
-  h += "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-       "<meta name=\"color-scheme\" content=\"light\">";
+  h += PS("\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+       "<meta name=\"color-scheme\" content=\"light\">");
   h += extraHead;
   h += "<title>";
   h += htmlEscape(str(l, kTitle));
-  h += "</title><style>";
+  h += PS("</title><style>");
   h += fromFlash(kCss);
-  h += "</style><script>document.documentElement.className='js'</script></head><body><header class=\"top\">";
+  h += PS("</style><script>document.documentElement.className='js'</script></head><body><header class=\"top\">");
   h += fromFlash(kLogo);
   h += "<h1>" + htmlEscape(str(l, kTitle)) + "</h1>";
   if (!sub.empty()) h += "<p>" + htmlEscape(sub) + "</p>";
-  h += "</header><main>";
+  h += PS("</header><main>");
   return h;
 }
 
 static std::string foot(Lang l) {
-  return std::string("</main><footer><p>&#9888;&#65039; ") + htmlEscape(str(l, kSafety)) + "</p></footer></body></html>";
+  return std::string(PS("</main><footer><p>&#9888;&#65039; ")) + htmlEscape(str(l, kSafety)) + PS("</p></footer></body></html>");
 }
 
 static std::string bars(int rssi) {
   int n = (rssi + 100) / 12;
   if (n < 1) n = 1;
   if (n > 4) n = 4;
-  return "<i class=\"sig s" + std::to_string(n) + "\" aria-hidden=\"true\"><b></b><b></b><b></b><b></b></i>";
+  return PS("<i class=\"sig s") + std::to_string(n) + PS("\" aria-hidden=\"true\"><b></b><b></b><b></b><b></b></i>");
 }
 
 static std::string section(int num, const std::string& title) {
-  return "<section class=\"card\"><h2><span class=\"n\">" + std::to_string(num) + "</span>" + title + "</h2>";
+  return PS("<section class=\"card\"><h2><span class=\"n\">") + std::to_string(num) + "</span>" + title + "</h2>";
 }
 
 std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, const std::vector<Key>& errors) {
   std::string p = head(l, str(l, kIntro));
-  for (Key k : errors) p += "<div class=\"e\" role=\"alert\"><b>!</b><span>" + htmlEscape(str(l, k)) + "</span></div>";
-  p += "<form method=\"post\" action=\"/connect\" onsubmit=\"var b=this.querySelector('.go');b.disabled=1;b.textContent='";
+  for (Key k : errors) p += PS("<div class=\"e\" role=\"alert\"><b>!</b><span>") + htmlEscape(str(l, k)) + PS("</span></div>");
+  p += PS("<form method=\"post\" action=\"/connect\" onsubmit=\"var b=this.querySelector('.go');b.disabled=1;b.textContent='");
   p += htmlEscape(str(l, kConnect)) + "…'\">";
 
-  // 1. WiFi: scanned networks as rows; "My WiFi isn't listed" opens a name box (works without JS: <details>).
+  // 1. WiFi: scanned networks as rows; PS("My WiFi isn't listed") opens a name box (works without JS: <details>).
   p += section(1, htmlEscape(str(l, kWifi)));
   bool picked = false;
   std::string rows;
@@ -248,54 +251,54 @@ std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, co
     const Network& n = nets[i];
     bool sel = (!v.ssid.empty() && v.ssid == n.ssid) || (v.ssid.empty() && i == 0);
     picked |= sel;
-    rows += "<label class=\"net\"><input type=\"radio\" name=\"net\" value=\"" + htmlEscape(n.ssid) + "\"" +
-            (sel ? " checked" : "") + " onchange=\"document.getElementById('s').value=''\"><span class=\"nm\">" + htmlEscape(n.ssid) + "</span>";
-    if (!n.secure) rows += "<span class=\"h\">(" + htmlEscape(str(l, kOpen)) + ")</span>";
+    rows += PS("<label class=\"net\"><input type=\"radio\" name=\"net\" value=\"") + htmlEscape(n.ssid) + "\"" +
+            (sel ? " checked" : "") + PS(" onchange=\"document.getElementById('s').value=''\"><span class=\"nm\">") + htmlEscape(n.ssid) + "</span>";
+    if (!n.secure) rows += PS("<span class=\"h\">(") + htmlEscape(str(l, kOpen)) + ")</span>";
     rows += bars(n.rssi) + "</label>";
   }
-  if (!rows.empty()) p += "<div class=\"list\">" + rows + "</div>";
+  if (!rows.empty()) p += PS("<div class=\"list\">") + rows + "</div>";
   // A typed name always wins over a ticked row (validate()), so a hidden network works without JS too.
   p += std::string("<details") + (picked ? "" : " open") + "><summary>" + htmlEscape(str(l, kOther)) +
-       "</summary><label class=\"f\" for=\"s\">" + htmlEscape(str(l, kWifiName)) +
-       "</label><input id=\"s\" type=\"text\" name=\"ssid\" maxlength=\"32\" autocapitalize=\"off\" autocorrect=\"off\" "
-       "spellcheck=\"false\" value=\"" + (picked ? "" : htmlEscape(v.ssid)) + "\"></details>";
-  p += "<label class=\"f\" for=\"p\">" + htmlEscape(str(l, kPassword)) +
-       "</label><div class=\"pw\"><input id=\"p\" type=\"password\" name=\"pass\" maxlength=\"64\" autocapitalize=\"off\" "
-       "autocorrect=\"off\" spellcheck=\"false\"><button type=\"button\" class=\"sh\" aria-label=\"" + htmlEscape(str(l, kShowPw)) +
-       "\" onclick=\"var q=document.getElementById('p');q.type=q.type=='password'?'text':'password'\">&#128065;</button></div>";
-  p += "<p class=\"h\">" + htmlEscape(str(l, kWifiHint)) + "</p></section>";
+       PS("</summary><label class=\"f\" for=\"s\">") + htmlEscape(str(l, kWifiName)) +
+       PS("</label><input id=\"s\" type=\"text\" name=\"ssid\" maxlength=\"32\" autocapitalize=\"off\" autocorrect=\"off\" "
+       "spellcheck=\"false\" value=\"") + (picked ? "" : htmlEscape(v.ssid)) + PS("\"></details>");
+  p += PS("<label class=\"f\" for=\"p\">") + htmlEscape(str(l, kPassword)) +
+       PS("</label><div class=\"pw\"><input id=\"p\" type=\"password\" name=\"pass\" maxlength=\"64\" autocapitalize=\"off\" "
+       "autocorrect=\"off\" spellcheck=\"false\"><button type=\"button\" class=\"sh\" aria-label=\"") + htmlEscape(str(l, kShowPw)) +
+       PS("\" onclick=\"var q=document.getElementById('p');q.type=q.type=='password'?'text':'password'\">&#128065;</button></div>");
+  p += PS("<p class=\"h\">") + htmlEscape(str(l, kWifiHint)) + PS("</p></section>");
 
   // 2. Address + ZIP.
-  p += section(2, "<label for=\"a\">" + htmlEscape(str(l, kAddress)) + "</label>");
-  p += "<input id=\"a\" type=\"text\" name=\"address\" maxlength=\"200\" autocomplete=\"street-address\" value=\"" +
-       htmlEscape(v.address) + "\"><p class=\"h\">&#128274; " + htmlEscape(str(l, kAddressHint)) + "</p>";
-  p += "<label class=\"f\" for=\"z\">" + htmlEscape(str(l, kZip)) + "</label><input id=\"z\" type=\"text\" name=\"zip\" "
-       "maxlength=\"5\" inputmode=\"numeric\" pattern=\"[0-9]*\" autocomplete=\"postal-code\" style=\"max-width:9rem\" value=\"" +
-       htmlEscape(v.zip) + "\"></section>";
+  p += section(2, PS("<label for=\"a\">") + htmlEscape(str(l, kAddress)) + "</label>");
+  p += PS("<input id=\"a\" type=\"text\" name=\"address\" maxlength=\"200\" autocomplete=\"street-address\" value=\"") +
+       htmlEscape(v.address) + PS("\"><p class=\"h\">&#128274; ") + htmlEscape(str(l, kAddressHint)) + "</p>";
+  p += PS("<label class=\"f\" for=\"z\">") + htmlEscape(str(l, kZip)) + PS("</label><input id=\"z\" type=\"text\" name=\"zip\" "
+       "maxlength=\"5\" inputmode=\"numeric\" pattern=\"[0-9]*\" autocomplete=\"postal-code\" style=\"max-width:9rem\" value=\"") +
+       htmlEscape(v.zip) + PS("\"></section>");
 
   // 3. Outside / inside (default outside).
   p += section(3, htmlEscape(str(l, kWhere)));
-  p += "<div class=\"two\"><label class=\"opt\"><i>&#127795;</i><input type=\"radio\" name=\"where\" value=\"outside\"" +
+  p += PS("<div class=\"two\"><label class=\"opt\"><i>&#127795;</i><input type=\"radio\" name=\"where\" value=\"outside\"") +
        std::string(v.indoor ? "" : " checked") + ">" + htmlEscape(str(l, kOutside)) + "</label>";
-  p += "<label class=\"opt\"><i>&#127968;</i><input type=\"radio\" name=\"where\" value=\"inside\"" +
-       std::string(v.indoor ? " checked" : "") + ">" + htmlEscape(str(l, kInside)) + "</label></div></section>";
+  p += PS("<label class=\"opt\"><i>&#127968;</i><input type=\"radio\" name=\"where\" value=\"inside\"") +
+       std::string(v.indoor ? " checked" : "") + ">" + htmlEscape(str(l, kInside)) + PS("</label></div></section>");
 
-  p += "<p class=\"h\">" + htmlEscape(str(l, kShare)) + "</p>";
-  p += "<button class=\"go\" type=\"submit\">" + htmlEscape(str(l, kConnect)) + "</button></form>";
+  p += PS("<p class=\"h\">") + htmlEscape(str(l, kShare)) + "</p>";
+  p += PS("<button class=\"go\" type=\"submit\">") + htmlEscape(str(l, kConnect)) + PS("</button></form>");
   return p + foot(l);
 }
 
 std::string connectingPage(Lang l) {
-  std::string p = head(l, "", "<meta http-equiv=\"refresh\" content=\"3;url=/status\">");
-  p += "<section class=\"card st\" role=\"status\"><div class=\"spin\"></div><h2>" + htmlEscape(str(l, kConnecting)) +
-       "</h2><p class=\"h\">" + htmlEscape(str(l, kKeepOpen)) + "</p></section>";
+  std::string p = head(l, "", PS("<meta http-equiv=\"refresh\" content=\"3;url=/status\">"));
+  p += PS("<section class=\"card st\" role=\"status\"><div class=\"spin\"></div><h2>") + htmlEscape(str(l, kConnecting)) +
+       PS("</h2><p class=\"h\">") + htmlEscape(str(l, kKeepOpen)) + PS("</p></section>");
   return p + foot(l);
 }
 
 std::string donePage(Lang l) {
   std::string p = head(l, "");
-  p += "<section class=\"card st\" role=\"status\"><div class=\"ok\">&#10003;</div><h2>" + htmlEscape(str(l, kDone)) +
-       "</h2><p>" + htmlEscape(str(l, kDoneNext)) + "</p></section>";
+  p += PS("<section class=\"card st\" role=\"status\"><div class=\"ok\">&#10003;</div><h2>") + htmlEscape(str(l, kDone)) +
+       "</h2><p>" + htmlEscape(str(l, kDoneNext)) + PS("</p></section>");
   return p + foot(l);
 }
 

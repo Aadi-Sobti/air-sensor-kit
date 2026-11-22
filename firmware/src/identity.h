@@ -11,6 +11,9 @@ struct Identity {
 
 enum class IdentityStatus { kLoaded, kRestoredFromBackup, kCreated, kLost, kStorageFailed };
 IdentityStatus loadOrCreateIdentity(Identity& out);
+// Factory tool (M9): store the backend-assigned short code in /identity and its backup. Returns false on a write
+// failure (the old file stays valid: writes are atomic).
+bool saveShortCode(Identity& id, const std::string& code);
 const char* identityStatusName(IdentityStatus s);
 // Uploads (M4) and setup must refuse to run unless this is true.
 inline bool identityUsable(IdentityStatus s) {

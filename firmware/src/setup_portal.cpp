@@ -1,4 +1,5 @@
 #include "setup_portal.h"
+#include "log.h"
 
 #include <Arduino.h>
 #include <DNSServer.h>
@@ -104,7 +105,7 @@ static void collectScan() {
   if (!gChannelPicked && WiFi.softAPgetStationNum() == 0 && !netTesting() && ch > 0 && ch != gApChannel) {
     gApChannel = ch;
     WiFi.softAP(gSsid.c_str(), gId ? gId->setupPassword.c_str() : nullptr, gApChannel);
-    Serial.printf("[portal] ap channel=%d (matches nearby WiFi)\n", gApChannel);
+    LOGF("[portal] ap channel=%d (matches nearby WiFi)\n", gApChannel);
   }
   gChannelPicked = true;
 }
@@ -134,7 +135,7 @@ static void handleConnect() {
   }
   gForm = form;
   gPhase = Phase::kTesting;
-  Serial.println("[portal] testing new WiFi settings");  // never log SSID, password, or address
+  LOGLN("[portal] testing new WiFi settings");  // never log SSID, password, or address
   sendPage(pt::connectingPage(lang()));
   gTestPending = true;  // portalPoll starts the test; the AP then follows the router's channel (phones may rejoin)
   gTestStartAt = millis() + 500;
@@ -171,7 +172,7 @@ static void startAp() {
   gClientSeen = false;
   gChannelPicked = false;
   gStations = 0;
-  Serial.printf("[portal] ap=on ssid=%s ok=%d\n", gSsid.c_str(), ok ? 1 : 0);
+  LOGF("[portal] ap=on ssid=%s ok=%d\n", gSsid.c_str(), ok ? 1 : 0);
 }
 
 static void stopAp() {
@@ -190,7 +191,7 @@ static void stopAp() {
     gPhase = Phase::kIdle;
     gForm = pt::Form{};
   }
-  Serial.println("[portal] ap=off");
+  LOGLN("[portal] ap=off");
 }
 
 static void registerRoutes() {
@@ -250,7 +251,7 @@ void portalPoll(uint32_t nowMs) {
   int stations = WiFi.softAPgetStationNum();
   if (stations != gStations) {
     if (stations > gStations) gLastActivity = millis();
-    Serial.printf("[portal] phones on setup WiFi: %d\n", stations);
+    LOGF("[portal] phones on setup WiFi: %d\n", stations);
     gStations = stations;
   }
   if (!gClientSeen && stations > 0) gClientSeen = true;
@@ -273,13 +274,13 @@ void portalPoll(uint32_t nowMs) {
     gForm.password.clear();
     gHolding = true;
     gHoldUntil = nowMs + kHoldAfterSuccessMs;
-    Serial.printf("[portal] new WiFi works (%s)\n", netTestReason());
+    LOGF("[portal] new WiFi works (%s)\n", netTestReason());
   } else if (t == NetTest::kFailed) {
     netTestEnd();  // saved WiFi (if any) untouched
     gPhase = Phase::kFailed;
     gFailKey = netTestFailure() == 0 ? pt::kErrPassword : pt::kErrNotFound;
     gForm.password.assign(gForm.password.size(), '\0');
     gForm.password.clear();
-    Serial.printf("[portal] new WiFi did not connect (%s); nothing saved\n", netTestReason());
+    LOGF("[portal] new WiFi did not connect (%s); nothing saved\n", netTestReason());
   }
 }

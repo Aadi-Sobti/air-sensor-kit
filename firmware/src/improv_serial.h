@@ -18,3 +18,7 @@ bool improvBusy();                                     // a credential test is r
 // Provides the setup AP name + password for the "PFCMD SETUPINFO" serial command (see improv_serial.cpp).
 typedef void (*SetupInfoFn)(std::string& ssid, std::string& password);
 void improvSetSetupInfo(SetupInfoFn fn);
+// "PFCMD SETCODE <code>" from the packing laptop (M9). Called only when allowed (no short code yet, or < 60 s
+// after boot). The handler stores the code, prints "[factory] short_code=<code> saved=1|0", and restarts.
+typedef void (*SetCodeFn)(const std::string& code);
+void improvSetSetCode(SetCodeFn fn);

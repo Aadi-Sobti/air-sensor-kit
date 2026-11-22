@@ -106,6 +106,15 @@
             "value": "serial=(self), camera=(), microphone=(), geolocation=()"
           }
         ]
+      },
+      {
+        "source": "/fw/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
       }
     ]
   },
