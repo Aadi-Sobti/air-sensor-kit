@@ -144,6 +144,27 @@ static void test_ap_channel_follows_home_wifi() {
   TEST_ASSERT_EQUAL(0, pickApChannel({{"X", -30, true, 0}}, ""));    // unknown
 }
 
+static void test_pages_never_outgrow_their_buffer() {
+  // Worst case: many 32-character names made of characters that HTML-escape to 5-6 bytes each.
+  std::vector<Network> nets;
+  for (int i = 0; i < 30; i++) nets.push_back({std::string(30, '&') + std::to_string(i), -40 - i, i % 2 == 0, 6});
+  Form v;
+  v.address = std::string(200, '"');
+  v.zip = "10027";
+  for (Lang l : {Lang::kEn, Lang::kEs}) {
+    std::string f = formPage(l, nets, v, {kErrNeedSsid, kErrPwLength, kErrAddress, kErrZip});
+    TEST_ASSERT_TRUE_MESSAGE(f.size() <= kPageReserve, "form page bigger than its reserved buffer");
+    TEST_ASSERT_TRUE(f.find("</html>") != std::string::npos);  // still a complete page
+    TEST_ASSERT_TRUE(connectingPage(l).size() <= kPageReserve && donePage(l).size() <= kPageReserve);
+  }
+  // A normal neighborhood still lists 15 networks.
+  std::vector<Network> normal;
+  for (int i = 0; i < 20; i++) normal.push_back({"Neighbor WiFi " + std::to_string(i), -40 - i, true, 6});
+  std::string f = formPage(Lang::kEn, normal, Form{}, {});
+  TEST_ASSERT_TRUE(f.find("Neighbor WiFi 14") != std::string::npos);
+  TEST_ASSERT_TRUE(f.find("Neighbor WiFi 15") == std::string::npos);
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_every_string_exists_in_both_languages);
@@ -156,6 +177,7 @@ int main(int, char**) {
   RUN_TEST(test_form_keeps_values_but_never_the_password);
   RUN_TEST(test_pages_work_without_js_and_are_small);
   RUN_TEST(test_ap_name);
+  RUN_TEST(test_pages_never_outgrow_their_buffer);
   RUN_TEST(test_pause_saved_wifi_only_while_a_phone_uses_setup);
   RUN_TEST(test_ap_channel_follows_home_wifi);
   return UNITY_END();

@@ -55,9 +55,22 @@ static void noteRequest() {
 
 static pt::Lang lang() { return pt::pickLang(gServer.header("Accept-Language").c_str()); }
 
-static void sendPage(const std::string& html) {
+// Running out of memory while building a page crashes the sensor (exceptions are off), which drops the setup WiFi
+// and the phone with it (seen on hardware 2026-11-22). So check first: the page needs one free block of
+// kPageReserve plus room for small temporary strings (the CSS copy is ~3.5 KB). If that isn't there, send a tiny page
+// that reloads itself in 2 s; memory is usually back by then.
+static constexpr uint32_t kPageTempRoom = 8 * 1024;
+template <typename Build>
+static void sendPage(Build build) {
   gServer.sendHeader("Cache-Control", "no-store");
-  gServer.send(200, "text/html; charset=utf-8", html.c_str(), html.size());  // no extra copy
+  if (ESP.getMaxFreeBlockSize() < pt::kPageReserve + 1024 || ESP.getFreeHeap() < pt::kPageReserve + kPageTempRoom) {
+    LOGF("[portal] page deferred: low memory heap=%u maxblk=%u\n", ESP.getFreeHeap(), ESP.getMaxFreeBlockSize());
+    gServer.send_P(200, PSTR("text/html"),
+                   PSTR("<!doctype html><meta http-equiv=\"refresh\" content=\"2\"><p>Loading&hellip; / Cargando&hellip;</p>"));
+    return;
+  }
+  std::string html = build();
+  gServer.send(200, "text/html; charset=utf-8", html.c_str(), html.size());  // sent from the buffer, no copy
 }
 
 static void sendRedirect() {
@@ -116,13 +129,13 @@ static void sendStatus();
 // must show the current phase, exactly like /status.
 static void handleRoot() {
   noteRequest();
-  if (gPhase == Phase::kIdle) return sendPage(pt::formPage(lang(), gNets, gForm, {}));
+  if (gPhase == Phase::kIdle) return sendPage([&] { return pt::formPage(lang(), gNets, gForm, {}); });
   sendStatus();
 }
 
 static void handleConnect() {
   noteRequest();
-  if (gPhase == Phase::kTesting) return sendPage(pt::connectingPage(lang()));
+  if (gPhase == Phase::kTesting) return sendPage([&] { return pt::connectingPage(lang()); });
   std::map<std::string, std::string> f;
   for (int i = 0; i < gServer.args(); i++) f[gServer.argName(i).c_str()] = gServer.arg(i).c_str();
   pt::Form form;
@@ -131,12 +144,12 @@ static void handleConnect() {
     if (errs.empty()) errs.push_back(pt::kErrNotFound);  // USB setup is testing right now; try again shortly
     form.password.clear();
     gForm = form;
-    return sendPage(pt::formPage(lang(), gNets, form, errs));
+    return sendPage([&] { return pt::formPage(lang(), gNets, form, errs); });
   }
   gForm = form;
   gPhase = Phase::kTesting;
   LOGLN("[portal] testing new WiFi settings");  // never log SSID, password, or address
-  sendPage(pt::connectingPage(lang()));
+  sendPage([&] { return pt::connectingPage(lang()); });
   gTestPending = true;  // portalPoll starts the test; the AP then follows the router's channel (phones may rejoin)
   gTestStartAt = millis() + 500;
 }
@@ -148,9 +161,9 @@ static void handleStatus() {
 
 static void sendStatus() {
   switch (gPhase) {
-    case Phase::kTesting: return sendPage(pt::connectingPage(lang()));
-    case Phase::kSuccess: return sendPage(pt::donePage(lang()));
-    case Phase::kFailed: return sendPage(pt::formPage(lang(), gNets, gForm, {gFailKey}));
+    case Phase::kTesting: return sendPage([&] { return pt::connectingPage(lang()); });
+    case Phase::kSuccess: return sendPage([&] { return pt::donePage(lang()); });
+    case Phase::kFailed: return sendPage([&] { return pt::formPage(lang(), gNets, gForm, {gFailKey}); });
     default: return sendRedirect();
   }
 }

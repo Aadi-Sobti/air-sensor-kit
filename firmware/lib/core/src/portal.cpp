@@ -204,7 +204,7 @@ static const char kLogo[] PF_PROGMEM =
 // `sub` is the line under the title in the blue header (may be empty).
 static std::string head(Lang l, const std::string& sub, const std::string& extraHead = std::string()) {
   std::string h;
-  h.reserve(9000);
+  h.reserve(kPageReserve);
   h += PS("<!doctype html><html lang=\"");
   h += l == Lang::kEs ? "es" : "en";
   h += PS("\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -243,20 +243,22 @@ std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, co
   p += PS("<form method=\"post\" action=\"/connect\" onsubmit=\"var b=this.querySelector('.go');b.disabled=1;b.textContent='");
   p += htmlEscape(str(l, kConnect)) + "…'\">";
 
-  // 1. WiFi: scanned networks as rows; PS("My WiFi isn't listed") opens a name box (works without JS: <details>).
+  // 1. WiFi: scanned networks as rows; "My WiFi isn't listed" opens a name box (works without JS: <details>).
   p += section(1, htmlEscape(str(l, kWifi)));
   bool picked = false;
-  std::string rows;
-  for (size_t i = 0; i < nets.size() && i < 15; i++) {
+  // Room left for the rest of the page after the list (fields, sharing notice, footer) is well under 4 KB.
+  // Rows go straight into the page buffer: a separate list buffer growing next to it ran out of memory on hardware.
+  if (!nets.empty()) p += PS("<div class=\"list\">");
+  for (size_t i = 0; i < nets.size() && i < 15 && p.size() < kPageReserve - 4096; i++) {
     const Network& n = nets[i];
     bool sel = (!v.ssid.empty() && v.ssid == n.ssid) || (v.ssid.empty() && i == 0);
     picked |= sel;
-    rows += PS("<label class=\"net\"><input type=\"radio\" name=\"net\" value=\"") + htmlEscape(n.ssid) + "\"" +
+    p += PS("<label class=\"net\"><input type=\"radio\" name=\"net\" value=\"") + htmlEscape(n.ssid) + "\"" +
             (sel ? " checked" : "") + PS(" onchange=\"document.getElementById('s').value=''\"><span class=\"nm\">") + htmlEscape(n.ssid) + "</span>";
-    if (!n.secure) rows += PS("<span class=\"h\">(") + htmlEscape(str(l, kOpen)) + ")</span>";
-    rows += bars(n.rssi) + "</label>";
+    if (!n.secure) p += PS("<span class=\"h\">(") + htmlEscape(str(l, kOpen)) + ")</span>";
+    p += bars(n.rssi) + "</label>";
   }
-  if (!rows.empty()) p += PS("<div class=\"list\">") + rows + "</div>";
+  if (!nets.empty()) p += "</div>";
   // A typed name always wins over a ticked row (validate()), so a hidden network works without JS too.
   p += std::string("<details") + (picked ? "" : " open") + "><summary>" + htmlEscape(str(l, kOther)) +
        PS("</summary><label class=\"f\" for=\"s\">") + htmlEscape(str(l, kWifiName)) +
@@ -285,21 +287,24 @@ std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, co
 
   p += PS("<p class=\"h\">") + htmlEscape(str(l, kShare)) + "</p>";
   p += PS("<button class=\"go\" type=\"submit\">") + htmlEscape(str(l, kConnect)) + PS("</button></form>");
-  return p + foot(l);
+  p += foot(l);  // append in place: `p + foot` would copy the whole page
+  return p;
 }
 
 std::string connectingPage(Lang l) {
   std::string p = head(l, "", PS("<meta http-equiv=\"refresh\" content=\"3;url=/status\">"));
   p += PS("<section class=\"card st\" role=\"status\"><div class=\"spin\"></div><h2>") + htmlEscape(str(l, kConnecting)) +
        PS("</h2><p class=\"h\">") + htmlEscape(str(l, kKeepOpen)) + PS("</p></section>");
-  return p + foot(l);
+  p += foot(l);  // append in place: `p + foot` would copy the whole page
+  return p;
 }
 
 std::string donePage(Lang l) {
   std::string p = head(l, "");
   p += PS("<section class=\"card st\" role=\"status\"><div class=\"ok\">&#10003;</div><h2>") + htmlEscape(str(l, kDone)) +
        "</h2><p>" + htmlEscape(str(l, kDoneNext)) + PS("</p></section>");
-  return p + foot(l);
+  p += foot(l);  // append in place: `p + foot` would copy the whole page
+  return p;
 }
 
 bool pauseSavedWifi(bool apOn, int stations, bool staConnected, uint32_t msSinceActivity) {
