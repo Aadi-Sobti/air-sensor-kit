@@ -13,7 +13,7 @@ import { logEvent, logWarn } from "./lib/redact";
 import { Reading } from "./lib/payload";
 
 export const SC_URL = "https://api.sensor.community/v1/push-sensor-data/";
-export const SC = { pin: "1", maxAgeS: 5 * 60, timeoutMs: 15000 };
+export const SC = { pin: "1", maxAgeS: 5 * 60, timeoutMs: 15000, enqueueTimeoutMs: 2000 };
 
 export interface ScTask { deviceId: string; fw: string; pm1: number; pm25: number; pm10: number; ts: number }
 
@@ -48,15 +48,29 @@ export const httpPost: HttpPost = async (url, headers, body) => {
 
 export class RetryableError extends Error {}
 
-/** Task handler body. Throws RetryableError on network errors / 5xx / 429 (the task queue retries with backoff). */
-export async function forwardOne(t: ScTask, post: HttpPost = httpPost, nowS = Math.floor(Date.now() / 1000)): Promise<"sent" | "stale" | "rejected"> {
-  if (nowS - t.ts > SC.maxAgeS * 3) return "stale"; // retried too late: the server time would be wrong
+/** Resolves (or rejects) within `ms`, so a slow Cloud Tasks call can't hold up a sensor's upload. */
+export function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms);
+    p.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
+}
+
+/**
+ * Task handler body. Retries (throws RetryableError) only when Sensor.Community definitely did NOT accept the
+ * reading (5xx / 429). Network errors and timeouts are not retried: the POST may already have been accepted, and
+ * their API can't detect repeats, so a lost point is better than a duplicate. Readings older than SC.maxAgeS are
+ * dropped (Sensor.Community stamps the arrival time; a late delivery would be mis-timed).
+ */
+export async function forwardOne(t: ScTask, post: HttpPost = httpPost, nowS = Math.floor(Date.now() / 1000)): Promise<"sent" | "stale" | "rejected" | "lost"> {
+  if (nowS - t.ts > SC.maxAgeS) return "stale";
   const req = scRequest(t);
   let status: number;
   try {
     status = (await post(req.url, req.headers, req.body)).status;
   } catch (e) {
-    throw new RetryableError(String((e as Error)?.message ?? e));
+    logWarn("sc_forward_lost", { device: t.deviceId, error: String((e as Error)?.message ?? e).slice(0, 80) });
+    return "lost";
   }
   if (status >= 200 && status < 300) {
     logEvent("sc_forward_ok", { device: t.deviceId, status });

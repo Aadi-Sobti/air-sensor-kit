@@ -37,14 +37,14 @@ describe("Sensor.Community payload (unit)", () => {
     assert.equal(taskFor("esp8266-1", "x", [reading(NOW_S - 10, { n: 0 })], NOW_S), null);
     assert.equal(taskFor("esp8266-1", "x", [reading(NOW_S - 900), reading(NOW_S - 20, { pm25_atm: 33 })], NOW_S)!.pm25, 33);
   });
-  it("retries on 5xx/429/network errors, not on 4xx; drops retries that come too late", async () => {
+  it("retries only on 5xx/429; network errors/timeouts aren't retried (no duplicates); late retries are dropped", async () => {
     const t: ScTask = { deviceId: "esp8266-1", fw: "x", pm1: 1, pm25: 2, pm10: 3, ts: NOW_S };
     assert.equal(await forwardOne(t, async () => ({ status: 201 }), NOW_S), "sent");
     await assert.rejects(forwardOne(t, async () => ({ status: 503 }), NOW_S), RetryableError);
     await assert.rejects(forwardOne(t, async () => ({ status: 429 }), NOW_S), RetryableError);
-    await assert.rejects(forwardOne(t, async () => { throw new Error("ECONNRESET"); }, NOW_S), RetryableError);
+    assert.equal(await forwardOne(t, async () => { throw new Error("ECONNRESET"); }, NOW_S), "lost");
     assert.equal(await forwardOne(t, async () => ({ status: 403 }), NOW_S), "rejected");
-    assert.equal(await forwardOne(t, async () => ({ status: 201 }), NOW_S + 3600), "stale");
+    assert.equal(await forwardOne(t, async () => ({ status: 201 }), NOW_S + 301), "stale"); // > 5 min: would be mis-timed
   });
 });
 
@@ -99,5 +99,15 @@ describe("forwarding gate in ingest (emulator)", () => {
     const s2 = randomBytes(32).toString("hex");
     const r = await upload(id2, s2, true, { scEnabled: true, enqueueSc: async () => { throw new Error("queue down"); } });
     assert.equal(r.status, 200);
+  });
+
+  it("a hanging queue call can't hold the upload (2 s limit)", async () => {
+    const id = `esp8266-${920000 + Math.floor(Math.random() * 9999)}`;
+    await db.doc(`devices/${id}`).set({ status: "allowlisted", scRegistered: true });
+    clearRegistryCache();
+    const started = Date.now();
+    const r = await upload(id, randomBytes(32).toString("hex"), true, { scEnabled: true, enqueueSc: () => new Promise<void>(() => undefined) });
+    assert.equal(r.status, 200);
+    assert.ok(Date.now() - started < 5000, `took ${Date.now() - started} ms`);
   });
 });

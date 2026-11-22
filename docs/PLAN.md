@@ -277,7 +277,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Screen → turn on offline notices → unplug the board 35 min → a notice arrives.
 
 ### M8 Sensor.Community forwarding (flag OFF by default)
-- [x] Task-queue forwarder + payload tests. 👤 Founder confirms forwarding/bulk registration with Sensor.Community.
+- [x] Task-queue forwarder + payload tests (agent part).
+- [ ] 👤 Founder confirms forwarding/bulk registration with Sensor.Community (+ decisions below before the flag goes on).
       Facts verified 2026-11-21: push API (opendata-stuttgart meta wiki EN-APIs: endpoint, X-Sensor, X-Pin 1 for PMS,
       P1 = PM10 / P2 = PM2.5, no timestamp — the server stamps arrival); airrohr source read via the GitHub API
       (`defines.h` "#define PMS_API_PIN 1"; it reads PMS frame bytes 10–15 = the atmospheric PM1/PM2.5/PM10 per the
@@ -285,8 +286,18 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       `forwardSensorCommunity` (retries 5×, 30–300 s backoff, ≤ 5/s); ingest enqueues only when SC_FORWARD_ENABLED
       is true AND `devices.scRegistered` is true, only the newest reading < 5 min old, and a queue failure never fails
       an upload. No location is sent (Sensor.Community gets one only at registration). Tests: backend 90 (5 new).
-      Deployed to dev 2026-11-22 with SC_FORWARD_ENABLED=false (Cloud Tasks API enabled; nothing is queued).
-      Unverified: Sensor.Community's data license (their FAQ blocks automated reads).
+      Deployed to dev 2026-11-22 with SC_FORWARD_ENABLED=false: deploy log "functions[forwardSensorCommunity(us-east1)]
+      Successful create operation" + "missing required API cloudtasks.googleapis.com. Enabling now..."
+      (`logs/deploy-m8-*.log`); nothing is queued while the flag is off.
+      M8 review fixes: enqueue limited to 2 s (a slow queue can't hold an upload; tested with a hanging queue); retries
+      only on 5xx/429, network errors/timeouts not retried (no duplicates), readings > 5 min dropped, max 5 min of
+      retries; `.env.prosefire-dev` committed (the flag's value is in the repo; changing it = redeploy functions);
+      COSTS corrected (each task ≈ 2 billable operations).
+      **Unverified until the flag is first turned on in dev:** the real Cloud Tasks path and IAM. The ingest service
+      account (default compute SA unless set) needs `roles/cloudtasks.enqueuer` and `roles/iam.serviceAccountUser` on
+      itself, and must be allowed to invoke `forwardSensorCommunity`. Check after flag-on: logs show `sc_forward_ok`
+      (or `sc_forward_rejected`) and no `sc_enqueue_failed`. Unverified: Sensor.Community's data license (their FAQ
+      blocks automated reads). For prod, turning the flag on is a founder action.
 - 👤 To finish M8 (founder): (1) contact Sensor.Community to confirm forwarding from a fleet of non-airrohr
       sensors, bulk registration, and their data license; (2) register the test sensor `esp8266-11001626` at
       https://devices.sensor.community (PMS5003, outdoor) with the **public cell center** as its location, not the

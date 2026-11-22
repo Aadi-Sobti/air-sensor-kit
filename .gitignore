@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# Non-secret function parameters per project (e.g. the Sensor.Community flag) are committed on purpose.
+!backend/functions/.env.prosefire-dev
 secrets/
 *service-account*.json
 # Private signing keys only. Public keys and pinned root CAs ARE committed.

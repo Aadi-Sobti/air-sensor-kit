@@ -151,7 +151,8 @@ export const history = onRequest({ memory: "256MiB", maxInstances: 10 }, async (
 
 /** Task queue worker: one reading -> Sensor.Community, with retries/backoff (never inline in ingest). */
 export const forwardSensorCommunity = onTaskDispatched<ScTask>({
-  retryConfig: { maxAttempts: 5, minBackoffSeconds: 30, maxBackoffSeconds: 300 },
+  // Retries only for 5xx/429, and only while the reading is still fresh (Sensor.Community stamps arrival time).
+  retryConfig: { maxAttempts: 4, minBackoffSeconds: 20, maxBackoffSeconds: 120, maxRetrySeconds: 300 },
   rateLimits: { maxConcurrentDispatches: 10, maxDispatchesPerSecond: 5 },
   memory: "256MiB",
 }, async (req) => {

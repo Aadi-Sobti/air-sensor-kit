@@ -67,6 +67,9 @@ lands on the same map key.
 
 ## Sensor.Community forwarding (M8, 2026-11-22)
 - One Cloud Tasks task per accepted upload from a registered sensor when the flag is on (≈ 17,280/sensor/month).
-  Cloud Tasks: first 1M operations/month free, then $0.40/M (https://cloud.google.com/tasks/pricing) → free up to
-  ~55 sensors, ≈ $0.007/sensor/month beyond. Plus one small function run per task (inside the Cloud Run free tier at
-  small scale). Flag OFF (now): $0.
+  Cloud Tasks bills "an API call or push delivery attempt" (https://cloud.google.com/tasks/pricing): each task is ≥ 2
+  operations (create + delivery), plus retries → ≈ 34,560/sensor/month. First 1M operations/month free, then $0.40/M
+  → free up to ~28 sensors, then ≈ $0.014/sensor/month (corrected after the M8 review; I'd first counted half).
+- The worker is one more function invocation per upload, sharing Cloud Run's free 2M requests/month with ingest
+  (≈ 34,560 invocations/sensor/month together) → ingest + worker stay free up to ~57 sensors, then ≈ $0.007/sensor/month
+  for requests plus a little CPU. Flag OFF (now): $0.

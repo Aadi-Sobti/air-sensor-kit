@@ -9,7 +9,7 @@
 //   private_locations/{id}       address + ZIP from setup (never public, never logged)
 import { FieldValue, Firestore, Timestamp } from "firebase-admin/firestore";
 
-import { ScTask, taskFor } from "./forward";
+import { SC, ScTask, taskFor, withTimeout } from "./forward";
 import { sha256Hex, verify } from "./lib/hmac";
 import { LIMITS, parseUpload, Reading } from "./lib/payload";
 import { logEvent, logWarn } from "./lib/redact";
@@ -255,7 +255,7 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     const task = taskFor(id, up.fw, up.readings, nowS);
     if (task) {
       try {
-        await deps.enqueueSc(task);
+        await withTimeout(deps.enqueueSc(task), SC.enqueueTimeoutMs); // never hold the device's upload
       } catch (e) {
         logWarn("sc_enqueue_failed", { device: id, error: String((e as Error)?.message ?? e).slice(0, 80) }); // upload still OK
       }
