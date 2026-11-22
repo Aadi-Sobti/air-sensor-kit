@@ -4,11 +4,14 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M9 (built; founder checks pending) · M0–M8 merged to main 2026-11-22 · was: M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
+**Current milestone:** M10 (drafts done; founder approval + user tests) · M9 built (founder checks pending) · M0–M8 merged to main 2026-11-22 · was: M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] 👤 7-day soak on home WiFi: board on 0.7.5 since 2026-11-22 (keep it plugged in; the agent records uptime, heap,
+- [ ] 👤 4-day soak on home WiFi (founder 2026-11-22; was 7): board on 0.7.5 since 2026-11-22 (keep it plugged in; the agent records uptime, heap,
       and uploads at the end). iPhone re-test passed 2026-11-22.
 - [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
+- [ ] 👤 M10: approve the guide (`/guide`, ask the agent for a dev link), card, and volunteer drafts; add photos;
+      price the long cable / charger options (#11) and decide #12; then run the first-user tests
+      (`docs/guides/first-user-test.md`).
 - [ ] 👤 M9: get 1–2 more NodeMCU boards (2nd OTA bench board + a fresh board to provision); approve the label wording
       (draft in `tools/labels.py`) and pick a 4"×2" sticker sheet; the board now runs dev firmware 0.7.2.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
@@ -381,7 +384,13 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       board in < 2 min from the printed instructions.
 
 ### M10 Guides + first-time-user test
-- [ ] Build guide + setup card from `docs/USER_FLOW.md` (EN/ES, photos/diagrams).
+- [ ] Build guide + setup card from `docs/USER_FLOW.md` (EN/ES, photos/diagrams). **Drafts done 2026-11-22, awaiting
+      founder approval:** site page `/guide` (EN + ES, `?lang=es`; wiring diagram in the decided colors; a "How did your
+      kit come?" switch for the three kit versions while #12 is open; where to put it: outside, ~6 ft up, away from
+      smoke sources; troubleshooting), `docs/guides/card.md` (card front/back EN + ES), `docs/guides/volunteer-provisioning.md`.
+      Checked in a phone-sized browser (EN + ES, kit switch renumbers steps). Web tests 33/33. Photos need the founder.
+- [ ] 👤 First-time-user tests: protocol + observation sheet in `docs/guides/first-user-test.md` (3+ testers; mix of
+      computer/phone, iPhone/Android, EN/ES, kit versions).
 - **Done when:** 👤 at least 3 people who've never seen the kit build and set it up alone, without scanning the
       wrong QR code, and can find their sensor afterward on `/my`; the top issues are fixed.
 
@@ -396,6 +405,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-22 · M10 drafts: /guide page (EN/ES, wiring diagram, 3 kit versions), card updated, first-user test kit; decisions #2, #13 · web 33 · next: founder approval, photos, user tests; 4-day soak running.
 - 2026-11-22 · M9 merged (#11). iPhone re-test: found + fixed an out-of-memory reboot loop in the new setup page (0.7.3 → 0.7.5); founder: "works perfectly" on 0.7.4; 0.7.5 via OTA, back on the map · native 91 · next: 7-day soak, founder M9 items.
 - 2026-11-22 · Merged M5–M8 (PRs #6–#10). M9: signed OTA (verified on hardware: update, unsigned rejected, recovery), factory endpoint (dev), SETCODE, provision.py + labels, RAM +3 KB · native 89, tools 48, backend 100 · next: spec-review fixes, founder: iPhone re-test, boards, label wording.
 - 2026-11-22 · Board back: 0.6.0 phone setup worked on iPhone, sensor on the map · 0.6.1 portal fixes (stable setup WiFi, request logging, redesign) · native 83, tools 29, flashed + boot capture · next: founder iPhone re-test, then 7-day soak; M9 must cut size first.

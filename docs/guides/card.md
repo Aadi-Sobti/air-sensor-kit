@@ -2,7 +2,8 @@
 
 Source of truth: `docs/USER_FLOW.md`. This file is only the printed wording. `<site>` = the project's domain (TBD).
 The two per-kit stickers (SETUP, OWNER) come from `tools/provision.py`; the card has a blank spot for each.
-Spanish needs a native speaker's review before printing. Wire colors wait on decision #2.
+Spanish needs a native speaker's review before printing. Wire colors: decision #2 (2026-11-22). The full guide with a
+wiring diagram is the site page `/guide` (`?lang=es` for Spanish); the card could carry a small QR to it (space permitting).
 
 Changes vs USER_FLOW (need approval):
 - Phone step 3 adds a fallback for the founder's 2026-11-22 iPhone run, where the page didn't open by itself:
@@ -16,7 +17,9 @@ Changes vs USER_FLOW (need approval):
 
 **1. Build (10 min, no tools)**
 1. Plug the sensor's cable into the small adapter board. It only fits one way.
-2. Connect the 4 wires, matching colors: **VCC → VIN** (red) · **GND → G** (black) · **TXD → D1** · **RXD → D2**.
+2. Connect the 4 wires, matching colors: **VCC → VIN** (red) · **GND → G** (black) · **TXD → D1** (blue) · **RXD → D2** (yellow).
+   *(If the wires are already on the small board, only connect their free ends to the WiFi board. If your sensor came
+   built, skip to step 2.)*
 3. Put the parts in the box, USB cable through the hole. Leave the lid open.
 
 **2. Connect it to your WiFi (3 min). Pick ONE:**
@@ -28,7 +31,7 @@ click **Connect my sensor** and follow the page.
 a setup page opens. Pick your WiFi, type its password and your address, tap **Connect**.
 If no page opens, open your web browser and go to any website.
 
-**3. Done!** Close the lid and plug it into a wall charger outside (or inside). A quick blink every few seconds means
+**3. Done!** Close the lid. Put it outside about 6 feet (2 m) up, away from grills and smoke, and plug it in. A quick blink every few seconds means
 it's working. Your readings: **<site>/s/<your sensor code>** (on the sticker).
 
 *This is not a smoke alarm. It does not replace official warnings or evacuation orders.*
@@ -61,7 +64,9 @@ Tap **Add to Home Screen** to keep it like an app. No account needed. **Keep thi
 
 **1. Ármalo (10 min, sin herramientas)**
 1. Conecta el cable del sensor a la placa adaptadora pequeña. Solo entra de una manera.
-2. Conecta los 4 cables según los colores: **VCC → VIN** (rojo) · **GND → G** (negro) · **TXD → D1** · **RXD → D2**.
+2. Conecta los 4 cables según los colores: **VCC → VIN** (rojo) · **GND → G** (negro) · **TXD → D1** (azul) · **RXD → D2** (amarillo).
+   *(Si los cables ya están en la placa pequeña, conecta solo sus puntas libres a la placa WiFi. Si tu sensor llegó
+   armado, ve al paso 2.)*
 3. Pon las piezas en la caja, con el cable USB por el agujero. Deja la tapa abierta.
 
 **2. Conéctalo a tu WiFi (3 min). Elige UNA opción:**
@@ -73,7 +78,7 @@ haz clic en **Conectar mi sensor** y sigue la página.
 se abre una página. Elige tu WiFi, escribe su contraseña y tu dirección, y toca **Conectar**.
 Si no se abre ninguna página, abre tu navegador y entra a cualquier sitio web.
 
-**3. ¡Listo!** Cierra la tapa y conéctalo a un cargador de pared. Un parpadeo corto cada pocos segundos significa que
+**3. ¡Listo!** Cierra la tapa. Ponlo afuera a unos 6 pies (2 m) de altura, lejos de parrillas y humo, y conéctalo. Un parpadeo corto cada pocos segundos significa que
 funciona. Tus lecturas: **<site>/s/<código de tu sensor>** (en la etiqueta).
 
 *Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación.*
