@@ -63,15 +63,17 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | (Agent) Re-registering a board: unused (never uploaded) → same short code, new owner code (covers failed prints); in use → always refused; owner used "Delete my data" → only with `reprovision`, after the nightly archive purge finished, with every per-owner field reset (name, inside/outside, Sensor.Community registration, map entry). The tool never deletes data, and never erases a board that has a code or has uploaded | Privacy: a returned kit must never carry the previous owner's data to a new home; spec review |
 | 2026-11-22 | (Agent) Label layout: one kit per row of a letter sheet of 4"×2" stickers (10 per sheet), SETUP left, OWNER right; setup password also printed as text under the QR. **Wording is a draft** for founder approval | Rows keep a kit's two labels together; text fallback if a camera can't scan |
 | 2026-11-22 | (Agent) Corrected: the OTA size limit is the 1 MB max program size (not ~520 KB as I first wrote) | Read the core's Updater.cpp |
+| 2026-11-22 | #2 Wire colors: **red VCC → VIN, black GND → G, blue TXD → D1, yellow RXD → D2** | Founder; blue/yellow are easy to tell apart, including for color-blind people |
+| 2026-11-22 | #13 Languages for v1 guides and card: **English + Spanish**; more after the first-user tests, with native-speaker reviewers | Founder |
+| 2026-11-22 | Soak test: **4 days** on home WiFi (instead of 7) | Founder; more than the 24 h acceptance check |
+| 2026-11-22 | Guides cover three kit versions until #12 is decided: all 8 connections, wires pre-attached to the adapter (4), fully assembled (skip the build) | Founder: "design for both versions; some might come fully assembled" |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
 |---|---|---|---|
 | 1 | Final project/nonprofit name (ProseFire is a placeholder) | Before M9 labels | Used in AP name, domain, labels |
-| 2 | Wire colors in the kit (which jumper wires get bought) | M2/M10 | Red=VIN, black=G, two distinct colors for D1/D2; the guide shows colors |
-| 11 | Include a USB wall charger in the kit? | M10 | Adds per-kit cost; most homes have a phone charger |
-| 12 | Pre-attach jumpers to the adapter at packing time? | M10 | Fewer recipient mistakes, more volunteer time |
-| 13 | Languages beyond EN + ES | M10 | NYC: Haitian Creole, Chinese, Bengali, Russian… |
+| 11 | Include a USB wall charger in the kit? **And a long enough cable:** the sensor should sit ~6 ft (2 m) above ground (founder 2026-11-22), so the kit's cable may not reach an outlet | M10 | Options to price: long USB cable (10 ft) vs charger + extension; decide after pricing and the first-user tests |
+| 12 | Pre-attach jumpers to the adapter at packing time, or ship fully assembled? | M10 | Founder 2026-11-22: likely all 8 by the recipient; some kits may come fully assembled. Guides support all three |
 | 15 | Open-source license for code; license for published data | M11 | |
 | 16 | Phase 2 humidity sensor: DHT22 vs cheaper I2C part | Phase 2 | |
 | 17 | Android household alerts (Fire Watch is iOS-only) | Phase 3 | Web push from the owner page may cover this |
