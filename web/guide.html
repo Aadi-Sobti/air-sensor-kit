@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Build and set up your air sensor · ProseFire</title>
+  </head>
+  <body class="guide">
+    <!-- DRAFT (M10): wording awaits the founder's approval and the first-time-user tests. Source of truth: docs/USER_FLOW.md -->
+    <main>
+      <h1 data-i18n="guide.title">Build and set up your air sensor</h1>
+      <p data-i18n="guide.intro"></p>
+
+      <section class="g-card">
+        <h2 data-i18n="guide.box.title"></h2>
+        <p data-i18n="guide.box.items"></p>
+        <h2 data-i18n="guide.need.title"></h2>
+        <ul>
+          <li data-i18n="guide.need.wifi"></li>
+          <li data-i18n="guide.need.device"></li>
+          <li data-i18n="guide.need.power"></li>
+        </ul>
+      </section>
+
+      <section class="g-card" id="build">
+        <h2 data-i18n="guide.build.title"></h2>
+        <fieldset class="kit-pick">
+          <legend data-i18n="guide.kit.question"></legend>
+          <label><input type="radio" name="kit" value="parts" checked /> <span data-i18n="guide.kit.parts"></span></label>
+          <label><input type="radio" name="kit" value="prewired" /> <span data-i18n="guide.kit.prewired"></span></label>
+          <label><input type="radio" name="kit" value="assembled" /> <span data-i18n="guide.kit.assembled"></span></label>
+        </fieldset>
+        <p class="hint-box" data-kit="assembled" data-i18n="guide.build.skip"></p>
+        <ol class="steps" data-kit="parts prewired">
+          <li data-kit="parts" data-i18n="guide.build.s1"></li>
+          <li data-kit="parts" data-i18n="guide.build.s2"></li>
+          <li>
+            <span data-i18n="guide.build.s3"></span>
+            <span class="hint" data-i18n="guide.build.s3hint"></span>
+          </li>
+          <li data-i18n="guide.build.s4"></li>
+        </ol>
+        <figure class="wiring" data-kit="parts prewired">
+          <svg viewBox="0 0 480 460" role="img" aria-labelledby="wiring-cap">
+            <!-- adapter board -->
+            <rect x="20" y="150" width="120" height="150" rx="10" fill="#2f6f4f" />
+            <rect x="4" y="195" width="22" height="60" rx="3" fill="#ddd" stroke="#999" />
+            <text x="80" y="316" text-anchor="middle" class="w-lbl" id="lbl-adapter">adapter board</text>
+            <g class="w-pin-lbl" text-anchor="end">
+              <text x="124" y="185">VCC</text><text x="124" y="215">GND</text>
+              <text x="124" y="245">TXD</text><text x="124" y="275">RXD</text>
+            </g>
+            <g fill="#e8c35a"><circle cx="140" cy="180" r="6" /><circle cx="140" cy="210" r="6" /><circle cx="140" cy="240" r="6" /><circle cx="140" cy="270" r="6" /></g>
+            <!-- WiFi board (NodeMCU): 15 pins per side, USB plug at the bottom -->
+            <rect x="255" y="60" width="150" height="360" rx="8" fill="#1d1d1f" />
+            <rect x="305" y="410" width="50" height="34" rx="4" fill="#c9c9c9" stroke="#888" />
+            <text x="330" y="458" text-anchor="middle" class="w-small">USB</text>
+            <text x="330" y="250" text-anchor="middle" class="w-lbl w-on-dark" id="lbl-board">WiFi board</text>
+            <g fill="#777" id="pins"></g>
+            <!-- wires -->
+            <g fill="none" stroke-width="7" stroke-linecap="round">
+              <path d="M140 180 C 205 180, 200 370, 270 370" stroke="#d62828" />
+              <path d="M140 210 C 195 210, 190 350, 270 350" stroke="#111" />
+              <path d="M140 240 C 230 240, 225 32, 330 32 C 445 32, 445 110, 390 110" stroke="#1f5fd1" />
+              <path d="M140 270 C 245 270, 240 14, 330 14 C 462 14, 462 130, 390 130" stroke="#f2c200" />
+            </g>
+            <g class="w-pin-lbl w-on-dark">
+              <text x="285" y="375">VIN</text><text x="285" y="355">G</text>
+              <text x="375" y="115" text-anchor="end">D1</text><text x="375" y="135" text-anchor="end">D2</text>
+            </g>
+          </svg>
+          <figcaption id="wiring-cap" data-i18n="guide.diagram.caption"></figcaption>
+        </figure>
+        <p class="hint" data-kit="parts prewired" data-i18n="guide.build.check"></p>
+      </section>
+
+      <section class="g-card">
+        <h2 data-i18n="guide.place.title"></h2>
+        <ul>
+          <li data-i18n="guide.place.height"></li>
+          <li data-i18n="guide.place.away"></li>
+          <li data-i18n="guide.place.rain"></li>
+          <li data-i18n="guide.place.reach"></li>
+        </ul>
+      </section>
+
+      <section class="g-card">
+        <h2 data-i18n="guide.setup.title"></h2>
+        <h3 data-i18n="guide.setup.computer.title"></h3>
+        <ol class="steps">
+          <li data-i18n="guide.setup.computer.s1"></li>
+          <li><span data-i18n="guide.setup.computer.s2"></span> <a href="/setup" data-i18n="guide.setup.computer.link"></a></li>
+          <li data-i18n="guide.setup.computer.s3"></li>
+          <li data-i18n="guide.setup.computer.s4"></li>
+        </ol>
+        <h3 data-i18n="guide.setup.phone.title"></h3>
+        <ol class="steps">
+          <li data-i18n="guide.setup.phone.s1"></li>
+          <li data-i18n="guide.setup.phone.s2"></li>
+          <li data-i18n="guide.setup.phone.s3"></li>
+          <li data-i18n="guide.setup.phone.s4"></li>
+          <li data-i18n="guide.setup.phone.s5"></li>
+        </ol>
+      </section>
+
+      <section class="g-card">
+        <h2 data-i18n="guide.done.title"></h2>
+        <ul>
+          <li data-i18n="guide.done.light"></li>
+          <li data-i18n="guide.done.map"></li>
+          <li data-i18n="guide.done.manage"></li>
+          <li data-i18n="guide.done.moving"></li>
+        </ul>
+      </section>
+
+      <section class="g-card">
+        <h2 data-i18n="guide.trouble.title"></h2>
+        <dl class="trouble">
+          <dt data-i18n="guide.trouble.light.q"></dt><dd data-i18n="guide.trouble.light.a"></dd>
+          <dt data-i18n="guide.trouble.popup.q"></dt><dd data-i18n="guide.trouble.popup.a"></dd>
+          <dt data-i18n="guide.trouble.browser.q"></dt><dd data-i18n="guide.trouble.browser.a"></dd>
+          <dt data-i18n="guide.trouble.phonepage.q"></dt><dd data-i18n="guide.trouble.phonepage.a"></dd>
+          <dt data-i18n="guide.trouble.wifi.q"></dt><dd data-i18n="guide.trouble.wifi.a"></dd>
+          <dt data-i18n="guide.trouble.password.q"></dt><dd data-i18n="guide.trouble.password.a"></dd>
+          <dt data-i18n="guide.trouble.double.q"></dt><dd data-i18n="guide.trouble.double.a"></dd>
+          <dt data-i18n="guide.trouble.lost.q"></dt><dd data-i18n="guide.trouble.lost.a"></dd>
+        </dl>
+      </section>
+    </main>
+    <footer>
+      <p data-i18n="safety.notSmokeAlarm">This is not a smoke alarm. It does not replace official warnings or evacuation orders.</p>
+    </footer>
+    <script type="module" src="/src/guide.ts"></script>
+  </body>
+</html>

@@ -18,6 +18,7 @@ export default defineConfig({
         claim: resolve(__dirname, "claim.html"),
         sensor: resolve(__dirname, "s.html"),
         my: resolve(__dirname, "my.html"),
+        guide: resolve(__dirname, "guide.html"),
       },
     },
   },

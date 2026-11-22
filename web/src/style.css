@@ -39,3 +39,24 @@ summary { font-weight: 600; cursor: pointer; min-height: 2.4rem; }
 button.link { background: none; color: #1557a0; text-decoration: underline; padding: 0.3rem 0; min-height: auto; }
 button.danger { background: #b00020; margin-top: 1rem; }
 .hint-box { background: #eef4fb; border-left: 5px solid #1557a0; padding: 0.6rem 0.9rem; margin: 0.8rem 0; }
+
+/* Build + setup guide (/guide) */
+[hidden] { display: none !important; }
+.g-card { border: 1px solid #e1e6ec; border-radius: 12px; padding: 0.6rem 1rem 0.9rem; margin: 1rem 0; }
+.g-card h2 { font-size: 1.2rem; margin: 0.6rem 0; }
+.g-card h3 { font-size: 1.05rem; margin: 1rem 0 0.3rem; }
+.steps li { margin: 0.55rem 0; }
+.steps .hint { display: block; }
+.kit-pick { border: 0; padding: 0; margin: 0 0 0.6rem; }
+.kit-pick legend { font-weight: 600; margin-bottom: 0.3rem; }
+.kit-pick label { display: flex; gap: 0.6rem; align-items: center; min-height: 44px; }
+.kit-pick input { width: 1.2rem; height: 1.2rem; flex: none; }
+.wiring { margin: 0.8rem 0; }
+.wiring svg { width: 100%; max-width: 480px; height: auto; display: block; }
+.wiring figcaption { font-weight: 600; margin-top: 0.4rem; }
+.w-lbl { font: 600 15px system-ui, sans-serif; fill: #1a1a1a; }
+.w-small { font: 12px system-ui, sans-serif; fill: #555; }
+.w-pin-lbl { font: 700 15px system-ui, sans-serif; fill: #fff; }
+.w-on-dark { fill: #fff; }
+.trouble dt { font-weight: 700; margin-top: 0.7rem; }
+.trouble dd { margin: 0.1rem 0 0; }
