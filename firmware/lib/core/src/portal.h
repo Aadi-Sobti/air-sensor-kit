@@ -38,6 +38,11 @@ std::vector<Key> validate(const std::map<std::string, std::string>& fields, Form
 
 std::string htmlEscape(const std::string& s);
 
+// Pages are built in one buffer reserved up front, so they never grow (growing needs the old + a doubled block at
+// once: a 9 KB page growing to 18 KB ran the sensor out of memory on hardware, 2026-11-22). The WiFi list stops
+// early if a page would get close to the limit (very long, heavily escaped names).
+constexpr size_t kPageReserve = 14 * 1024;
+
 // Pages. `errors` are shown at the top; form values (except the password) are kept so people don't retype.
 std::string formPage(Lang l, const std::vector<Network>& nets, const Form& values, const std::vector<Key>& errors);
 std::string connectingPage(Lang l);  // refreshes itself to /status (works without JS, survives channel switches)

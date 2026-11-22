@@ -6,8 +6,8 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M9 (built; founder checks pending) · M0–M8 merged to main 2026-11-22 · was: M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] 👤 iPhone re-test of phone setup on firmware 0.6.1 (≈ 10 min, see M6): hold FLASH 5 s, join the setup WiFi,
-      try a wrong password first, then the right one. Then the 7-day soak on home WiFi starts (board stays plugged in).
+- [ ] 👤 7-day soak on home WiFi: board on 0.7.5 since 2026-11-22 (keep it plugged in; the agent records uptime, heap,
+      and uploads at the end). iPhone re-test passed 2026-11-22.
 - [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
 - [ ] 👤 M9: get 1–2 more NodeMCU boards (2nd OTA bench board + a fresh board to provision); approve the label wording
       (draft in `tools/labels.py`) and pick a 4"×2" sticker sheet; the board now runs dev firmware 0.7.2.
@@ -203,7 +203,20 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       (1) wrong password → phone dropped off the setup WiFi and couldn't rejoin; (2) after rejoining, the page didn't
       pop up by itself (had to open a browser); (3) page looks too plain. Also `setup_info.py` printed a cut-off
       password (fixed: waits for a full line; regression test).
-- [ ] Fixes in 0.6.1 (built + flashed 2026-11-22; **phone re-test pending**): (1) pause saved-WiFi retries while a
+- [x] iPhone run #2 (2026-11-22, founder, firmware 0.7.4): the setup page **opened by itself**, a wrong password showed
+      "That password didn't work" and the phone **stayed connected**, the right password gave "You're all set!".
+      Log `logs/iphone-retest-074.log`: captive.apple.com probe → page; wrong_password after 9 s, nothing saved; new WiFi
+      works after 3 s → RUNNING; saved-WiFi retries paused while the phone used setup. Sensor back on the map 2026-11-22
+      (FDK7NA online, placed, PM2.5 3.5). The founder's verdict: "Works perfectly".
+      **Found on the way (my bug):** the redesigned page ran the sensor out of memory ("Unhandled C++ exception: OOM") on
+      0.7.3: the page string (reserved 9 KB) doubled to 18 KB in a neighborhood with many networks, so every page load
+      rebooted the sensor and dropped the phone (`logs/iphone-retest-073.log`, 18 reboots). 0.7.4: 14 KB reserved up
+      front, no full-page copy, list capped; still one OOM on the first load after flashing (a separate 3.5→7 KB WiFi-list
+      buffer). 0.7.5: rows written straight into the page buffer + a memory check before building any page (too little →
+      a tiny self-reloading page instead of a crash). Native test: worst-case escaped names stay ≤ the reserve.
+      0.7.5 installed over WiFi, uploads OK; its page path is covered by the pre-check but **not yet seen on a phone**
+      (next phone setup re-checks it).
+- [x] Fixes in 0.6.1 (built + flashed 2026-11-22; phone re-test passed on 0.7.4, see above): (1) pause saved-WiFi retries while a
       phone uses setup + open the setup WiFi on the home network's channel, so the password test doesn't switch
       channels (`core::portal::pauseSavedWifi/pickApChannel`, 2 new tests); (2) dev builds log each setup-page request
       (host + path only, capped) so the next run shows what iOS asks for if the page doesn't pop up; (3) redesigned
@@ -383,6 +396,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-22 · M9 merged (#11). iPhone re-test: found + fixed an out-of-memory reboot loop in the new setup page (0.7.3 → 0.7.5); founder: "works perfectly" on 0.7.4; 0.7.5 via OTA, back on the map · native 91 · next: 7-day soak, founder M9 items.
 - 2026-11-22 · Merged M5–M8 (PRs #6–#10). M9: signed OTA (verified on hardware: update, unsigned rejected, recovery), factory endpoint (dev), SETCODE, provision.py + labels, RAM +3 KB · native 89, tools 48, backend 100 · next: spec-review fixes, founder: iPhone re-test, boards, label wording.
 - 2026-11-22 · Board back: 0.6.0 phone setup worked on iPhone, sensor on the map · 0.6.1 portal fixes (stable setup WiFi, request logging, redesign) · native 83, tools 29, flashed + boot capture · next: founder iPhone re-test, then 7-day soak; M9 must cut size first.
 - 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
