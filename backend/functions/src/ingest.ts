@@ -38,6 +38,7 @@ interface DeviceEntry {
   secret: string | null;
   fetchedAt: number;
   scRegistered?: boolean; // registered at Sensor.Community (founder/registration process); needed for forwarding
+  indoor?: boolean; // indoor sensors are never forwarded (founder decision 2026-11-22)
 }
 
 /** Optional side effects of an accepted upload. Forwarding is OFF unless `scEnabled` (feature flag) is true. */
@@ -76,6 +77,7 @@ async function loadDevice(db: Firestore, id: string, nowMs: number, fresh: boole
     secret: sec.exists ? String(sec.get("secret")) : null,
     fetchedAt: nowMs,
     scRegistered: dev.get("scRegistered") === true,
+    indoor: dev.get("indoor") === true,
   };
   registryCache.set(id, entry);
   return entry;
@@ -251,7 +253,8 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     registryCache.set(id, { status: "active", secret: enrollSecret, fetchedAt: nowMs, scRegistered: dev.scRegistered });
   }
   // Sensor.Community forwarding (M8): feature flag + per-device registration; queued, never inline.
-  if (deps.scEnabled && deps.enqueueSc && dev.scRegistered && accepted > 0) {
+  const indoorNow = up.setup ? up.setup.indoor : dev.indoor; // setup info in this upload wins
+  if (deps.scEnabled && deps.enqueueSc && dev.scRegistered && !indoorNow && accepted > 0) {
     const task = taskFor(id, up.fw, up.readings, nowS);
     if (task) {
       try {

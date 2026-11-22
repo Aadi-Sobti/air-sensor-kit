@@ -16,7 +16,7 @@ Lang pickLang(const std::string& acceptLanguage);
 enum Key {
   kTitle, kIntro, kWifi, kOther, kWifiName, kPassword, kShowPw, kOpen, kWifiHint, kAddress, kAddressHint, kZip,
   kWhere, kOutside, kInside, kConnect, kConnecting, kKeepOpen, kDone, kDoneNext, kErrPassword, kErrNotFound,
-  kErrNeedSsid, kErrPwLength, kErrAddress, kErrZip, kSafety, kKeyCount
+  kErrNeedSsid, kErrPwLength, kErrAddress, kErrZip, kSafety, kShare, kKeyCount
 };
 std::string str(Lang l, Key k);
 

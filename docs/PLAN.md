@@ -278,7 +278,9 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 ### M8 Sensor.Community forwarding (flag OFF by default)
 - [x] Task-queue forwarder + payload tests (agent part).
-- [ ] 👤 Founder confirms forwarding/bulk registration with Sensor.Community (+ decisions below before the flag goes on).
+- [ ] 👤 Founder confirms forwarding/bulk registration with Sensor.Community **and their data license** (decided
+      2026-11-22: share after the license is confirmed; outdoor sensors only; register with the public cell center;
+      recipients are told during setup — sentence added to /setup, /claim, the phone page, USER_FLOW).
       Facts verified 2026-11-21: push API (opendata-stuttgart meta wiki EN-APIs: endpoint, X-Sensor, X-Pin 1 for PMS,
       P1 = PM10 / P2 = PM2.5, no timestamp — the server stamps arrival); airrohr source read via the GitHub API
       (`defines.h` "#define PMS_API_PIN 1"; it reads PMS frame bytes 10–15 = the atmospheric PM1/PM2.5/PM10 per the

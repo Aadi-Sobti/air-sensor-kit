@@ -27,7 +27,7 @@ describe("i18n", () => {
 
   it("every t() key used in the scripts exists", () => {
     for (const f of ["src/setup.ts", "src/claim.ts", "src/map.ts", "src/sensor.ts", "src/my.ts"]) {
-      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety|map|sensor|aqi|my|pwa)\.[a-zA-Z_.]+)"/g)].map((m) => m[1]);
+      const used = [...read(f).matchAll(/"((?:setup|claim|census|site|safety|map|sensor|aqi|my|pwa|share)\.[a-zA-Z_.]+)"/g)].map((m) => m[1]);
       for (const k of used) expect(enKeys, `${f}: ${k}`).toContain(k);
     }
   });

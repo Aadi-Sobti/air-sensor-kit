@@ -23,6 +23,7 @@ static void test_every_string_exists_in_both_languages() {
   TEST_ASSERT_EQUAL_STRING("ZIP code", str(Lang::kEn, kZip).c_str());
   TEST_ASSERT_EQUAL_STRING("Afuera", str(Lang::kEs, kOutside).c_str());
   TEST_ASSERT_TRUE(str(Lang::kEs, kSafety).find("alarma de humo") != std::string::npos);
+  TEST_ASSERT_TRUE(str(Lang::kEn, kShare).find("Sensor.Community") != std::string::npos);  // last entry in the blob
 }
 
 static void test_language_from_accept_language() {
@@ -101,6 +102,7 @@ static void test_pages_work_without_js_and_are_small() {
   for (int i = 0; i < 20; i++) nets.push_back({"Network number " + std::to_string(i) + " with a long name", -40 - i, true});
   std::string f = formPage(Lang::kEs, nets, Form{}, {kErrNeedSsid, kErrZip});
   TEST_ASSERT_TRUE(has(f, "<form method=\"post\" action=\"/connect\">"));
+  TEST_ASSERT_TRUE(has(f, "Sensor.Community"));  // sharing notice before the Connect button
   TEST_ASSERT_TRUE(has(f, "lang=\"es\""));
   TEST_ASSERT_FALSE(has(f, "http://") || has(f, "https://"));  // no external assets
   TEST_ASSERT_TRUE(f.size() < 12000);  // spec: < 20 KB gzipped; uncompressed is already well under

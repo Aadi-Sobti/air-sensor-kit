@@ -55,7 +55,8 @@ static const char kEnBlob[] PF_PROGMEM =
     "WiFi passwords have 8 to 63 characters." "\0"
     "Type your street address." "\0"
     "Type a 5-digit ZIP code." "\0"
-    "This is not a smoke alarm. It does not replace official warnings or evacuation orders." "\0";
+    "This is not a smoke alarm. It does not replace official warnings or evacuation orders." "\0"
+    "Your sensor's readings (never your address) appear on our public map and are shared as open data with Sensor.Community." "\0";
 // Spanish strings, one after another, each ending in \0 (kept in flash, not RAM).
 static const char kEsBlob[] PF_PROGMEM =
     "Configura tu sensor de aire" "\0"
@@ -84,7 +85,8 @@ static const char kEsBlob[] PF_PROGMEM =
     "Las contraseñas de WiFi tienen de 8 a 63 caracteres." "\0"
     "Escribe tu dirección." "\0"
     "Escribe un código postal de 5 dígitos." "\0"
-    "Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación." "\0";
+    "Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación." "\0"
+    "Las lecturas de tu sensor (nunca tu dirección) aparecen en nuestro mapa público y se comparten como datos abiertos con Sensor.Community." "\0";
 
 std::string str(Lang l, Key k) {
   if (k < 0 || k >= kKeyCount) return "";
@@ -220,6 +222,7 @@ std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, co
        "> " + htmlEscape(str(l, kOutside)) + "</label>";
   p += "<label class=\"c\"><input type=\"radio\" name=\"where\" value=\"inside\"" + std::string(v.indoor ? " checked" : "") +
        "> " + htmlEscape(str(l, kInside)) + "</label></fieldset>";
+  p += "<p class=\"h\">" + htmlEscape(str(l, kShare)) + "</p>";
   p += "<button type=\"submit\">" + htmlEscape(str(l, kConnect)) + "</button></form>";
   return p + foot(l);
 }

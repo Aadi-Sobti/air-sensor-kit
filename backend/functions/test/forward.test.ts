@@ -101,6 +101,16 @@ describe("forwarding gate in ingest (emulator)", () => {
     assert.equal(r.status, 200);
   });
 
+  it("never forwards indoor sensors (founder decision)", async () => {
+    const id = `esp8266-${930000 + Math.floor(Math.random() * 9999)}`;
+    await db.doc(`devices/${id}`).set({ status: "allowlisted", scRegistered: true, indoor: true });
+    const tasks: ScTask[] = [];
+    clearRegistryCache();
+    const r = await upload(id, randomBytes(32).toString("hex"), true, { scEnabled: true, enqueueSc: async (t) => void tasks.push(t) });
+    assert.equal(r.status, 200);
+    assert.equal(tasks.length, 0);
+  });
+
   it("a hanging queue call can't hold the upload (2 s limit)", async () => {
     const id = `esp8266-${920000 + Math.floor(Math.random() * 9999)}`;
     await db.doc(`devices/${id}`).set({ status: "allowlisted", scRegistered: true });
