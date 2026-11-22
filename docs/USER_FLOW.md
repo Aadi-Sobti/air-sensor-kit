@@ -48,6 +48,8 @@ Edge, or any smartphone. A phone charger plug for the final spot (decision #11).
 - **Later: Fire Watch.** When linking is available, open Fire Watch → *Add my air sensor* → scan the same
   Manage QR. (Phase 3; nothing to do now.)
 - Never needed: installing software, creating an account, filling out a form, or writing down an ID.
+- Shown during setup (both paths): "Your sensor's readings (never your address) appear on our public map and are
+  shared as open data with Sensor.Community." (founder decision 2026-11-22)
 - **Moving or new WiFi?** Do Part 2 again. With a computer, just plug in and go to `<site>/setup`.
   With a phone, first hold the board's **FLASH** button for 5 seconds while it's running (the light starts blinking slowly).
 

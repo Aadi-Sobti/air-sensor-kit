@@ -6,13 +6,16 @@ import { getStorage } from "firebase-admin/storage";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { onRequest } from "firebase-functions/v2/https";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { defineSecret } from "firebase-functions/params";
+import { defineBoolean, defineSecret } from "firebase-functions/params";
+import { onTaskDispatched } from "firebase-functions/v2/tasks";
+import { getFunctions } from "firebase-admin/functions";
 import webpush from "web-push";
 
 import { runArchive, runArchivePurge } from "./archive";
 import { clientIp, handleOwner, sensorHistory } from "./owner/api";
 import { PushSender } from "./publish";
 import { handleClaim } from "./claim";
+import { forwardOne, ScTask } from "./forward";
 import { handleIngest } from "./ingest";
 import { defaultDeps, runPublish } from "./publish";
 
@@ -24,6 +27,9 @@ initializeApp();
 const OWNER_PEPPER = defineSecret("OWNER_PEPPER"); // keyed hash for owner codes + session signing
 const VAPID_PUBLIC = defineSecret("VAPID_PUBLIC"); // web push (not secret, but kept with its private half)
 const VAPID_PRIVATE = defineSecret("VAPID_PRIVATE");
+// Sensor.Community forwarding (M8): OFF until the founder confirms with Sensor.Community (backend.md).
+// Set in functions/.env.<project>; each sensor must also have devices.scRegistered = true.
+const SC_FORWARD_ENABLED = defineBoolean("SC_FORWARD_ENABLED", { default: false });
 
 function pushSender(): PushSender | undefined {
   try {
@@ -62,11 +68,17 @@ export const health = onRequest((req, res) => {
 export const ingest = onRequest(
   { cpu: "gcf_gen1", memory: "256MiB", concurrency: 1, maxInstances: 20, timeoutSeconds: 30 },
   async (req, res) => {
+    const enabled = SC_FORWARD_ENABLED.value();
     const out = await handleIngest(getFirestore(), {
       method: req.method,
       headers: req.headers as Record<string, string | string[] | undefined>,
       rawBody: req.rawBody,
-    });
+    }, Date.now(), enabled ? {
+      scEnabled: true,
+      enqueueSc: async (task) => {
+        await getFunctions().taskQueue("locations/us-east1/functions/forwardSensorCommunity").enqueue(task, { dispatchDeadlineSeconds: 60 });
+      },
+    } : {});
     res.set("Cache-Control", "no-store");
     res.status(out.status).json(out.body);
   },
@@ -135,4 +147,14 @@ export const history = onRequest({ memory: "256MiB", maxInstances: 10 }, async (
   const out = await sensorHistory(getFirestore(), code);
   res.set("Cache-Control", out.status === 200 ? "public, max-age=120, s-maxage=300" : "no-store");
   res.status(out.status).json(out.body);
+});
+
+/** Task queue worker: one reading -> Sensor.Community, with retries/backoff (never inline in ingest). */
+export const forwardSensorCommunity = onTaskDispatched<ScTask>({
+  // Retries only for 5xx/429, and only while the reading is still fresh (Sensor.Community stamps arrival time).
+  retryConfig: { maxAttempts: 4, minBackoffSeconds: 20, maxBackoffSeconds: 120, maxRetrySeconds: 300 },
+  rateLimits: { maxConcurrentDispatches: 10, maxDispatchesPerSecond: 5 },
+  memory: "256MiB",
+}, async (req) => {
+  await forwardOne(req.data); // throws RetryableError on 5xx/429/network -> the queue retries with backoff
 });

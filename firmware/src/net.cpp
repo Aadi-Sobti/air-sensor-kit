@@ -12,6 +12,7 @@ static uint32_t gTestStart = 0;
 static char gTestReason[48] = "";
 static int gTestFailure = 3;  // WifiFailure::kTimeout
 static bool gApActive = false;  // set by the setup portal
+static bool gPaused = false;    // a phone is using the setup WiFi: stop searching for the saved network
 
 // One place decides the radio mode: station if we're using/testing a network, access point if the setup portal
 // is up. Both at once (AP+STA) while a phone user's credentials are being tested.
@@ -24,6 +25,12 @@ static void applyMode() {
     delay(2);
   }
   WiFi.mode(want);
+}
+
+void netSetSavedWifiPaused(bool paused) {
+  if (paused == gPaused) return;
+  gPaused = paused;
+  Serial.printf("[net] saved WiFi retries %s\n", paused ? "paused (a phone is using setup)" : "resumed");
 }
 
 void netSetApActive(bool on) {
@@ -40,7 +47,8 @@ void netBegin() {
 void netApply(bool connectWifi, const DeviceConfig& cfg, bool apOn, uint32_t nowMs) {
   (void)nowMs;
   if (gTesting) return;
-  if (connectWifi && cfg.hasWifi()) {
+  bool connected = gStaStarted && WiFi.status() == WL_CONNECTED;
+  if (connectWifi && cfg.hasWifi() && (!gPaused || connected)) {
     if (!gStaStarted || gSsid != cfg.wifiSsid || gPass != cfg.wifiPass) {
       if (gStaStarted) WiFi.disconnect();  // new password for the same network: start over
       gStaStarted = true;

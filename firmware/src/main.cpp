@@ -74,6 +74,7 @@ static void onPortalSaved(const core::portal::Form& f) {
   gCfg.indoor = f.indoor;
   gCfg.setupInfoPending = true;
   bool saved = saveConfig(gCfg);
+  portalSetSavedSsid(gCfg.wifiSsid);
   Serial.printf("[cfg] wifi+setup save=%s\n", saved ? "ok" : "FAIL");
   gSm.wifiSettingsSaved(millis());
   gUpload.requestSoon(millis());
@@ -84,6 +85,7 @@ static void onImprovSaved(const std::string& ssid, const std::string& pass) {
   gCfg.wifiSsid = ssid;
   gCfg.wifiPass = pass;
   bool saved = saveConfig(gCfg);
+  portalSetSavedSsid(gCfg.wifiSsid);
   DeviceConfig check;
   bool readBack = loadConfig(check) && check.wifiSsid == ssid && check.wifiPass == pass;
   Serial.printf("[cfg] wifi save=%s readback=%s (%s)\n", saved ? "ok" : "FAIL", readBack ? "ok" : "FAIL",
@@ -206,6 +208,7 @@ void setup() {
 
   improvBegin(&gId, onImprovSaved, makeClaimRedirect);
   portalBegin(&gId, ESP.getChipId(), onPortalSaved);
+  portalSetSavedSsid(gCfg.wifiSsid);
   improvSetSetupInfo([](std::string& ssid, std::string& pw) {
     ssid = portalApSsid();
     pw = gId.setupPassword;
@@ -242,6 +245,7 @@ void loop() {
   if (fired) {
     bool ok = eraseWifiAndSetup(gCfg);
     portalReset();
+    portalSetSavedSsid("");
     gSm.eraseWifi(now);
     Serial.printf("[reset] FLASH long-press: WiFi + setup info erased (%s), identity kept\n", ok ? "ok" : "FAIL");
     logState("long_press");

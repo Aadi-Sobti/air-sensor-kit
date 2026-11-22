@@ -55,7 +55,8 @@ static const char kEnBlob[] PF_PROGMEM =
     "WiFi passwords have 8 to 63 characters." "\0"
     "Type your street address." "\0"
     "Type a 5-digit ZIP code." "\0"
-    "This is not a smoke alarm. It does not replace official warnings or evacuation orders." "\0";
+    "This is not a smoke alarm. It does not replace official warnings or evacuation orders." "\0"
+    "Your sensor's readings (never your address) appear on our public map and are shared as open data with Sensor.Community." "\0";
 // Spanish strings, one after another, each ending in \0 (kept in flash, not RAM).
 static const char kEsBlob[] PF_PROGMEM =
     "Configura tu sensor de aire" "\0"
@@ -84,7 +85,8 @@ static const char kEsBlob[] PF_PROGMEM =
     "Las contraseñas de WiFi tienen de 8 a 63 caracteres." "\0"
     "Escribe tu dirección." "\0"
     "Escribe un código postal de 5 dígitos." "\0"
-    "Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación." "\0";
+    "Esto no es una alarma de humo. No reemplaza los avisos oficiales ni las órdenes de evacuación." "\0"
+    "Las lecturas de tu sensor (nunca tu dirección) aparecen en nuestro mapa público y se comparten como datos abiertos con Sensor.Community." "\0";
 
 std::string str(Lang l, Key k) {
   if (k < 0 || k >= kKeyCount) return "";
@@ -147,94 +149,171 @@ std::string htmlEscape(const std::string& s) {
   return o;
 }
 
+// Look: calm blue cards on a light background, big tap targets (>= 48 px), works in iOS's captive mini-browser.
+// Everything here is plain HTML + CSS; the little JS (show password, "connecting" button) is optional.
 static const char kCss[] PF_PROGMEM =
-    "body{font:18px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:34rem;margin:0 auto;padding:1rem;color:#1a1a1a}"
-    "h1{font-size:1.5rem}label{display:block;margin:.8rem 0 .25rem;font-weight:600}"
-    "input[type=text],input[type=password]{font:inherit;width:100%;box-sizing:border-box;min-height:3rem;padding:.4rem .6rem;border:2px solid #888;border-radius:.5rem}"
-    ".c{display:flex;gap:.6rem;align-items:center;min-height:2.8rem;padding:.2rem .5rem;border:2px solid #ddd;border-radius:.5rem;margin:.35rem 0;font-weight:400}"
-    ".c input{width:1.3rem;height:1.3rem}.h{color:#555;font-size:.9rem}"
-    ".e{background:#fde8e8;border-left:5px solid #b00020;padding:.6rem .8rem;margin:.8rem 0}"
-    "button{font:inherit;font-size:1.1rem;min-height:3rem;width:100%;margin-top:1rem;border:0;border-radius:.6rem;background:#1557a0;color:#fff}"
-    ".ok{font-size:1.6rem;color:#0a6b2d;font-weight:700}footer{margin-top:2rem;border-top:1px solid #ddd;padding-top:.8rem;font-size:.85rem;color:#444}";
+    ":root{--b:#1660c4;--bd:#0e4793;--t:#14202e;--m:#5a6878;--l:#dfe6ee}"
+    "*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}"
+    "body{margin:0;background:#eef3f8;color:var(--t);font:17px/1.45 -apple-system,system-ui,Segoe UI,Roboto,sans-serif}"
+    ".top{background:linear-gradient(135deg,#1660c4,#0d8a9c);color:#fff;padding:1.6rem 1.2rem 3.2rem}"
+    ".top svg{width:2.6rem;height:2.6rem;display:block;margin-bottom:.7rem}"
+    ".top h1{margin:0;font-size:1.6rem;line-height:1.2}.top p{margin:.45rem 0 0;opacity:.92}"
+    "main{max-width:32rem;margin:-2.2rem auto 0;padding:0 .9rem 1.5rem}"
+    ".card{background:#fff;border-radius:1.1rem;padding:1.1rem 1.1rem 1.2rem;margin-bottom:.9rem;box-shadow:0 1px 2px rgba(20,32,46,.06),0 4px 14px rgba(20,32,46,.06)}"
+    "h2{display:flex;align-items:center;gap:.55rem;font-size:1.1rem;margin:0 0 .8rem}"
+    ".n{flex:none;display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:50%;background:#e4eefb;color:var(--b);font-size:.95rem}"
+    "label.f{display:block;font-weight:600;margin:.9rem 0 .35rem}"
+    "input[type=text],input[type=password]{font:inherit;width:100%;min-height:3.2rem;padding:.5rem .85rem;border:1.5px solid #c5d0dc;border-radius:.8rem;background:#fff;color:inherit;-webkit-appearance:none}"
+    "input:focus{outline:0;border-color:var(--b);box-shadow:0 0 0 3px rgba(22,96,196,.2)}"
+    ".list{border:1.5px solid var(--l);border-radius:.9rem;overflow:hidden}"
+    ".net{display:flex;align-items:center;gap:.7rem;min-height:3.3rem;padding:.4rem .85rem;border-top:1px solid var(--l);cursor:pointer}"
+    ".net:first-child{border-top:0}.net:has(input:checked){background:#eaf2fd}"
+    ".net input,.opt input{width:1.25rem;height:1.25rem;margin:0;accent-color:var(--b);flex:none}"
+    ".nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.net .h{flex:none}"
+    ".sig{display:inline-flex;align-items:flex-end;gap:2px;height:15px;flex:none}"
+    ".sig b{width:4px;border-radius:1px;background:#cfd8e3}.sig b:nth-child(1){height:30%}.sig b:nth-child(2){height:55%}"
+    ".sig b:nth-child(3){height:78%}.sig b:nth-child(4){height:100%}"
+    ".s1 b:nth-child(-n+1),.s2 b:nth-child(-n+2),.s3 b:nth-child(-n+3),.s4 b{background:var(--b)}"
+    "details{margin-top:.7rem}summary{color:var(--b);font-weight:600;cursor:pointer;padding:.5rem 0;min-height:2.6rem}"
+    ".pw{position:relative}.pw input{padding-right:5.2rem}"
+    ".sh{display:none;position:absolute;right:.35rem;top:.35rem;bottom:.35rem;padding:0 .8rem;border:0;border-radius:.6rem;background:#e4eefb;color:var(--b);font:inherit;font-size:.9rem;font-weight:600}"
+    ".js .sh{display:block}"
+    ".h{color:var(--m);font-size:.88rem;margin:.45rem 0 0}"
+    ".two{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}"
+    ".opt{display:flex;flex-direction:column;align-items:center;gap:.35rem;padding:.9rem .5rem;border:1.5px solid var(--l);border-radius:.9rem;font-weight:600;cursor:pointer}"
+    ".opt:has(input:checked){border-color:var(--b);background:#eaf2fd}.opt i{font-style:normal;font-size:1.7rem;line-height:1}"
+    ".e{display:flex;gap:.6rem;align-items:flex-start;background:#fdecee;color:#8a1022;border:1.5px solid #f3b8c0;border-radius:.9rem;padding:.8rem .9rem;margin-bottom:.9rem;font-weight:600}"
+    ".e b{flex:none;display:inline-grid;place-items:center;width:1.5rem;height:1.5rem;border-radius:50%;background:#c4142f;color:#fff;font-size:.9rem}"
+    ".go{display:block;width:100%;min-height:3.5rem;margin-top:1rem;border:0;border-radius:.95rem;background:var(--b);color:#fff;font:inherit;font-size:1.15rem;font-weight:700;box-shadow:0 4px 12px rgba(22,96,196,.3)}"
+    ".go:active{background:var(--bd)}.go:disabled{opacity:.7}"
+    ".st{text-align:center;padding:1.6rem 1.1rem}.st h2{display:block;font-size:1.35rem;margin:1rem 0 .4rem}"
+    ".spin{width:3.4rem;height:3.4rem;margin:.4rem auto 0;border-radius:50%;border:5px solid #dbe6f4;border-top-color:var(--b);animation:r 1s linear infinite}"
+    "@keyframes r{to{transform:rotate(360deg)}}"
+    ".ok{display:grid;place-items:center;width:4.2rem;height:4.2rem;margin:.3rem auto 0;border-radius:50%;background:#1f9d55;color:#fff;font-size:2.3rem;font-weight:700}"
+    "footer{max-width:32rem;margin:0 auto;padding:0 1.6rem 2rem;color:var(--m);font-size:.82rem;text-align:center}";
 
-static std::string head(Lang l, const char* extraHead = "") {
-  std::string h = "<!doctype html><html lang=\"";
+// Logo: a sensor with air waves (inline SVG, no external files).
+static const char kLogo[] PF_PROGMEM =
+    "<svg viewBox=\"0 0 48 48\" aria-hidden=\"true\"><rect x=\"4\" y=\"4\" width=\"40\" height=\"40\" rx=\"12\" fill=\"#fff\" "
+    "fill-opacity=\".18\"/><path d=\"M13 19c4-4 8-4 11 0s7 4 11 0M13 26c4-4 8-4 11 0s7 4 11 0M13 33c4-4 8-4 11 0s7 4 11 0\" "
+    "fill=\"none\" stroke=\"#fff\" stroke-width=\"3\" stroke-linecap=\"round\"/></svg>";
+
+// `sub` is the line under the title in the blue header (may be empty).
+static std::string head(Lang l, const std::string& sub, const char* extraHead = "") {
+  std::string h;
+  h.reserve(9000);
+  h += "<!doctype html><html lang=\"";
   h += l == Lang::kEs ? "es" : "en";
-  h += "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">";
+  h += "\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+       "<meta name=\"color-scheme\" content=\"light\">";
   h += extraHead;
   h += "<title>";
   h += htmlEscape(str(l, kTitle));
   h += "</title><style>";
   h += fromFlash(kCss);
-  h += "</style></head><body><main>";
+  h += "</style><script>document.documentElement.className='js'</script></head><body><header class=\"top\">";
+  h += fromFlash(kLogo);
+  h += "<h1>" + htmlEscape(str(l, kTitle)) + "</h1>";
+  if (!sub.empty()) h += "<p>" + htmlEscape(sub) + "</p>";
+  h += "</header><main>";
   return h;
 }
 
 static std::string foot(Lang l) {
-  return std::string("</main><footer><p>") + htmlEscape(str(l, kSafety)) + "</p></footer></body></html>";
+  return std::string("</main><footer><p>&#9888;&#65039; ") + htmlEscape(str(l, kSafety)) + "</p></footer></body></html>";
 }
 
 static std::string bars(int rssi) {
   int n = (rssi + 100) / 12;
   if (n < 1) n = 1;
   if (n > 4) n = 4;
-  static const char* b[] = {"", "\xE2\x96\x82", "\xE2\x96\x82\xE2\x96\x84", "\xE2\x96\x82\xE2\x96\x84\xE2\x96\x86",
-                            "\xE2\x96\x82\xE2\x96\x84\xE2\x96\x86\xE2\x96\x88"};
-  return b[n];
+  return "<i class=\"sig s" + std::to_string(n) + "\" aria-hidden=\"true\"><b></b><b></b><b></b><b></b></i>";
+}
+
+static std::string section(int num, const std::string& title) {
+  return "<section class=\"card\"><h2><span class=\"n\">" + std::to_string(num) + "</span>" + title + "</h2>";
 }
 
 std::string formPage(Lang l, const std::vector<Network>& nets, const Form& v, const std::vector<Key>& errors) {
-  std::string p = head(l);
-  p += "<h1>" + htmlEscape(str(l, kTitle)) + "</h1>";
-  for (Key k : errors) p += "<p class=\"e\" role=\"alert\">" + htmlEscape(str(l, k)) + "</p>";
-  if (errors.empty()) p += "<p>" + htmlEscape(str(l, kIntro)) + "</p>";
-  p += "<form method=\"post\" action=\"/connect\"><fieldset style=\"border:0;padding:0\"><legend><b>" +
-       htmlEscape(str(l, kWifi)) + "</b></legend>";
+  std::string p = head(l, str(l, kIntro));
+  for (Key k : errors) p += "<div class=\"e\" role=\"alert\"><b>!</b><span>" + htmlEscape(str(l, k)) + "</span></div>";
+  p += "<form method=\"post\" action=\"/connect\" onsubmit=\"var b=this.querySelector('.go');b.disabled=1;b.textContent='";
+  p += htmlEscape(str(l, kConnect)) + "…'\">";
+
+  // 1. WiFi: scanned networks as rows; "My WiFi isn't listed" opens a name box (works without JS: <details>).
+  p += section(1, htmlEscape(str(l, kWifi)));
   bool picked = false;
+  std::string rows;
   for (size_t i = 0; i < nets.size() && i < 15; i++) {
     const Network& n = nets[i];
     bool sel = (!v.ssid.empty() && v.ssid == n.ssid) || (v.ssid.empty() && i == 0);
     picked |= sel;
-    p += "<label class=\"c\"><input type=\"radio\" name=\"net\" value=\"" + htmlEscape(n.ssid) + "\"" +
-         (sel ? " checked" : "") + "> " + htmlEscape(n.ssid) + " <span>" + bars(n.rssi) + "</span>";
-    if (!n.secure) p += " <span class=\"h\">(" + htmlEscape(str(l, kOpen)) + ")</span>";
-    p += "</label>";
+    rows += "<label class=\"net\"><input type=\"radio\" name=\"net\" value=\"" + htmlEscape(n.ssid) + "\"" +
+            (sel ? " checked" : "") + " onchange=\"document.getElementById('s').value=''\"><span class=\"nm\">" + htmlEscape(n.ssid) + "</span>";
+    if (!n.secure) rows += "<span class=\"h\">(" + htmlEscape(str(l, kOpen)) + ")</span>";
+    rows += bars(n.rssi) + "</label>";
   }
-  p += "<label class=\"c\"><input type=\"radio\" name=\"net\" value=\"__other__\"" + std::string(picked ? "" : " checked") +
-       "> " + htmlEscape(str(l, kOther)) + "</label>";
-  p += "<label for=\"s\">" + htmlEscape(str(l, kWifiName)) + "</label><input id=\"s\" type=\"text\" name=\"ssid\" maxlength=\"32\" "
-       "autocapitalize=\"off\" autocorrect=\"off\" spellcheck=\"false\" value=\"" + (picked ? "" : htmlEscape(v.ssid)) + "\"></fieldset>";
-  p += "<label for=\"p\">" + htmlEscape(str(l, kPassword)) + "</label><input id=\"p\" type=\"password\" name=\"pass\" maxlength=\"64\" "
-       "autocapitalize=\"off\" autocorrect=\"off\" spellcheck=\"false\">";
-  // Show/hide needs JS; with JS off the box simply does nothing and the field stays hidden.
-  p += "<label class=\"c\"><input type=\"checkbox\" onclick=\"document.getElementById('p').type=this.checked?'text':'password'\"> " +
-       htmlEscape(str(l, kShowPw)) + "</label>";
-  p += "<p class=\"h\">" + htmlEscape(str(l, kWifiHint)) + "</p>";
-  p += "<label for=\"a\">" + htmlEscape(str(l, kAddress)) + "</label><input id=\"a\" type=\"text\" name=\"address\" maxlength=\"200\" "
-       "autocomplete=\"street-address\" value=\"" + htmlEscape(v.address) + "\">";
-  p += "<p class=\"h\">" + htmlEscape(str(l, kAddressHint)) + "</p>";
-  p += "<label for=\"z\">" + htmlEscape(str(l, kZip)) + "</label><input id=\"z\" type=\"text\" name=\"zip\" maxlength=\"5\" "
-       "inputmode=\"numeric\" autocomplete=\"postal-code\" value=\"" + htmlEscape(v.zip) + "\">";
-  p += "<fieldset style=\"border:0;padding:0\"><legend><b>" + htmlEscape(str(l, kWhere)) + "</b></legend>";
-  p += "<label class=\"c\"><input type=\"radio\" name=\"where\" value=\"outside\"" + std::string(v.indoor ? "" : " checked") +
-       "> " + htmlEscape(str(l, kOutside)) + "</label>";
-  p += "<label class=\"c\"><input type=\"radio\" name=\"where\" value=\"inside\"" + std::string(v.indoor ? " checked" : "") +
-       "> " + htmlEscape(str(l, kInside)) + "</label></fieldset>";
-  p += "<button type=\"submit\">" + htmlEscape(str(l, kConnect)) + "</button></form>";
+  if (!rows.empty()) p += "<div class=\"list\">" + rows + "</div>";
+  // A typed name always wins over a ticked row (validate()), so a hidden network works without JS too.
+  p += std::string("<details") + (picked ? "" : " open") + "><summary>" + htmlEscape(str(l, kOther)) +
+       "</summary><label class=\"f\" for=\"s\">" + htmlEscape(str(l, kWifiName)) +
+       "</label><input id=\"s\" type=\"text\" name=\"ssid\" maxlength=\"32\" autocapitalize=\"off\" autocorrect=\"off\" "
+       "spellcheck=\"false\" value=\"" + (picked ? "" : htmlEscape(v.ssid)) + "\"></details>";
+  p += "<label class=\"f\" for=\"p\">" + htmlEscape(str(l, kPassword)) +
+       "</label><div class=\"pw\"><input id=\"p\" type=\"password\" name=\"pass\" maxlength=\"64\" autocapitalize=\"off\" "
+       "autocorrect=\"off\" spellcheck=\"false\"><button type=\"button\" class=\"sh\" aria-label=\"" + htmlEscape(str(l, kShowPw)) +
+       "\" onclick=\"var q=document.getElementById('p');q.type=q.type=='password'?'text':'password'\">&#128065;</button></div>";
+  p += "<p class=\"h\">" + htmlEscape(str(l, kWifiHint)) + "</p></section>";
+
+  // 2. Address + ZIP.
+  p += section(2, "<label for=\"a\">" + htmlEscape(str(l, kAddress)) + "</label>");
+  p += "<input id=\"a\" type=\"text\" name=\"address\" maxlength=\"200\" autocomplete=\"street-address\" value=\"" +
+       htmlEscape(v.address) + "\"><p class=\"h\">&#128274; " + htmlEscape(str(l, kAddressHint)) + "</p>";
+  p += "<label class=\"f\" for=\"z\">" + htmlEscape(str(l, kZip)) + "</label><input id=\"z\" type=\"text\" name=\"zip\" "
+       "maxlength=\"5\" inputmode=\"numeric\" pattern=\"[0-9]*\" autocomplete=\"postal-code\" style=\"max-width:9rem\" value=\"" +
+       htmlEscape(v.zip) + "\"></section>";
+
+  // 3. Outside / inside (default outside).
+  p += section(3, htmlEscape(str(l, kWhere)));
+  p += "<div class=\"two\"><label class=\"opt\"><i>&#127795;</i><input type=\"radio\" name=\"where\" value=\"outside\"" +
+       std::string(v.indoor ? "" : " checked") + ">" + htmlEscape(str(l, kOutside)) + "</label>";
+  p += "<label class=\"opt\"><i>&#127968;</i><input type=\"radio\" name=\"where\" value=\"inside\"" +
+       std::string(v.indoor ? " checked" : "") + ">" + htmlEscape(str(l, kInside)) + "</label></div></section>";
+
+  p += "<p class=\"h\">" + htmlEscape(str(l, kShare)) + "</p>";
+  p += "<button class=\"go\" type=\"submit\">" + htmlEscape(str(l, kConnect)) + "</button></form>";
   return p + foot(l);
 }
 
 std::string connectingPage(Lang l) {
-  std::string p = head(l, "<meta http-equiv=\"refresh\" content=\"3;url=/status\">");
-  p += "<h1>" + htmlEscape(str(l, kTitle)) + "</h1><p>" + htmlEscape(str(l, kConnecting)) + "</p><p class=\"h\">" +
-       htmlEscape(str(l, kKeepOpen)) + "</p>";
+  std::string p = head(l, "", "<meta http-equiv=\"refresh\" content=\"3;url=/status\">");
+  p += "<section class=\"card st\" role=\"status\"><div class=\"spin\"></div><h2>" + htmlEscape(str(l, kConnecting)) +
+       "</h2><p class=\"h\">" + htmlEscape(str(l, kKeepOpen)) + "</p></section>";
   return p + foot(l);
 }
 
 std::string donePage(Lang l) {
-  std::string p = head(l);
-  p += "<p class=\"ok\">" + htmlEscape(str(l, kDone)) + "</p><p>" + htmlEscape(str(l, kDoneNext)) + "</p>";
+  std::string p = head(l, "");
+  p += "<section class=\"card st\" role=\"status\"><div class=\"ok\">&#10003;</div><h2>" + htmlEscape(str(l, kDone)) +
+       "</h2><p>" + htmlEscape(str(l, kDoneNext)) + "</p></section>";
   return p + foot(l);
+}
+
+bool pauseSavedWifi(bool apOn, int stations, bool staConnected, uint32_t msSinceActivity) {
+  return apOn && stations > 0 && !staConnected && msSinceActivity < kPortalIdleMs;
+}
+
+int pickApChannel(const std::vector<Network>& nets, const std::string& savedSsid) {
+  const Network* best = nullptr;
+  for (const Network& n : nets) {
+    if (!savedSsid.empty() && n.ssid == savedSsid) {
+      best = &n;
+      break;
+    }
+    if (!best || n.rssi > best->rssi) best = &n;
+  }
+  if (!best || best->channel < 1 || best->channel > 11) return 0;
+  return best->channel;
 }
 
 std::string fallbackShortCode(uint32_t chipId) {

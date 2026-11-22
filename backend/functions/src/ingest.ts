@@ -9,6 +9,7 @@
 //   private_locations/{id}       address + ZIP from setup (never public, never logged)
 import { FieldValue, Firestore, Timestamp } from "firebase-admin/firestore";
 
+import { SC, ScTask, taskFor, withTimeout } from "./forward";
 import { sha256Hex, verify } from "./lib/hmac";
 import { LIMITS, parseUpload, Reading } from "./lib/payload";
 import { logEvent, logWarn } from "./lib/redact";
@@ -36,6 +37,14 @@ interface DeviceEntry {
   status: string;
   secret: string | null;
   fetchedAt: number;
+  scRegistered?: boolean; // registered at Sensor.Community (founder/registration process); needed for forwarding
+  indoor?: boolean; // indoor sensors are never forwarded (founder decision 2026-11-22)
+}
+
+/** Optional side effects of an accepted upload. Forwarding is OFF unless `scEnabled` (feature flag) is true. */
+export interface IngestDeps {
+  scEnabled?: boolean;
+  enqueueSc?: (task: ScTask) => Promise<void>;
 }
 const registryCache = new Map<string, DeviceEntry>();
 export function clearRegistryCache(): void {
@@ -67,6 +76,8 @@ async function loadDevice(db: Firestore, id: string, nowMs: number, fresh: boole
     status: String(dev.get("status") ?? ""),
     secret: sec.exists ? String(sec.get("secret")) : null,
     fetchedAt: nowMs,
+    scRegistered: dev.get("scRegistered") === true,
+    indoor: dev.get("indoor") === true,
   };
   registryCache.set(id, entry);
   return entry;
@@ -81,7 +92,7 @@ function compactReading(r: Reading): Record<string, unknown> {
   };
 }
 
-export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Date.now()): Promise<IngestResponse> {
+export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Date.now(), deps: IngestDeps = {}): Promise<IngestResponse> {
   const nowS = Math.floor(nowMs / 1000);
   if (req.method !== "POST") return { status: 405, body: { ok: false, error: "method_not_allowed" } };
   const body = req.rawBody ?? Buffer.alloc(0);
@@ -239,9 +250,20 @@ export async function handleIngest(db: Firestore, req: IngestRequest, nowMs = Da
     return { status: 429, body: { ok: false, error: "rate_limited", retry_after_s: 600 } };
   }
   if (enrolling) {
-    registryCache.set(id, { status: "active", secret: enrollSecret, fetchedAt: nowMs });
+    registryCache.set(id, { status: "active", secret: enrollSecret, fetchedAt: nowMs, scRegistered: dev.scRegistered });
   }
-  // Sensor.Community forwarding is enqueued here in M8 (feature flag OFF until the founder confirms).
+  // Sensor.Community forwarding (M8): feature flag + per-device registration; queued, never inline.
+  const indoorNow = up.setup ? up.setup.indoor : dev.indoor; // setup info in this upload wins
+  if (deps.scEnabled && deps.enqueueSc && dev.scRegistered && !indoorNow && accepted > 0) {
+    const task = taskFor(id, up.fw, up.readings, nowS);
+    if (task) {
+      try {
+        await withTimeout(deps.enqueueSc(task), SC.enqueueTimeoutMs); // never hold the device's upload
+      } catch (e) {
+        logWarn("sc_enqueue_failed", { device: id, error: String((e as Error)?.message ?? e).slice(0, 80) }); // upload still OK
+      }
+    }
+  }
   logEvent("ingest_ok", { device: id, accepted, duplicates, enrolled: enrolling, setup: Boolean(up.setup) });
   return { status: 200, body: { ok: true, accepted, duplicates, server_time: nowS } };
 }

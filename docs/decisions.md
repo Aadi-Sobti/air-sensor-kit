@@ -49,6 +49,11 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-21 | Implementation (agent): owner API paths are session-scoped (`/owner/sensor`, `/owner/sensor/data`) instead of `/owner/sensors/{id}` (the session names the sensor). Sessions: 7-day sliding, **90-day absolute** limit. No per-sensor guess limit (a wrong code names no sensor); per-IP limit + global alert instead | M7b review |
 | 2026-11-21 | **Residual risk (agent, for founder awareness):** the per-IP guess limit relies on Firebase Hosting's headers; someone calling the function URL directly and forging CDN headers can rotate IPs. Owner codes have ~49.5 bits, so even a month of non-stop guessing at the function's capped rate has ≈ 0.3 % chance of hitting any of 10K codes; a guessing surge logs an alert. Stronger option later: Cloud Armor / App Check | Verified the header behavior on dev 2026-11-21 |
 | 2026-11-21 | Offline push notices include the safety line ("This is not a smoke alarm.") like every alert | Project safety rule |
+| 2026-11-22 | Sensor.Community: share readings **after the founder confirms their data license**; forwarding stays off until then | Founder |
+| 2026-11-22 | Recipients are told during setup (computer + phone, EN/ES): "Your sensor's readings (never your address) appear on our public map and are shared as open data with Sensor.Community." | Founder |
+| 2026-11-22 | Only **outdoor** sensors are forwarded to Sensor.Community | Founder |
+| 2026-11-22 | Sensor.Community registrations use the **public map cell center**, never the address | Founder |
+| 2026-11-22 | (Agent, within spec) While a phone is on the setup WiFi and used the page in the last 5 min, the sensor **pauses retrying an unreachable saved WiFi**; retries resume when the phone leaves or goes idle. The setup WiFi opens on the home network's channel (saved one if nearby, else strongest; US channels 1–11 only) | Founder's iPhone dropped off the setup WiFi after a wrong password and couldn't rejoin: the one radio kept leaving the setup channel to search. A working connection is never paused; spec's "keep retrying" still holds whenever nobody is using setup |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |

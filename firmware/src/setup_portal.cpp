@@ -37,19 +37,38 @@ static pt::Form gForm;  // password only kept while the test runs
 static pt::Key gFailKey = pt::kErrPassword;
 static uint32_t gHoldUntil = 0;
 static bool gHolding = false;
+static std::string gSavedSsid;     // the saved home network (if any): the setup WiFi opens on its channel
+static int gApChannel = 1;
+static bool gChannelPicked = false;
+static int gStations = 0;
+static uint32_t gLastActivity = 0;  // last phone join or page request
+
+// Dev builds log each page request's host + path (src/dev/dev_log.cpp), to see what a phone asks for when the
+// captive page doesn't pop up. Release builds: no-op.
+__attribute__((weak)) void devLogPortalRequest(ESP8266WebServer&) {}
+
+static void noteRequest() {
+  gLastActivity = millis();
+  devLogPortalRequest(gServer);
+}
 
 static pt::Lang lang() { return pt::pickLang(gServer.header("Accept-Language").c_str()); }
 
 static void sendPage(const std::string& html) {
   gServer.sendHeader("Cache-Control", "no-store");
-  gServer.send(200, "text/html; charset=utf-8", html.c_str());
+  gServer.send(200, "text/html; charset=utf-8", html.c_str(), html.size());  // no extra copy
 }
 
-static void redirectToPortal() {
+static void sendRedirect() {
   // Captive-portal trigger: OS connectivity probes and unknown hosts all land on the setup page.
   gServer.sendHeader("Location", "http://192.168.4.1/", true);
   gServer.sendHeader("Cache-Control", "no-store");
   gServer.send(302, "text/plain", "");
+}
+
+static void redirectToPortal() {
+  noteRequest();
+  sendRedirect();
 }
 
 static bool gScanning = false;
@@ -75,22 +94,33 @@ static void collectScan() {
       it->rssi = std::max(it->rssi, (int)WiFi.RSSI(i));
       continue;
     }
-    gNets.push_back({s, WiFi.RSSI(i), WiFi.encryptionType(i) != ENC_TYPE_NONE});
+    gNets.push_back({s, WiFi.RSSI(i), WiFi.encryptionType(i) != ENC_TYPE_NONE, WiFi.channel(i)});
   }
   WiFi.scanDelete();
   std::sort(gNets.begin(), gNets.end(), [](const pt::Network& a, const pt::Network& b) { return a.rssi > b.rssi; });
+  // Move the setup WiFi to the home network's channel, once, and only before any phone has joined (moving it
+  // later would drop the phone). Then testing the password doesn't switch channels.
+  int ch = pt::pickApChannel(gNets, gSavedSsid);
+  if (!gChannelPicked && WiFi.softAPgetStationNum() == 0 && !netTesting() && ch > 0 && ch != gApChannel) {
+    gApChannel = ch;
+    WiFi.softAP(gSsid.c_str(), gId ? gId->setupPassword.c_str() : nullptr, gApChannel);
+    Serial.printf("[portal] ap channel=%d (matches nearby WiFi)\n", gApChannel);
+  }
+  gChannelPicked = true;
 }
 
-static void handleStatus();
+static void sendStatus();
 
 // After the AP channel switch, phones reopen the captive browser at "/" (all probes redirect there), so "/"
 // must show the current phase, exactly like /status.
 static void handleRoot() {
+  noteRequest();
   if (gPhase == Phase::kIdle) return sendPage(pt::formPage(lang(), gNets, gForm, {}));
-  handleStatus();
+  sendStatus();
 }
 
 static void handleConnect() {
+  noteRequest();
   if (gPhase == Phase::kTesting) return sendPage(pt::connectingPage(lang()));
   std::map<std::string, std::string> f;
   for (int i = 0; i < gServer.args(); i++) f[gServer.argName(i).c_str()] = gServer.arg(i).c_str();
@@ -111,11 +141,16 @@ static void handleConnect() {
 }
 
 static void handleStatus() {
+  noteRequest();
+  sendStatus();
+}
+
+static void sendStatus() {
   switch (gPhase) {
     case Phase::kTesting: return sendPage(pt::connectingPage(lang()));
     case Phase::kSuccess: return sendPage(pt::donePage(lang()));
     case Phase::kFailed: return sendPage(pt::formPage(lang(), gNets, gForm, {gFailKey}));
-    default: return redirectToPortal();
+    default: return sendRedirect();
   }
 }
 
@@ -125,7 +160,7 @@ static void startAp() {
   WiFi.softAPConfig(kApIp, kApIp, IPAddress(255, 255, 255, 0));
   netSetApActive(true);
   // WPA2 with the per-device setup password from the QR sticker (decision #7). Never logged.
-  bool ok = WiFi.softAP(gSsid.c_str(), gId ? gId->setupPassword.c_str() : nullptr);
+  bool ok = WiFi.softAP(gSsid.c_str(), gId ? gId->setupPassword.c_str() : nullptr, gApChannel);
   gDnsP = new DNSServer();
   gServerP = new ESP8266WebServer(80);
   registerRoutes();
@@ -134,6 +169,8 @@ static void startAp() {
   gServer.begin();
   gActive = true;
   gClientSeen = false;
+  gChannelPicked = false;
+  gStations = 0;
   Serial.printf("[portal] ap=on ssid=%s ok=%d\n", gSsid.c_str(), ok ? 1 : 0);
 }
 
@@ -146,6 +183,7 @@ static void stopAp() {
   gDnsP = nullptr;
   WiFi.softAPdisconnect(true);
   netSetApActive(false);
+  netSetSavedWifiPaused(false);
   gActive = false;
   gHolding = false;
   if (gPhase != Phase::kTesting) {
@@ -174,6 +212,8 @@ void portalBegin(const Identity* id, uint32_t chipId, PortalSavedFn onSaved) {
   std::string code = id && !id->shortCode.empty() ? id->shortCode : pt::fallbackShortCode(chipId);
   gSsid = pt::apSsid(AP_PREFIX, code);
 }
+
+void portalSetSavedSsid(const std::string& ssid) { gSavedSsid = ssid; }
 
 void portalSetWanted(bool wanted, uint32_t nowMs) {
   bool hold = gHolding && static_cast<int32_t>(gHoldUntil - nowMs) > 0;
@@ -207,10 +247,16 @@ void portalPoll(uint32_t nowMs) {
   if (gScanning) collectScan();
   gDns.processNextRequest();
   gServer.handleClient();
-  if (!gClientSeen && WiFi.softAPgetStationNum() > 0) {
-    gClientSeen = true;
-    Serial.println("[portal] a phone joined");
+  int stations = WiFi.softAPgetStationNum();
+  if (stations != gStations) {
+    if (stations > gStations) gLastActivity = millis();
+    Serial.printf("[portal] phones on setup WiFi: %d\n", stations);
+    gStations = stations;
   }
+  if (!gClientSeen && stations > 0) gClientSeen = true;
+  // Live clock: gLastActivity may be newer than nowMs (set by a request handled above), and an unsigned
+  // difference would then wrap around.
+  netSetSavedWifiPaused(pt::pauseSavedWifi(true, stations, netConnected(), millis() - gLastActivity));
   if (gPhase != Phase::kTesting) return;
   if (gTestPending) {
     if (static_cast<int32_t>(nowMs - gTestStartAt) < 0) return;

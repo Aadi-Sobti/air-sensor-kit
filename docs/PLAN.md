@@ -6,8 +6,9 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] When the board is back (≈ 1 day): plug it in and tell the agent → flash 0.5.0, Chrome setup checklist (M5),
-      iPhone setup checklist (M6), smoke test (M1), then a full 24 h soak (keep it plugged in + hotspot on).
+- [ ] 👤 iPhone re-test of phone setup on firmware 0.6.1 (≈ 10 min, see M6): hold FLASH 5 s, join the setup WiFi,
+      try a wrong password first, then the right one. Then the 7-day soak on home WiFi starts (board stays plugged in).
+- [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -195,6 +196,20 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       (incl. a fix: a binary line could re-trigger the old command). Native 80/80.
       Watch on hardware: only WL_WRONG_PASSWORD shows the password message; if the ESP8266 reports a wrong
       password as CONNECT_FAILED/timeout, people see "couldn't reach that WiFi".
+- [x] iPhone run #1 on 0.6.0 (2026-11-22, founder): setup worked ("You're all set!", board RUNNING on home WiFi,
+      upload http=200; sensor FDK7NA on the public map 4 min later: pl=1, PM2.5 12.2, AQI 57). Founder found 3 problems:
+      (1) wrong password → phone dropped off the setup WiFi and couldn't rejoin; (2) after rejoining, the page didn't
+      pop up by itself (had to open a browser); (3) page looks too plain. Also `setup_info.py` printed a cut-off
+      password (fixed: waits for a full line; regression test).
+- [ ] Fixes in 0.6.1 (built + flashed 2026-11-22; **phone re-test pending**): (1) pause saved-WiFi retries while a
+      phone uses setup + open the setup WiFi on the home network's channel, so the password test doesn't switch
+      channels (`core::portal::pauseSavedWifi/pickApChannel`, 2 new tests); (2) dev builds log each setup-page request
+      (host + path only, capped) so the next run shows what iOS asks for if the page doesn't pop up; (3) redesigned
+      page (blue header, numbered cards, WiFi list with signal bars, show-password button, Outside/Inside tiles,
+      spinner + check-mark pages), same wording, still works with JS off; 11.3 KB with 20 networks.
+      Evidence: native 83/83, tools 29/29, release guard OK, boot capture `logs/serial-*.log` (1 boot, RUNNING, heap 33.8 KB).
+      Size: release Flash 521,915 B (+6.9 KB vs 0.5.0): **317 B under the ~522 KB OTA ceiling** → size cuts are M9's first task.
+      Note: a new kit opens its setup WiFi within seconds; only a sensor with saved WiFi it can't reach waits ~3 min.
 - 👤 Founder has an iPhone only (2026-11-21): the iPhone run counts; the **Android** run stays open (unverified)
       until someone can lend one (a volunteer or friend in M10 works too).
 - 👤 Phone checklist (after the soak, once 0.5.0 is flashed; run `python3 tools/setup_info.py --port <port>` in your
@@ -277,7 +292,34 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Screen → turn on offline notices → unplug the board 35 min → a notice arrives.
 
 ### M8 Sensor.Community forwarding (flag OFF by default)
-- [ ] Task-queue forwarder + payload tests. 👤 Founder confirms forwarding/bulk registration with Sensor.Community.
+- [x] Task-queue forwarder + payload tests (agent part).
+- [ ] 👤 Founder confirms forwarding/bulk registration with Sensor.Community **and their data license** (decided
+      2026-11-22: share after the license is confirmed; outdoor sensors only; register with the public cell center;
+      recipients are told during setup — sentence added to /setup, /claim, the phone page, USER_FLOW).
+      Facts verified 2026-11-21: push API (opendata-stuttgart meta wiki EN-APIs: endpoint, X-Sensor, X-Pin 1 for PMS,
+      P1 = PM10 / P2 = PM2.5, no timestamp — the server stamps arrival); airrohr source read via the GitHub API
+      (`defines.h` "#define PMS_API_PIN 1"; it reads PMS frame bytes 10–15 = the atmospheric PM1/PM2.5/PM10 per the
+      Plantower datasheet, sent as P0/P2/P1). `backend/functions/src/forward.ts` + task-queue worker
+      `forwardSensorCommunity` (retries 5×, 30–300 s backoff, ≤ 5/s); ingest enqueues only when SC_FORWARD_ENABLED
+      is true AND `devices.scRegistered` is true, only the newest reading < 5 min old, and a queue failure never fails
+      an upload. No location is sent (Sensor.Community gets one only at registration). Tests: backend 90 (5 new).
+      Deployed to dev 2026-11-22 with SC_FORWARD_ENABLED=false: deploy log "functions[forwardSensorCommunity(us-east1)]
+      Successful create operation" + "missing required API cloudtasks.googleapis.com. Enabling now..."
+      (`logs/deploy-m8-*.log`); nothing is queued while the flag is off.
+      M8 review fixes: enqueue limited to 2 s (a slow queue can't hold an upload; tested with a hanging queue); retries
+      only on 5xx/429, network errors/timeouts not retried (no duplicates), readings > 5 min dropped, max 5 min of
+      retries; `.env.prosefire-dev` committed (the flag's value is in the repo; changing it = redeploy functions);
+      COSTS corrected (each task ≈ 2 billable operations).
+      **Unverified until the flag is first turned on in dev:** the real Cloud Tasks path and IAM. The ingest service
+      account (default compute SA unless set) needs `roles/cloudtasks.enqueuer` and `roles/iam.serviceAccountUser` on
+      itself, and must be allowed to invoke `forwardSensorCommunity`. Check after flag-on: logs show `sc_forward_ok`
+      (or `sc_forward_rejected`) and no `sc_enqueue_failed`. Unverified: Sensor.Community's data license (their FAQ
+      blocks automated reads). For prod, turning the flag on is a founder action.
+- 👤 To finish M8 (founder): (1) contact Sensor.Community to confirm forwarding from a fleet of non-airrohr
+      sensors, bulk registration, and their data license; (2) register the test sensor `esp8266-11001626` at
+      https://devices.sensor.community (PMS5003, outdoor) with the **public cell center** as its location, not the
+      home address; (3) in the Firebase console set `devices/esp8266-11001626.scRegistered = true` (boolean) and
+      tell the agent, who turns the flag on for dev and checks maps.sensor.community.
 - **Done when:** one test sensor shows on maps.sensor.community.
 
 ### M9 OTA + factory provisioning
@@ -301,10 +343,12 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-22 · Board back: 0.6.0 phone setup worked on iPhone, sensor on the map · 0.6.1 portal fixes (stable setup WiFi, request logging, redesign) · native 83, tools 29, flashed + boot capture · next: founder iPhone re-test, then 7-day soak; M9 must cut size first.
 - 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-22 · M7b review fixes deployed · M8 Sensor.Community forwarder built (flag OFF) + deployed to dev · backend 90 · next: founder contacts Sensor.Community; board back → flash 0.6.0 + checklists.
 - 2026-11-21 · M7b owner page, owner codes (keyed hash in Secret Manager), web push notices, delete + archive purge, PWA, sensor-page chart; firmware 0.6.0 NEWCLAIM · backend 75, web 30, native 81 · deployed to dev · next: board back → flash 0.6.0, founder checklists.
 - 2026-11-21 · M7 review fixes (snapshot gzip/size budget, time-boxed publish, freshness, hourly NowCast, rollup catch-up, nightly archive, claim → sensor page) deployed to dev · backend 61, web 22 · partial soak 2.3 h: 54/54 uploads, 0 reboots · board unplugged ~1 day.
 - 2026-11-21 · M7 corrections/AQI/NowCast/H3/snapshot/map + sensor page, deployed to dev · backend 53, web 21 · next: founder map review; after the soak flash 0.5.0 + browser/phone checklists.
