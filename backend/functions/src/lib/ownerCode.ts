@@ -9,6 +9,7 @@ import { CODE_ALPHABET } from "./shortcode";
 
 export const OWNER_CODE_LEN = 10;
 export const SESSION_TTL_S = 7 * 24 * 3600; // sliding: refreshed on every use
+export const SESSION_MAX_S = 90 * 24 * 3600; // absolute: after 90 days the owner code is needed again
 
 export function newOwnerCode(): string {
   let s = "";
@@ -34,7 +35,7 @@ export function ownerCodeHash(pepper: string, code: string): string {
 }
 
 // Session token: base64url(JSON payload) + "." + base64url(HMAC(pepper, "session:v1:" + payload)).
-export interface SessionPayload { d: string; v: number; exp: number }
+export interface SessionPayload { d: string; v: number; exp: number; iat?: number }
 
 const b64u = (b: Buffer) => b.toString("base64url");
 

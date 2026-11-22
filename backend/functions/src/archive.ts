@@ -84,10 +84,19 @@ export async function runArchivePurge(db: Firestore, store: ArchiveStore, nowMs 
         done = false;
         break;
       }
-      const buf = await store.read(p);
       files++;
+      let buf: Buffer | null;
+      try {
+        buf = await store.read(p);
+      } catch (e) {
+        logWarn("archive_purge_read_failed", { day, error: String((e as Error)?.message ?? e).slice(0, 80) });
+        done = false; // retry this file next run; never skip it
+        break;
+      }
       if (buf) {
-        const lines = gunzipSync(buf).toString("utf8").split("\n").filter(Boolean);
+        // Files are gzip; tolerate an already-decompressed download (older files had Content-Encoding: gzip).
+        const text = buf[0] === 0x1f && buf[1] === 0x8b ? gunzipSync(buf).toString("utf8") : buf.toString("utf8");
+        const lines = text.split("\n").filter(Boolean);
         const kept = lines.filter((l) => {
           try {
             return JSON.parse(l).device !== d;
@@ -99,6 +108,17 @@ export async function runArchivePurge(db: Firestore, store: ArchiveStore, nowMs 
       }
       await dev.ref.set({ archivePurgedThrough: day }, { merge: true });
     }
+    // Uploads already in flight (ingest caches devices for up to 5 min) can land after the deletion: delete any
+    // leftover readings, and keep the purge open until the archive has covered the deletion day itself.
+    const leftovers = await db.collection("readings_hourly").where("deviceId", "==", d).select().get();
+    for (let i = 0; i < leftovers.docs.length; i += 400) {
+      const batch = db.batch();
+      leftovers.docs.slice(i, i + 400).forEach((x) => batch.delete(x.ref));
+      await batch.commit();
+    }
+    const deletedDay = dayKey(((dev.get("deletedAt") as Timestamp | undefined)?.toMillis() ?? 0) + 10 * 60e3);
+    const archivedThrough = String((await db.doc("public/archive_state").get()).get("lastDay") ?? "");
+    if (archivedThrough < deletedDay) done = false;
     if (done) {
       await dev.ref.set({ archivePurgePending: false, archivePurgedAt: Timestamp.fromMillis(nowMs), archivePurgedThrough: FieldValue.delete() }, { merge: true });
       purged.push(d);

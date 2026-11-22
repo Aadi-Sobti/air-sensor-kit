@@ -18,7 +18,9 @@ export async function registerSw(): Promise<ServiceWorkerRegistration | null> {
   }
 }
 
-interface InstallUi { box: HTMLElement; text: HTMLElement; button: HTMLButtonElement; dismiss: HTMLButtonElement; iosText: string }
+interface InstallUi {
+  box: HTMLElement; text: HTMLElement; button: HTMLButtonElement; dismiss: HTMLButtonElement; iosText: string; androidText: string;
+}
 
 export function setupInstallHint(ui: InstallUi): void {
   let seen = false;
@@ -34,7 +36,11 @@ export function setupInstallHint(ui: InstallUi): void {
     ui.box.hidden = false;
     return;
   }
+  // Android/desktop: Chrome offers an install prompt; other browsers (Firefox, Samsung Internet) get wording.
+  ui.text.textContent = ui.androidText;
+  const fallback = setTimeout(() => { if (/android/i.test(navigator.userAgent)) ui.box.hidden = false; }, 3000);
   window.addEventListener("beforeinstallprompt", (e) => {
+    clearTimeout(fallback);
     e.preventDefault();
     const prompt = e as Event & { prompt: () => Promise<void> };
     ui.button.hidden = false;
@@ -64,11 +70,23 @@ export async function pushState(): Promise<PushState> {
   return sub ? "on" : "off";
 }
 
+/**
+ * Must be called directly from the tap handler with the VAPID key ALREADY loaded: Safari/iOS only allows the
+ * permission prompt as the first thing a user gesture does (no network awaits before it).
+ */
 export async function subscribePush(vapidKey: string): Promise<PushSubscription | null> {
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return null;
   const reg = (await navigator.serviceWorker.getRegistration("/")) ?? (await registerSw());
   if (!reg) return null;
-  if ((await Notification.requestPermission()) !== "granted") return null;
   return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlToBytes(vapidKey) as BufferSource });
+}
+
+/** SHA-256 (hex) of this browser's push endpoint, so the server can say whether THIS browser gets notices. */
+export async function endpointHash(sub: PushSubscription | null): Promise<string> {
+  if (!sub || !crypto?.subtle) return "";
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(sub.endpoint));
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function currentSubscription(): Promise<PushSubscription | null> {

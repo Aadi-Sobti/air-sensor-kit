@@ -5,7 +5,7 @@ import "./style.css";
 import { renderChart, HourPoint } from "./chart";
 import { applyI18n, Key, t } from "./i18n";
 import { api, loadSensors, saveSensors, StoredSensor, takeOwnerCodeFromUrl, upsertSensor, wifiLevel } from "./ownerApi";
-import { currentSubscription, pushState, registerSw, setupInstallHint, subscribePush } from "./pwa";
+import { currentSubscription, endpointHash, pushState, registerSw, setupInstallHint, subscribePush } from "./pwa";
 import { CAT_COLORS, loadSnapshot, relTime, Snapshot, textOn } from "./snapshot";
 
 const lang = applyI18n();
@@ -13,6 +13,7 @@ document.title = t(lang, "my.pageTitle");
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 let sensors = loadSensors();
 let snapshot: Snapshot | null = null;
+let vapidKey = ""; // loaded up front: iOS needs the permission prompt to be the first thing a tap does
 
 function showError(key: Key | null) {
   $("error").hidden = !key;
@@ -46,7 +47,8 @@ async function renderCard(s: StoredSensor): Promise<HTMLElement> {
   setText(".s-name", s.name || s.code);
   let r;
   try {
-    r = await api("GET", "/sensor", undefined, s.token);
+    const ep = await endpointHash(await currentSubscription());
+    r = await api("GET", `/sensor${ep ? `?ep=${ep}` : ""}`, undefined, s.token);
   } catch {
     setText(".s-status", t(lang, "my.error"));
     return tpl;
@@ -54,8 +56,13 @@ async function renderCard(s: StoredSensor): Promise<HTMLElement> {
   if (r.status === 401) {
     // Session ended (expired, or the owner code was replaced): ask for the code again.
     setText(".s-status", t(lang, "my.sessionExpired"));
-    tpl.querySelector("details")?.remove();
+    const forget = q<HTMLElement>(tpl, ".b-forget"); // keep "Remove from this phone" for dead cards
+    tpl.querySelector("details")?.replaceWith(forget);
     tpl.querySelector(".chart-tabs")?.remove();
+    forget.addEventListener("click", async () => {
+      saveSensors(sensors = sensors.filter((x) => x.code !== s.code));
+      await renderAll();
+    });
     return tpl;
   }
   if (r.status !== 200) {
@@ -153,8 +160,7 @@ async function renderCard(s: StoredSensor): Promise<HTMLElement> {
         if (sub) await api("DELETE", "/push", { subscription: sub.toJSON() }, s.token);
         b.notices = false;
       } else {
-        const key = String((await api("GET", "/vapid")).body.key ?? "");
-        const sub = key ? await subscribePush(key) : null;
+        const sub = vapidKey ? await subscribePush(vapidKey) : null; // permission prompt first, no awaits before it
         if (sub) {
           const u = await api("POST", "/push", { subscription: sub.toJSON(), lang }, s.token);
           b.notices = u.status === 200;
@@ -195,8 +201,9 @@ async function renderAll(): Promise<void> {
 
 (async () => {
   void registerSw();
+  void api("GET", "/vapid").then((r) => (vapidKey = String(r.body.key ?? ""))).catch(() => undefined);
   setupInstallHint({ box: $("install"), text: $("install-text"), button: $<HTMLButtonElement>("install-btn"),
-    dismiss: $<HTMLButtonElement>("install-dismiss"), iosText: t(lang, "pwa.iosHint") });
+    dismiss: $<HTMLButtonElement>("install-dismiss"), iosText: t(lang, "pwa.iosHint"), androidText: t(lang, "pwa.androidHint") });
   $("code-form").addEventListener("submit", (e) => {
     e.preventDefault();
     void openWithCode($<HTMLInputElement>("code").value);

@@ -10,7 +10,9 @@ import { runArchivePurge } from "../src/archive";
 import { sha256Hex } from "../src/lib/hmac";
 import { formatOwnerCode, maskAddress, normalizeOwnerCode, ownerCodeHash, signSession, verifySession } from "../src/lib/ownerCode";
 import { logger } from "firebase-functions";
-import { deleteSensorData, handleOwner, issueOwnerCode, OWNER, OwnerRequest, sensorHistory } from "../src/owner/api";
+import { checkOwnerCode, clientIp, deleteSensorData, handleOwner, isPushServiceUrl, issueOwnerCode, OWNER, OwnerRequest, sensorHistory } from "../src/owner/api";
+import { clearRegistryCache, handleIngest } from "../src/ingest";
+import { sign } from "../src/lib/hmac";
 import { hourKeyUtc, PushSender, runPublish } from "../src/publish";
 
 const PROJECT = process.env.GCLOUD_PROJECT ?? "demo-prosefire";
@@ -165,7 +167,7 @@ describe("owner API (emulator)", () => {
     await db.doc(`readings_hourly/${id}_${hourKeyUtc(NOW)}`).set({ deviceId: id, r: { "1": { pm25: 5 } } });
     await db.doc(`public_sensors/${id}`).set({ code: "XXXXXX" });
     await db.doc(`device_secrets/${id}`).set({ secret: "s" });
-    assert.equal((await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: "https://push.example/abc", keys: { p256dh: "p", auth: "a" } } }, t), NOW)).status, 200);
+    assert.equal((await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/abc123", keys: { p256dh: Buffer.alloc(65, 4).toString("base64url"), auth: Buffer.alloc(16, 7).toString("base64url") } } }, t), NOW)).status, 200);
     assert.equal((await handleOwner(db, cfg, req("DELETE", "/sensor/data", undefined, t), NOW)).status, 200);
     for (const p of [`readings_hourly/${id}_${hourKeyUtc(NOW)}`, `private_locations/${id}`, `public_sensors/${id}`, `device_secrets/${id}`]) {
       assert.equal((await db.doc(p).get()).exists, false, p);
@@ -204,6 +206,117 @@ describe("owner API (emulator)", () => {
     assert.deepEqual(r.body, { ok: true, code: "HSTRY2", h: [["2026112213", 4.4]] });
     assert.equal((await sensorHistory(db, "NOPE99")).status, 404);
     assert.equal((await sensorHistory(db, "<script>")).status, 404);
+  });
+});
+
+describe("owner security fixes (emulator)", () => {
+  before(() => {
+    if (!getApps().length) initializeApp({ projectId: PROJECT });
+    db = getFirestore();
+  });
+
+  it("client IP: first entry through Hosting (CDN), last entry for direct calls; IPv6 keyed by /64", () => {
+    assert.equal(clientIp({ "x-forwarded-for": "198.51.100.4, 151.101.1.1", "cdn-loop": "Fastly, Fastly" }), "198.51.100.4");
+    assert.equal(clientIp({ "x-forwarded-for": "9.9.9.9, 198.51.100.4" }), "198.51.100.4"); // direct + spoofed header
+    assert.equal(clientIp({ "x-forwarded-for": "198.51.100.4" }), "198.51.100.4");
+    assert.equal(clientIp({ "x-forwarded-for": "2001:db8:aa:bb:1:2:3:4, 151.101.1.1", "cdn-loop": "Fastly" }), "2001:db8:aa:bb::/64");
+    assert.equal(clientIp({}, "203.0.113.9"), "203.0.113.9");
+  });
+
+  it("parallel wrong guesses can't get past the per-IP limit", async () => {
+    await owned();
+    const ip = "198.51.100.200";
+    const results = await Promise.all(Array.from({ length: 30 }, () =>
+      handleOwner(db, cfg, req("POST", "/session", { code: "BBBB-BBBB-BB" }, undefined, ip), NOW)));
+    const wrong = results.filter((r) => r.status === 401).length;
+    assert.ok(wrong <= OWNER.wrongPerIpPerHour, `${wrong} guesses were checked`);
+    assert.equal(results.filter((r) => r.status === 429).length, 30 - wrong);
+  });
+
+  it("a correct code doesn't use up the IP's allowance, and a guessing surge never locks out correct codes", async () => {
+    const { code } = await owned();
+    const ip = "198.51.100.201";
+    for (let i = 0; i < 15; i++) await login(code, ip); // 15 correct logins from one IP: all fine
+    const hour = Math.floor(NOW / 3600e3);
+    await db.doc(`owner_attempts/global_${hour}`).set({ n: OWNER.wrongGlobalPerHour + 50 });
+    await login(code, "198.51.100.202"); // global surge: correct codes still work
+  });
+
+  it("checkOwnerCode is a reusable helper (for partner links later)", async () => {
+    const { id, code } = await owned();
+    const r = await checkOwnerCode(db, PEPPER, "test-ip-key-1", code, NOW);
+    assert.ok(typeof r === "object" && r.deviceId === id);
+    assert.equal(await checkOwnerCode(db, PEPPER, "test-ip-key-1", "AAAA-AAAA-AA", NOW), "wrong");
+  });
+
+  it("rotation refuses expired tokens and retired sensors", async () => {
+    const a = await owned();
+    const t = randomBytes(16).toString("hex");
+    await db.doc(`devices/${a.id}`).set({ claimTokenHash: sha256Hex(t), claimTokenExpires: Timestamp.fromMillis(NOW - 1) }, { merge: true });
+    assert.equal((await handleOwner(db, cfg, req("POST", "/rotate", { d: a.id, t }), NOW)).status, 409);
+    const b = await owned({ status: "retired" });
+    const t2 = randomBytes(16).toString("hex");
+    await db.doc(`devices/${b.id}`).set({ claimTokenHash: sha256Hex(t2), claimTokenExpires: Timestamp.fromMillis(NOW + 3600e3) }, { merge: true });
+    assert.equal((await handleOwner(db, cfg, req("POST", "/rotate", { d: b.id, t: t2 }), NOW)).status, 409);
+  });
+
+  it("push: only real push services, real key sizes, at most 10 browsers per sensor; status is per browser", async () => {
+    assert.ok(isPushServiceUrl("https://fcm.googleapis.com/fcm/send/x"));
+    assert.ok(isPushServiceUrl("https://web.push.apple.com/abc"));
+    assert.ok(isPushServiceUrl("https://updates.push.services.mozilla.com/wpush/v2/x"));
+    for (const bad of ["https://evil.example/x", "http://fcm.googleapis.com/x", "https://fcm.googleapis.com.evil.com/x", "https://push.apple.com.evil/x"]) {
+      assert.equal(isPushServiceUrl(bad), false, bad);
+    }
+    const { id, code } = await owned();
+    const t = await login(code);
+    const keys = { p256dh: Buffer.alloc(65, 1).toString("base64url"), auth: Buffer.alloc(16, 2).toString("base64url") };
+    const bad = await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: "https://evil.example/x", keys } }, t), NOW);
+    assert.equal(bad.status, 400);
+    const shortKey = await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/z", keys: { ...keys, auth: "AA" } } }, t), NOW);
+    assert.equal(shortKey.status, 400);
+    for (let i = 0; i < OWNER.maxPushSubs; i++) {
+      const r = await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: `https://fcm.googleapis.com/fcm/send/${i}`, keys } }, t), NOW);
+      assert.equal(r.status, 200, `sub ${i}`);
+    }
+    const over = await handleOwner(db, cfg, req("POST", "/push", { subscription: { endpoint: "https://fcm.googleapis.com/fcm/send/11", keys } }, t), NOW);
+    assert.equal(over.status, 400);
+    assert.equal((await db.doc(`devices/${id}`).get()).get("notifyOffline"), true); // flag on the device itself
+    const ep = sha256Hex("https://fcm.googleapis.com/fcm/send/3");
+    const mine = await handleOwner(db, cfg, { ...req("GET", "/sensor", undefined, t), query: { ep } }, NOW);
+    assert.equal(mine.body.notices, true);
+    const other = await handleOwner(db, cfg, { ...req("GET", "/sensor", undefined, t), query: { ep: sha256Hex("https://fcm.googleapis.com/fcm/send/none") } }, NOW);
+    assert.equal(other.body.notices, false);
+  });
+
+  it("sessions have an absolute 90-day limit even when used every day", async () => {
+    const { code } = await owned();
+    let t = await login(code);
+    for (let day = 6; day <= 84; day += 6) {
+      const r = await handleOwner(db, cfg, req("GET", "/sensor", undefined, t), NOW + day * 86400e3);
+      assert.equal(r.status, 200, `day ${day}`);
+      t = String(r.body.token);
+    }
+    assert.equal((await handleOwner(db, cfg, req("GET", "/sensor", undefined, t), NOW + 91 * 86400e3)).status, 401);
+  });
+
+  it("ingest refuses setup info for a sensor whose data was deleted (even with a stale device cache)", async () => {
+    const id = `esp8266-${7950000 + ++n}`;
+    await db.doc(`devices/${id}`).set({ status: "allowlisted" });
+    const secret = randomBytes(32).toString("hex");
+    const up = async (body: object, enroll: boolean, atMs: number) => {
+      const raw = Buffer.from(JSON.stringify(body));
+      const ts = String(Math.floor(atMs / 1000));
+      const headers: Record<string, string> = { "x-device-id": id, "x-timestamp": ts, "x-signature": sign(secret, ts, raw) };
+      if (enroll) headers["x-enroll-secret"] = secret;
+      return handleIngest(db, { method: "POST", headers, rawBody: raw }, atMs);
+    };
+    const base = { fw: "0.6.0", uptime_s: 1, rssi: -50, readings: [] };
+    clearRegistryCache();
+    assert.equal((await up(base, true, NOW)).status, 200); // enrolled + cached as active
+    await deleteSensorData(db, id, NOW + 1000);
+    const r = await up({ ...base, setup: { address: "1 Late St", zip: "10001", indoor: false } }, false, NOW + 60e3);
+    assert.equal(r.status, 403);
+    assert.equal((await db.doc(`private_locations/${id}`).get()).exists, false);
   });
 });
 
@@ -251,11 +364,43 @@ describe("offline notices + archive purge (emulator)", () => {
       read: async (p: string) => files.get(p) ?? null,
       list: async () => [...files.keys()],
     };
+    await db.doc("public/archive_state").set({ lastDay: "2026-11-30" }); // archive already covers the deletion day
     const done = await runArchivePurge(db, store, NOW);
     assert.ok(done.includes(id));
     const all = [...files.values()].map((b) => gunzipSync(b).toString()).join("");
     assert.equal(all.includes("GONE"), false);
     assert.ok(all.includes("\"ts\":1") && all.includes("\"ts\":4"));
     assert.equal((await db.doc(`devices/${id}`).get()).get("archivePurgePending"), false);
+  });
+
+  it("purge handles already-decompressed downloads, deletes late readings, and waits until the deletion day is archived", async () => {
+    const id = "esp8266-LATE";
+    const files = new Map<string, Buffer>();
+    files.set("archive/raw/v1/2026/11/20.ndjson.gz", Buffer.from(`{"device":"esp8266-LATE","ts":1}\n{"device":"esp8266-2","ts":2}\n`)); // plain text
+    files.set("archive/raw/v1/2026/11/21.ndjson.gz", gzipSync(`{"device":"esp8266-LATE","ts":3}\n`));
+    const deletedAt = Date.UTC(2026, 10, 22, 23, 58);
+    await db.doc(`devices/${id}`).set({ status: "retired", archivePurgePending: true, deletedAt: Timestamp.fromMillis(deletedAt),
+      enrolledAt: Timestamp.fromMillis(Date.UTC(2026, 10, 19)) });
+    await db.doc(`readings_hourly/${id}_2026112300`).set({ deviceId: id, r: { "9": { pm25: 1 } } }); // arrived after deletion
+    const store = { save: async (p: string, b: Buffer) => void files.set(p, b), read: async (p: string) => files.get(p) ?? null, list: async () => [...files.keys()] };
+    await db.doc("public/archive_state").set({ lastDay: "2026-11-22" }); // the day after deletion (23rd, +10 min) isn't archived yet
+    assert.deepEqual(await runArchivePurge(db, store, NOW), []);
+    assert.equal((await db.doc(`readings_hourly/${id}_2026112300`).get()).exists, false); // leftover deleted anyway
+    assert.equal((await db.doc(`devices/${id}`).get()).get("archivePurgePending"), true);
+    await db.doc("public/archive_state").set({ lastDay: "2026-11-23" });
+    assert.deepEqual(await runArchivePurge(db, store, NOW), [id]);
+    const all = [...files.values()].map((b) => (b[0] === 0x1f ? gunzipSync(b) : b).toString()).join("");
+    assert.equal(all.includes("LATE"), false);
+    assert.ok(all.includes("esp8266-2"));
+  });
+
+  it("notices work for a sensor that wasn't on the map when they were turned on", async () => {
+    const id = `esp8266-${7960000 + ++n}`;
+    await db.doc(`devices/${id}`).set({ status: "active", indoor: false, notifyOffline: true, publicCellPending: true });
+    await db.doc(`private_locations/${id}`).set({ address: "1 A St", zip: "10001", lat: 40.7, lng: -74.0 });
+    const geocode = async () => ({ kind: "unavailable" as const });
+    const nws = async () => ({ ok: false, json: async () => ({}) });
+    await runPublish(db, { geocode, nws }, NOW);
+    assert.equal((await db.doc(`public_sensors/${id}`).get()).get("notifyOffline"), true);
   });
 });

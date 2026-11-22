@@ -263,6 +263,14 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       Tests: backend 75 (owner 14 incl. brute force, rotation, masked address, delete, logs; notices; purge), web 30,
       native 81, tools 28. Deployed to dev: owner/history live; /my registers its service worker, no console errors.
       Firmware 0.6.0: Flash 49.4% (515,951 B) ⚠ ~4 KB under the OTA ceiling: size cuts are the first M9 task.
+      M7b spec-review fixes (2026-11-21): client IP from the right X-Forwarded-For position (Hosting vs direct, checked
+      live on dev) + IPv6 /64; guesses counted first in a transaction (parallel-safe), correct codes refunded, global
+      surge only alerts; shared `checkOwnerCode` helper (partner links later); rotation atomic; push endpoints limited
+      to real push services, key sizes checked, ≤ 10 per sensor, per-browser status, 5 s send timeout, sent after the
+      snapshot, flag kept on the device; offline notice carries the safety line; archive purge handles both file
+      formats, never skips a failing file, deletes late readings, waits until the deletion day is archived; ingest
+      refuses setup info for deleted sensors; owner_attempts TTL; iOS permission prompt first on tap; dead cards
+      removable; service worker caches the built assets; Android install wording. Backend 85, web 30.
 - **Done when:** tests pass (incl. brute-force rate limit, rotated code stops working, owner page never shows
       the full address); 👤 founder checks both pages on a phone and installs the app to the home screen.
       👤 Pending (needs the board on 0.6.0): /setup → "Get a new owner code" → open /my on the iPhone → Add to Home
