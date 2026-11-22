@@ -4,11 +4,13 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
+**Current milestone:** M9 (built; founder checks pending) · M0–M8 merged to main 2026-11-22 · was: M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
 - [ ] 👤 iPhone re-test of phone setup on firmware 0.6.1 (≈ 10 min, see M6): hold FLASH 5 s, join the setup WiFi,
       try a wrong password first, then the right one. Then the 7-day soak on home WiFi starts (board stays plugged in).
 - [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
+- [ ] 👤 M9: get 1–2 more NodeMCU boards (2nd OTA bench board + a fresh board to provision); approve the label wording
+      (draft in `tools/labels.py`) and pick a 4"×2" sticker sheet; the board now runs dev firmware 0.7.2.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
@@ -323,7 +325,38 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** one test sensor shows on maps.sensor.community.
 
 ### M9 OTA + factory provisioning
-- [ ] Signed OTA (dev key), manifest, staged rollout. `provision.py` + PDF labels (setup label + owner label).
+- [x] Signed OTA (dev key), manifest, staged rollout. Firmware 0.7.x. `firmware/src/ota.cpp` + `lib/core/src/ota_policy.*`:
+      checks `/fw/manifest.json` 2 min after first reaching RUNNING, then every 24 h + a per-device 0–59 min offset;
+      stages bench (listed IDs) → canary (stable FNV-1a 0–99 bucket < canary_percent) → all; never downgrades; strict
+      manifest parser (same-site `/fw/` path, size ≤ 1,044,464 B). RSA-2048 signatures (PKCS#1 v1.5 over SHA-256, the
+      core's format; the core's EC check has a length bug, so not EC). The signature checker exists only during a
+      download (keeping it from boot cost 7.6 KB RAM and TLS failed: seen on hardware). Release builds: OTA off until the
+      founder makes the production key (`tools/ota_keys.py release`, M11); release guard fails if the dev key is in a
+      release binary. Tools: `ota_keys.py`, `ota_publish.py` (signs, verifies with openssl, writes manifest; `--unsigned`
+      bench test). Hosting: versioned images cached forever (Hosting only sends Content-Length for cacheable files, and
+      the updater needs it), manifest `no-cache`.
+      **Hardware (bench board, dev project, 2026-11-22):** 0.7.0 → 0.7.1 installed over WiFi (`logs/m9-ota-update-*.log`:
+      "[ota] installed 0.7.1 (signature ok)" → "[boot] fw=0.7.1 reset=Software/System restart"); UNSIGNED 0.7.2 refused
+      ("update_err=12 Signature verification failed; still on 0.7.1", `logs/m9-ota-unsigned-*.log`); signed 0.7.2 then
+      installed (`logs/m9-ota-recover-*.log`). Only 1 bench board exists → the "2 bench boards" check is half done.
+      RAM: log format strings + setup-page HTML moved to flash (static RAM 37.6 → 34.5 KB); idle heap 36.9 KB (0.6.1:
+      33.8 KB); free heap during an upload 7.6 KB (was 5.3 KB). Size: release Flash 539,847 B (52 %).
+- [x] Factory provisioning. Backend `POST /api/v1/factory/register` (`src/factory.ts`, 8 emulator tests): per-station
+      keys (SHA-256 hashes in the `FACTORY_KEY_HASHES` secret; `tools/factory_station.py new|revoke`), unique 6-char
+      short code (reserved in `short_codes/`), owner code stored only as a keyed hash; re-registering an unused board
+      keeps its code and issues a new owner code (reprints); a board used in the field needs `reprovision` and no stored
+      address (nothing is deleted). Deployed to **dev**; live: no key → 401, valid key → passes auth.
+      Firmware: `PFCMD SETCODE <code>` (same 60 s / unprovisioned gate as setup info) saves the code to /identity (+ backup)
+      and restarts. `tools/provision.py`: detect (CH340/FTDI/CP210x) → flash-size check → erase + flash (esptool) →
+      chip ID + setup WiFi over USB → register → set code → confirm from the restart → labels → CSV log (no secrets);
+      batch = one worker per port; `--no-flash` reprint. `tools/labels.py`: SETUP + OWNER labels on one row of a 4"×2"
+      (10/sheet) letter sticker sheet; QR via segno; PDF written in-house; QR codes verified with Apple's CoreImage reader
+      in the tests. Hardware: on the bench board (already in use) the tool read boot/identity/setup info and the dev
+      server refused it (409 already_in_use), no label (`logs/prov-test/provision-log.csv`).
+      Tools tests 48/48, native 89/89, backend 100/100.
+- 👤 Pending: (1) a second bench board for the 2-board OTA check; (2) a volunteer provisions a **fresh** board in < 2 min
+      from printed instructions (needs a new NodeMCU; the bench board is in use); (3) approve label wording (draft) and
+      pick the sticker product; (4) production OTA key (M11).
 - **Done when:** OTA works on 2 bench boards and an unsigned image is rejected; 👤 a volunteer provisions a fresh
       board in < 2 min from the printed instructions.
 
@@ -343,6 +376,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-22 · Merged M5–M8 (PRs #6–#10). M9: signed OTA (verified on hardware: update, unsigned rejected, recovery), factory endpoint (dev), SETCODE, provision.py + labels, RAM +3 KB · native 89, tools 48, backend 100 · next: spec-review fixes, founder: iPhone re-test, boards, label wording.
 - 2026-11-22 · Board back: 0.6.0 phone setup worked on iPhone, sensor on the map · 0.6.1 portal fixes (stable setup WiFi, request logging, redesign) · native 83, tools 29, flashed + boot capture · next: founder iPhone re-test, then 7-day soak; M9 must cut size first.
 - 2026-11-21 · M0 scaffold: git + public GitHub repo, toolchain installed, firmware/tools/backend/web skeletons, CI,
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local

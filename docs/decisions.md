@@ -58,6 +58,11 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | Labels: **segno** (BSD-3, pure Python, packing-laptop tool only) for QR codes; PDF layout written in-house (no PDF library) | Founder |
 | 2026-11-22 | Packing-laptop flasher: **esptool** via pip (GPL-2.0, Espressif's official tool; laptop only, nothing on the sensor). Recipients never flash anything | Founder |
 | 2026-11-22 | `factory/register` auth: **per-station keys** (long random key file per packing laptop, stored hashed in the backend, revocable one by one). No accounts | Founder |
+| 2026-11-22 | (Agent, within spec) OTA signatures are **RSA-2048** (the ESP8266 core's own signing format); OTA checks 2 min after first connecting, then daily + a per-device 0–59 min offset; stages bench → canary (stable per-device slice) → all; never downgrade | EC keys hit a length check bug in the core; offsets spread load |
+| 2026-11-22 | (Agent) **Release builds have OTA off** until the founder creates the production key (M11); the release guard fails if the dev key ever lands in a release build | Production key is founder-only and must be backed up offline |
+| 2026-11-22 | (Agent) Re-registering a board: unused (never uploaded) → same short code, new owner code (covers failed prints); used in the field → refused unless `reprovision` AND its address is already deleted (owner's "Delete my data"); the tool never deletes data | Privacy: a returned kit must never carry the previous owner's address to a new home |
+| 2026-11-22 | (Agent) Label layout: one kit per row of a letter sheet of 4"×2" stickers (10 per sheet), SETUP left, OWNER right; setup password also printed as text under the QR. **Wording is a draft** for founder approval | Rows keep a kit's two labels together; text fallback if a camera can't scan |
+| 2026-11-22 | (Agent) Corrected: the OTA size limit is the 1 MB max program size (not ~520 KB as I first wrote) | Read the core's Updater.cpp |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
