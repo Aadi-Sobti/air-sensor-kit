@@ -21,7 +21,9 @@ import _venv  # noqa: E402
 _venv.ensure("serial")
 import serial  # noqa: E402
 
-LINE_RE = re.compile(r"\[setupinfo\] ap_ssid=(.+?) ap_password=(\S+)")
+# Must end with the line break: serial data arrives in chunks, and a half-received line would give a
+# truncated password (seen on hardware 2026-11-22: 7 of 12 characters).
+LINE_RE = re.compile(r"\[setupinfo\] ap_ssid=(\S+) ap_password=(\S+)\r?\n")
 
 
 def wifi_qr_payload(ssid: str, password: str) -> str:
@@ -45,18 +47,23 @@ def main(argv=None) -> int:
         return 2
     try:
         buf = b""
-        end = time.monotonic() + 20
-        next_ask = time.monotonic() + 3  # let it boot (opening the port may restart it)
+        end = time.monotonic() + 25
+        time.sleep(4)  # opening the port restarts the sensor; let it boot
+        ser.reset_input_buffer()
+        next_ask = time.monotonic()
         while time.monotonic() < end:
             if time.monotonic() >= next_ask:
-                ser.write(b"PFCMD SETUPINFO\n")
+                # Leading newline: junk bytes from the restart would otherwise spoil the first command line.
+                ser.write(b"\nPFCMD SETUPINFO\n")
+                ser.flush()
                 next_ask = time.monotonic() + 3
             buf += ser.read(ser.in_waiting or 1)
             text = buf.decode("utf-8", "replace")
             m = LINE_RE.search(text)
             if m:
                 ssid, pw = m.group(1), m.group(2)
-                print(f"Phone setup WiFi:  {ssid}\nPassword:          {pw}")
+                print(f"Phone setup WiFi:  {ssid}\nPassword:          {pw}   ({len(pw)} characters: capital letters and digits 2-9)")
+                print("The setup network appears about 3 minutes from now (this tool restarted the sensor).")
                 print(f"(QR text for a label maker: {wifi_qr_payload(ssid, pw)})")
                 print("On the phone: WiFi settings -> join that network -> type the password. The setup page opens.")
                 return 0
