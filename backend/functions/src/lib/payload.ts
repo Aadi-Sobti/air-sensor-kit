@@ -46,7 +46,7 @@ export function parseUpload(raw: unknown, nowS: number): { ok: true; upload: Upl
   if (!str(b.fw, 32) || !/^[0-9A-Za-z._-]+$/.test(b.fw)) return { ok: false, error: "bad_fw" };
   if (!num(b.uptime_s, 0, 1e9)) return { ok: false, error: "bad_uptime" };
   if (!num(b.rssi, -127, 0)) return { ok: false, error: "bad_rssi" };
-  if (!Array.isArray(b.readings) || b.readings.length < 1 || b.readings.length > LIMITS.maxReadings) {
+  if (!Array.isArray(b.readings) || b.readings.length > LIMITS.maxReadings) {
     return { ok: false, error: "bad_readings" };
   }
   const readings: Reading[] = [];

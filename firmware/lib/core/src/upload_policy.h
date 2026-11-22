@@ -28,6 +28,10 @@ class UploadPolicy {
   bool due(uint32_t nowMs) const { return static_cast<int32_t>(nowMs - nextAtMs_) >= 0; }
   // Records the result and schedules the next attempt. retryAfterS is used for kRateLimited.
   void onResult(UploadOutcome o, uint32_t nowMs, uint32_t retryAfterS = 0);
+  // Upload as soon as possible (e.g. a claim is waiting on the website), unless we're backing off failures.
+  void requestSoon(uint32_t nowMs) {
+    if (failures_ == 0) nextAtMs_ = nowMs;
+  }
   uint32_t nextInMs(uint32_t nowMs) const { return due(nowMs) ? 0 : nextAtMs_ - nowMs; }
   uint32_t consecutiveFailures() const { return failures_; }
   bool enrolled() const { return enrolled_; }

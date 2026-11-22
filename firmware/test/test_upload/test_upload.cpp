@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 
+#include "claim.h"
 #include "codes.h"
 #include "improv.h"
 #include "pending_readings.h"
@@ -164,6 +165,29 @@ static void test_policy_due_across_millis_wrap() {
   TEST_ASSERT_TRUE(p.due(150000u));
 }
 
+// ---------- claim token ----------
+static void test_claim_token_hash_and_url() {
+  uint8_t rnd[16];
+  for (int i = 0; i < 16; i++) rnd[i] = static_cast<uint8_t>(i);
+  ClaimToken c = makeClaimToken(rnd);
+  TEST_ASSERT_EQUAL_STRING("000102030405060708090a0b0c0d0e0f", c.token.c_str());
+  // Python: hashlib.sha256(b"000102030405060708090a0b0c0d0e0f").hexdigest()  (backend: sha256Hex(t))
+  TEST_ASSERT_EQUAL_STRING("d65df89f702eec58ca3c7bf2001c9ffc7cd80553ae01d42a799ba26756142d96", c.hashHex.c_str());
+  TEST_ASSERT_EQUAL_STRING("https://x.example/claim#d=esp8266-7&t=000102030405060708090a0b0c0d0e0f",
+                           claimUrl("https://x.example", "esp8266-7", c.token).c_str());
+}
+
+static void test_policy_request_soon() {
+  gRand = 0.5;
+  UploadPolicy p(fixedRand);
+  p.begin(0);
+  p.requestSoon(1000);
+  TEST_ASSERT_TRUE(p.due(1000));
+  p.onResult(UploadOutcome::kNetworkError, 2000);
+  p.requestSoon(2000);
+  TEST_ASSERT_FALSE(p.due(2000));  // still backing off
+}
+
 // ---------- Improv ----------
 static void test_improv_spec_example_wifi_settings() {
   // Spec example: 01 1E 0C {MyWirelessAP} 10 {mysecurepassword}
@@ -215,6 +239,13 @@ static void test_improv_checksum_and_bad_frames() {
   TEST_ASSERT_TRUE(sawInvalid);
 }
 
+static void test_improv_wifi_failure_codes() {
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnableToConnect, improv::errorForWifiFailure(improv::WifiFailure::kWrongPassword));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kNotFound));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kConnectFailed));
+  TEST_ASSERT_EQUAL_UINT8(improv::kUnknownError, improv::errorForWifiFailure(improv::WifiFailure::kTimeout));
+}
+
 static void test_improv_result_and_state_frames() {
   auto r = improv::resultFrame(improv::kGetDeviceInfo, {"ProseFire", "0.3.0", "ESP8266", "ProseFire sensor"});
   TEST_ASSERT_EQUAL_UINT8(improv::kRpcResult, r[7]);
@@ -245,8 +276,11 @@ int main(int, char**) {
   RUN_TEST(test_policy_jitter_spreads_devices);
   RUN_TEST(test_policy_special_outcomes);
   RUN_TEST(test_policy_due_across_millis_wrap);
+  RUN_TEST(test_claim_token_hash_and_url);
+  RUN_TEST(test_policy_request_soon);
   RUN_TEST(test_improv_spec_example_wifi_settings);
   RUN_TEST(test_improv_checksum_and_bad_frames);
+  RUN_TEST(test_improv_wifi_failure_codes);
   RUN_TEST(test_improv_result_and_state_frames);
   return UNITY_END();
 }

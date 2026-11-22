@@ -141,7 +141,9 @@ describe("ingest (emulator)", () => {
     const big = await handleIngest(db, req(d.id, d.secret, "x".repeat(17 * 1024)), NOW);
     assert.equal(big.status, 413);
     assert.equal((await handleIngest(db, req(d.id, d.secret, "{not json"), NOW)).status, 400);
-    assert.equal((await handleIngest(db, req(d.id, d.secret, upload({}, [])), NOW)).status, 400);
+    const healthOnly = await handleIngest(db, req(d.id, d.secret, upload({}, [])), NOW);
+    assert.equal(healthOnly.status, 200); // readings: [] = health-only upload (warm-up, unplugged sensor)
+    assert.equal(healthOnly.body.accepted, 0);
     const neg = upload({}, [{ ...reading(NOW_S), pm25_cf1: -1 }]);
     assert.equal((await handleIngest(db, req(d.id, d.secret, neg), NOW)).status, 400);
     const future = upload({}, [reading(NOW_S + 3600)]);

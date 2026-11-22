@@ -38,6 +38,12 @@ class Parser {
   size_t pos_ = 0;
 };
 
+// Why a WiFi credential test failed, and the Improv error we report for it. Only a wrong password is reported as
+// "unable to connect" (the page says "that password didn't work"); not-found / failed / timeout are reported as
+// "unknown error" (the page says "check it's 2.4 GHz WiFi and you're within range").
+enum class WifiFailure { kWrongPassword, kNotFound, kConnectFailed, kTimeout };
+Error errorForWifiFailure(WifiFailure f);
+
 // Decodes the data part of an RPC frame (command, length, payload). False if malformed.
 bool decodeRpc(const uint8_t* data, size_t n, Rpc& out);
 

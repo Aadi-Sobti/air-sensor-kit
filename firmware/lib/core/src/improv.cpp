@@ -5,6 +5,10 @@ namespace improv {
 
 static const char kHeader[] = "IMPROV";
 
+Error errorForWifiFailure(WifiFailure f) {
+  return f == WifiFailure::kWrongPassword ? kUnableToConnect : kUnknownError;
+}
+
 bool decodeRpc(const uint8_t* d, size_t n, Rpc& out) {
   out = Rpc{};
   if (n < 2) return false;

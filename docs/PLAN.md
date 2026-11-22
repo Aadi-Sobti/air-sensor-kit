@@ -4,7 +4,7 @@ How to use this file (agent): read it at the start of each session. Work the cur
 bottom. Tick a box only with evidence. Keep "Waiting on founder" current. Add one line to the session log
 per session. Acceptance checks marked 👤 need the founder (hardware, phone, browser, accounts, approvals).
 
-**Current milestone:** M4 (needs the founder's Firebase dev project) · M0–M3 done; M5/M7 groundwork next
+**Current milestone:** M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
 - [ ] Keep the board plugged in (USB + iPhone hotspot on with Maximize Compatibility) for the 24 h soak.
 - [ ] 👤 M1 smoke check (2 min): blow out a match ~1 m from the sensor while the agent captures (skipped 2026-11-21).
@@ -130,7 +130,33 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
-- [ ] Improv in firmware (+ codec tests), `/setup` page, `/claim` page + `claim` endpoint, claim token.
+- [x] Improv in firmware (+ codec tests), `/setup` page, `/claim` page + `claim` endpoint, claim token.
+      Firmware 0.4.0: a fresh 128-bit claim token per USB setup (only its SHA-256 is kept and sent in the next
+      upload, which is requested right away); redirect `https://<site>/claim#d=<id>&t=<token>`. `pio test` 65/65.
+      Backend `claim` (+ `lib/geocode.ts`, US Census Geocoder, verified 2026-11-21): single-use, 24 h expiry,
+      constant-time hash compare, per-device attempt limit, address/coords only in private_locations, geocoder
+      outage → accept + `locationPending`, no match → 422. Emulator: 30 passing (9 claim tests).
+      Web: Improv codec + client (tested against a fake sensor), `/setup` (Web Serial, filters CH340/FTDI/CP210x,
+      DTR/RTS off + 2 s boot wait, always closes the port, same-origin claim redirect only), `/claim` (token moved to
+      sessionStorage and stripped from the URL, polls up to 2 min). EN+ES strings; `npm test` 17/17. Hosting: clean
+      URLs + CSP/Referrer-Policy/Permissions-Policy. Deployed to dev 2026-11-21; local preview checked (setup intro,
+      claim bad-link + form).
+      Spec-review fixes (2026-11-21): claim polling no longer trips the guess limit (only wrong guesses against a
+      stored hash count); one identical "not_ready" answer for unknown/pending/wrong/used; a used token can't be
+      revived by a re-sent upload (`usedClaimTokenHash`); health-only uploads (`readings: []`) so a pending claim is
+      delivered even before the sensor has a reading (and sensor faults still reach the server); firmware reports a
+      wrong password (0x03) separately from not-found/timeout (0xFF → "check it's 2.4 GHz / within range"); claim
+      token reused for status queries until new WiFi is saved; setup page releases the port on every error path;
+      localized page titles; TTL policies on `readings_hourly.expireAt` + `claim_attempts.expireAt`, and the
+      readings map is exempt from indexing (deployed + confirmed). Backend 33 passing; native 66/66; web 18/18;
+      tools 25/25. Release 0.4.0: RAM 41.5% (34,020 B), Flash 45.2% (471,775 B); `check_release.py` OK.
+      Deviations (until M7): no "tap your home on the map" option; the public H3 cell is computed in M7
+      (`publicCellPending`); the flow ends on the claim page's success screen, not the sensor's public page; the
+      first reading shown is the sensor's ATM value (uncorrected) until the EPA correction/AQI exist.
+- 👤 Browser checklist (after the soak, once 0.4.0 is flashed): Chrome on macOS · Chrome on Windows · Edge ·
+      Safari shows the phone-path message. Per browser: picker shows exactly one device · WiFi list appears ·
+      wrong password → friendly retry · right password → claim page → first reading shown · port released
+      (`pio device list` / re-flash works afterwards).
 - **Done when:** codec/claim tests pass; 👤 computer-setup checklist passes on Chrome (Windows + macOS) and
       Edge; Safari shows the phone-path fallback.
 
@@ -180,5 +206,6 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
   spec review fixes (ELF symbol check, inherited-flag check, partial-log capture, no-JS safety line) · all local
   checks green (see M0 items), board flashed + captured (`logs/m0-blink-1795252792.log`) · next: green CI on PR #1, then M1 PMS5003 driver.
 - 2026-11-21 · CI green on PR #1 (run 44889781985). M1 PMS5003 driver + fake sensor · 18/18 native tests, real-sensor capture 0 checksum errors (`logs/m1-pms-1795254828.log`) · next: M2 device core.
+- 2026-11-21 · M5 built + spec-reviewed + deployed to dev (setup/claim pages, claim endpoint, claim token) · backend 33, native 66, web 18, tools 25 · next: flash 0.4.0 after the soak, founder browser checklist.
 - 2026-11-21 · Founder back: decisions (startup-only AP fallback, LED = WiFi only, SETUP AP never times out, agent may merge) · M2 review fixes (secure RNG, identity backup) `logs/m2-fresh-1795282632.log` · PRs #1 #2 merged · M3 cost table + ingest: 21 backend tests, simulator 0 problems · next: M4 needs the dev Firebase project (founder); meanwhile M5/M7 groundwork.
 - 2026-11-21 · M2 device core + M1 review fixes · 46/46 native tests, board boots twice with persisted identity (`logs/m2-boot*-*.log`) · next: M3 cost table + ingest on emulator.

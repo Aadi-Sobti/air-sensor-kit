@@ -31,6 +31,10 @@ storage + archive ≈ $6.
 **Levers if costs climb:** uploading every 5 min instead of 2.5 halves writes, requests, and compute (≈ −45%).
 Batching readings on the device (the phase-2 offline buffer already sends an array) cuts requests further.
 
+**Retention mechanics (deployed 2026-11-21):** Firestore TTL policies delete `readings_hourly` 35 days after the
+hour and `claim_attempts` after 2 h (TTL deletes: $0.01 / 100K). The per-reading map (`r`) is exempt from indexing,
+so each upload writes one document without dozens of index entries.
+
 **Choice (provisional, under the founder's 2026-11-21 permission): B.** It is the cheapest at every size, keeps raw
 data forever (needed because corrections are versioned and re-run), and makes idempotency free: a re-sent reading
 lands on the same map key.
