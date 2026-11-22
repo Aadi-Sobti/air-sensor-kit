@@ -109,11 +109,18 @@ export async function checkOwnerCode(db: Firestore, pepper: string, ipKey: strin
   const ipRef = db.doc(`owner_attempts/${ipKey}_${hour}`);
   const gRef = db.doc(`owner_attempts/global_${hour}`);
   const exp = Timestamp.fromMillis((hour + 2) * 3600e3);
-  const n = await db.runTransaction(async (tx) => {
-    const cur = Number((await tx.get(ipRef)).get("n") ?? 0) + 1;
-    tx.set(ipRef, { n: cur, expireAt: exp }, { merge: true });
-    return cur;
-  });
+  let n: number;
+  try {
+    n = await db.runTransaction(async (tx) => {
+      const cur = Number((await tx.get(ipRef)).get("n") ?? 0) + 1;
+      tx.set(ipRef, { n: cur, expireAt: exp }, { merge: true });
+      return cur;
+    });
+  } catch {
+    // The counter couldn't be updated (e.g. a burst of parallel guesses from one address contending for it): fail
+    // closed. The guess is not checked, and the caller sees "too many tries" instead of a server error.
+    return "rate_limited";
+  }
   if (n > OWNER.wrongPerIpPerHour) return "rate_limited";
   const code = normalizeOwnerCode(raw);
   const entry = code ? await db.doc(`owner_codes/${ownerCodeHash(pepper, code)}`).get() : null;
