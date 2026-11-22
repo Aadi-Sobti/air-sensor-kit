@@ -57,6 +57,13 @@
         }
       },
       {
+        "source": "/api/v1/factory/**",
+        "function": {
+          "functionId": "factory",
+          "region": "us-east1"
+        }
+      },
+      {
         "source": "/api/v1/sensor/**",
         "function": {
           "functionId": "history",
@@ -97,6 +104,24 @@
           {
             "key": "Permissions-Policy",
             "value": "serial=(self), camera=(), microphone=(), geolocation=()"
+          }
+        ]
+      },
+      {
+        "source": "/fw/manifest.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/fw/*.@(signed|bin)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=31536000, immutable"
           }
         ]
       }

@@ -86,9 +86,23 @@ def scan_file(path: Path, needles) -> list[str]:
     return [f"{path}: contains {s.decode()!r}" for s in needles if s in data]
 
 
-def check_bin(build_dir: Path) -> list[str]:
-    return scan_file(build_dir / "firmware.bin", BIN_FORBIDDEN) + \
+def dev_key_marker(fw: Path) -> bytes | None:
+    """A distinctive line of the dev OTA public key: a release build must never trust the dev key (M9)."""
+    pem = fw / "keys" / "ota_dev_public.pem"
+    if not pem.exists():
+        return None
+    lines = [ln for ln in pem.read_text().splitlines() if ln and not ln.startswith("-----")]
+    return lines[1].encode() if len(lines) > 2 else None
+
+
+def check_bin(build_dir: Path, fw: Path | None = None) -> list[str]:
+    problems = scan_file(build_dir / "firmware.bin", BIN_FORBIDDEN) + \
         scan_file(build_dir / "firmware.elf", ELF_FORBIDDEN)
+    marker = dev_key_marker(fw) if fw else None
+    binf = build_dir / "firmware.bin"
+    if marker and binf.exists() and marker in binf.read_bytes():
+        problems.append(f"{binf}: contains the DEV OTA signing key (release builds must not trust it)")
+    return problems
 
 
 def main(argv=None) -> int:
@@ -99,13 +113,13 @@ def main(argv=None) -> int:
     fw = Path(args.firmware_dir)
     problems = check_flags(fw / "platformio.ini") + check_sources(fw)
     if not args.no_bin:
-        problems += check_bin(fw / ".pio" / "build" / "release")
+        problems += check_bin(fw / ".pio" / "build" / "release", fw)
     if problems:
         print("[release-guard] FAIL")
         for p in problems:
             print("  " + p)
         return 1
-    print("[release-guard] OK: no DEV_/FAKE_PMS flags, setInsecure, or http:// in the release build")
+    print("[release-guard] OK: no DEV_/FAKE_PMS flags, setInsecure, http://, or dev OTA key in the release build")
     return 0
 
 

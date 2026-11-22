@@ -1,4 +1,5 @@
 #include "net.h"
+#include "log.h"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -30,7 +31,7 @@ static void applyMode() {
 void netSetSavedWifiPaused(bool paused) {
   if (paused == gPaused) return;
   gPaused = paused;
-  Serial.printf("[net] saved WiFi retries %s\n", paused ? "paused (a phone is using setup)" : "resumed");
+  LOGF("[net] saved WiFi retries %s\n", paused ? "paused (a phone is using setup)" : "resumed");
 }
 
 void netSetApActive(bool on) {
@@ -56,7 +57,7 @@ void netApply(bool connectWifi, const DeviceConfig& cfg, bool apOn, uint32_t now
       WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPass.c_str());
       gSsid = cfg.wifiSsid;
       gPass = cfg.wifiPass;
-      Serial.println("[net] connecting to saved WiFi");  // never log SSID/password
+      LOGLN("[net] connecting to saved WiFi");  // never log SSID/password
     }
   } else if (gStaStarted) {
     WiFi.disconnect();

@@ -15,6 +15,7 @@ import { runArchive, runArchivePurge } from "./archive";
 import { clientIp, handleOwner, sensorHistory } from "./owner/api";
 import { PushSender } from "./publish";
 import { handleClaim } from "./claim";
+import { handleFactory, parseKeyHashes } from "./factory";
 import { forwardOne, ScTask } from "./forward";
 import { handleIngest } from "./ingest";
 import { defaultDeps, runPublish } from "./publish";
@@ -27,6 +28,8 @@ initializeApp();
 const OWNER_PEPPER = defineSecret("OWNER_PEPPER"); // keyed hash for owner codes + session signing
 const VAPID_PUBLIC = defineSecret("VAPID_PUBLIC"); // web push (not secret, but kept with its private half)
 const VAPID_PRIVATE = defineSecret("VAPID_PRIVATE");
+// Packing-laptop station keys (M9, founder decision 2026-11-22): "<station> <sha256>" per line; see src/factory.ts.
+const FACTORY_KEY_HASHES = defineSecret("FACTORY_KEY_HASHES");
 // Sensor.Community forwarding (M8): OFF until the founder confirms with Sensor.Community (backend.md).
 // Set in functions/.env.<project>; each sensor must also have devices.scRegistered = true.
 const SC_FORWARD_ENABLED = defineBoolean("SC_FORWARD_ENABLED", { default: false });
@@ -140,6 +143,16 @@ export const owner = onRequest({ memory: "256MiB", maxInstances: 10, secrets: [O
   res.set("Cache-Control", "no-store");
   res.status(out.status).json(out.body);
 });
+
+/** POST /api/v1/factory/register : packing laptops register freshly flashed boards (tools/provision.py). */
+export const factory = onRequest({ memory: "256MiB", maxInstances: 2, timeoutSeconds: 30, secrets: [OWNER_PEPPER, FACTORY_KEY_HASHES] },
+  async (req, res) => {
+    const out = await handleFactory(getFirestore(), { pepper: OWNER_PEPPER.value(), keyHashes: parseKeyHashes(FACTORY_KEY_HASHES.value()) }, {
+      method: req.method, path: req.path, headers: req.headers as Record<string, string | string[] | undefined>, rawBody: req.rawBody,
+    });
+    res.set("Cache-Control", "no-store");
+    res.status(out.status).json(out.body);
+  });
 
 /** GET /api/v1/sensor/<CODE>/history : public hourly history for the sensor page chart (no location). */
 export const history = onRequest({ memory: "256MiB", maxInstances: 10 }, async (req, res) => {

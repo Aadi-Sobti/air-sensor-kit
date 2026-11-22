@@ -115,3 +115,17 @@ def test_only_the_local_setup_ap_address_is_allowed(tmp_path):
     assert cr.main(["--firmware-dir", str(fw)]) == 0
     (b / "firmware.bin").write_bytes(b"\x00http://192.168.4.1/\x00http://x.org\x00")
     assert cr.main(["--firmware-dir", str(fw)]) == 1
+
+
+def test_dev_ota_key_in_release_binary_fails(tmp_path):
+    fw = tmp_path / "fw"
+    (fw / "keys").mkdir(parents=True)
+    (fw / "keys" / "ota_dev_public.pem").write_text(
+        "-----BEGIN PUBLIC KEY-----\nAAAAfirstline\nBBBBdistinctivesecondline\nCCCCthird\n-----END PUBLIC KEY-----\n")
+    build = tmp_path / "build"
+    build.mkdir()
+    (build / "firmware.elf").write_bytes(b"elf")
+    (build / "firmware.bin").write_bytes(b"\xe9 clean image")
+    assert cr.check_bin(build, fw) == []
+    (build / "firmware.bin").write_bytes(b"\xe9 ... BBBBdistinctivesecondline ...")
+    assert any("DEV OTA" in p for p in cr.check_bin(build, fw))

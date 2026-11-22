@@ -75,6 +75,27 @@ static void test_setup_info_sent_once_cleared_only_after_ok() {
   TEST_ASSERT_FALSE(shouldClearSetupInfo(false, UploadOutcome::kOk));
 }
 
+static void test_setcode_command() {
+  std::string c;
+  TEST_ASSERT_TRUE(core::parseSetCodeCommand("PFCMD SETCODE K7Q2MX", c));
+  TEST_ASSERT_EQUAL_STRING("K7Q2MX", c.c_str());
+  c = "keep";
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETCODE K7Q2M", c));    // too short
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETCODE K7Q2MXX", c));  // too long
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETCODE K7Q2M0", c));   // 0 isn't in the alphabet
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETCODE k7q2mx", c));   // lower case
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETCODE K7Q2M ", c));
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand("PFCMD SETUPINFO", c));
+  TEST_ASSERT_FALSE(core::parseSetCodeCommand(nullptr, c));
+  TEST_ASSERT_EQUAL_STRING("keep", c.c_str());  // untouched on failure
+  // The whole command must fit the serial line buffer.
+  core::CommandLine cl;
+  bool got = false;
+  for (const char* p = "PFCMD SETCODE K7Q2MX\n"; *p; p++) got = cl.feedLine(static_cast<uint8_t>(*p));
+  TEST_ASSERT_TRUE(got);
+  TEST_ASSERT_TRUE(core::parseSetCodeCommand(cl.text(), c));
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_command_matches_clean_line_only);
@@ -82,5 +103,6 @@ int main(int, char**) {
   RUN_TEST(test_feed_line_returns_any_clean_command);
   RUN_TEST(test_setup_info_gate);
   RUN_TEST(test_setup_info_sent_once_cleared_only_after_ok);
+  RUN_TEST(test_setcode_command);
   return UNITY_END();
 }

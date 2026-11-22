@@ -1,4 +1,5 @@
 #include "improv_serial.h"
+#include "log.h"
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -29,6 +30,7 @@ static std::string gSsid, gPass;  // in RAM only during the test; never logged
 // 60 s of boot: physical USB access = ownership.
 static core::CommandLine gCmd;
 static SetupInfoFn gSetupInfo = nullptr;
+static SetCodeFn gSetCode = nullptr;
 
 static void feedLine(uint8_t b) {
   if (!gCmd.feedLine(b)) return;
@@ -38,7 +40,17 @@ static void feedLine(uint8_t b) {
     std::string url = gRedirect(true);
     size_t d = url.find("#d="), t = url.find("&t=");
     if (d != std::string::npos && t != std::string::npos) {
-      Serial.printf("[claim] d=%s t=%s\n", url.substr(d + 3, t - d - 3).c_str(), url.substr(t + 3).c_str());
+      LOGF("[claim] d=%s t=%s\n", url.substr(d + 3, t - d - 3).c_str(), url.substr(t + 3).c_str());
+    }
+    return;
+  }
+  std::string code;
+  if (core::parseSetCodeCommand(gCmd.text(), code) && gSetCode) {
+    // Factory tool (M9): same physical-access gate as setup info. The handler saves, answers, and restarts.
+    if (core::setupInfoAllowed(gId && !gId->shortCode.empty(), millis())) {
+      gSetCode(code);
+    } else {
+      LOGLN("[factory] not available (unplug and plug in the sensor, then run the tool within 60 s)");
     }
     return;
   }
@@ -46,13 +58,14 @@ static void feedLine(uint8_t b) {
   if (core::setupInfoAllowed(gId && !gId->shortCode.empty(), millis())) {
     std::string ssid, pw;
     gSetupInfo(ssid, pw);
-    Serial.printf("[setupinfo] ap_ssid=%s ap_password=%s\n", ssid.c_str(), pw.c_str());
+    LOGF("[setupinfo] ap_ssid=%s ap_password=%s\n", ssid.c_str(), pw.c_str());
   } else {
-    Serial.println("[setupinfo] not available (unplug and plug in the sensor, then run the tool within 60 s)");
+    LOGLN("[setupinfo] not available (unplug and plug in the sensor, then run the tool within 60 s)");
   }
 }
 
 void improvSetSetupInfo(SetupInfoFn fn) { gSetupInfo = fn; }
+void improvSetSetCode(SetCodeFn fn) { gSetCode = fn; }
 
 static void send(const std::vector<uint8_t>& f) {
   Serial.write(f.data(), f.size());
@@ -123,7 +136,7 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
           gSsid = rpc.ssid;
           gPass = rpc.password;
           gTesting = true;
-          Serial.println("[improv] testing new WiFi settings");  // no SSID/password in logs
+          LOGLN("[improv] testing new WiFi settings");  // no SSID/password in logs
           send(im::stateFrame(im::kProvisioning));
           netTestBegin(gSsid, gPass);
           break;
@@ -154,13 +167,13 @@ void improvPoll(uint32_t nowMs, bool wifiConnected) {
     gTesting = false;
     netTestEnd();
     if (gOnSaved) gOnSaved(gSsid, gPass);  // save only after the credentials worked
-    Serial.printf("[improv] new WiFi works (%s)\n", netTestReason());
+    LOGF("[improv] new WiFi works (%s)\n", netTestReason());
     send(im::stateFrame(im::kProvisioned));
     send(im::resultFrame(im::kWifiSettings, {redirectUrl(true)}));
   } else if (t == NetTest::kFailed) {
     gTesting = false;
     netTestEnd();  // the old saved network (if any) is untouched and resumes
-    Serial.printf("[improv] new WiFi did not connect (%s); nothing saved\n", netTestReason());
+    LOGF("[improv] new WiFi did not connect (%s); nothing saved\n", netTestReason());
     send(im::errorFrame(im::errorForWifiFailure(static_cast<im::WifiFailure>(netTestFailure()))));
     send(im::stateFrame(im::kReady));
   }

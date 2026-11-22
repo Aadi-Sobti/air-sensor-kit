@@ -79,3 +79,15 @@ IdentityStatus loadOrCreateIdentity(Identity& out) {
   core::saveRecord(fileStore(), kBackupPath, rec, kSchema);
   return IdentityStatus::kCreated;
 }
+
+bool saveShortCode(Identity& id, const std::string& code) {
+  core::KvRecord rec;
+  rec.set("device_id", id.deviceId);
+  rec.set("secret", id.secretHex);
+  rec.set("setup_pw", id.setupPassword);
+  rec.set("short_code", code);
+  if (!core::saveRecord(fileStore(), kPath, rec, kSchema)) return false;
+  core::saveRecord(fileStore(), kBackupPath, rec, kSchema);
+  id.shortCode = code;
+  return true;
+}

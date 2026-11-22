@@ -54,13 +54,21 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | Only **outdoor** sensors are forwarded to Sensor.Community | Founder |
 | 2026-11-22 | Sensor.Community registrations use the **public map cell center**, never the address | Founder |
 | 2026-11-22 | (Agent, within spec) While a phone is on the setup WiFi and used the page in the last 5 min, the sensor **pauses retrying an unreachable saved WiFi**; retries resume when the phone leaves or goes idle. The setup WiFi opens on the home network's channel (saved one if nearby, else strongest; US channels 1–11 only) | Founder's iPhone dropped off the setup WiFi after a wrong password and couldn't rejoin: the one radio kept leaving the setup channel to search. A working connection is never paused; spec's "keep retrying" still holds whenever nobody is using setup |
+| 2026-11-22 | #8 **Per-device stickers**: each kit card gets its own setup WiFi QR + owner QR (letter-size sticker sheets now, label printer later) | Founder; phone users type nothing |
+| 2026-11-22 | Labels: **segno** (BSD-3, pure Python, packing-laptop tool only) for QR codes; PDF layout written in-house (no PDF library) | Founder |
+| 2026-11-22 | Packing-laptop flasher: **esptool** via pip (GPL-2.0, Espressif's official tool; laptop only, nothing on the sensor). Recipients never flash anything | Founder |
+| 2026-11-22 | `factory/register` auth: **per-station keys** (long random key file per packing laptop, stored hashed in the backend, revocable one by one). No accounts | Founder |
+| 2026-11-22 | (Agent, within spec) OTA signatures are **RSA-2048** (the ESP8266 core's own signing format); OTA checks 2 min after first connecting, then daily + a per-device 0–59 min offset; stages bench → canary (stable per-device slice) → all; never downgrade | EC keys hit a length check bug in the core; offsets spread load |
+| 2026-11-22 | (Agent) **Release builds have OTA off** until the founder creates the production key (M11); the release guard fails if the dev key ever lands in a release build | Production key is founder-only and must be backed up offline |
+| 2026-11-22 | (Agent) Re-registering a board: unused (never uploaded) → same short code, new owner code (covers failed prints); in use → always refused; owner used "Delete my data" → only with `reprovision`, after the nightly archive purge finished, with every per-owner field reset (name, inside/outside, Sensor.Community registration, map entry). The tool never deletes data, and never erases a board that has a code or has uploaded | Privacy: a returned kit must never carry the previous owner's data to a new home; spec review |
+| 2026-11-22 | (Agent) Label layout: one kit per row of a letter sheet of 4"×2" stickers (10 per sheet), SETUP left, OWNER right; setup password also printed as text under the QR. **Wording is a draft** for founder approval | Rows keep a kit's two labels together; text fallback if a camera can't scan |
+| 2026-11-22 | (Agent) Corrected: the OTA size limit is the 1 MB max program size (not ~520 KB as I first wrote) | Read the core's Updater.cpp |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
 |---|---|---|---|
 | 1 | Final project/nonprofit name (ProseFire is a placeholder) | Before M9 labels | Used in AP name, domain, labels |
 | 2 | Wire colors in the kit (which jumper wires get bought) | M2/M10 | Red=VIN, black=G, two distinct colors for D1/D2; the guide shows colors |
-| 8 | Per-device QR stickers (needs a cheap label printer) vs generic card | M6/M9 | Per-device stickers: zero typing for phone users |
 | 11 | Include a USB wall charger in the kit? | M10 | Adds per-kit cost; most homes have a phone charger |
 | 12 | Pre-attach jumpers to the adapter at packing time? | M10 | Fewer recipient mistakes, more volunteer time |
 | 13 | Languages beyond EN + ES | M10 | NYC: Haitian Creole, Chinese, Bengali, Russian… |

@@ -29,6 +29,10 @@ class CommandLine {
   bool bad_ = false;
 };
 
+// "PFCMD SETCODE <code>": the packing laptop (tools/provision.py, M9) assigns the backend's short code. Valid only
+// with exactly 6 characters from kCodeAlphabet. Allowed under the same rule as setup info (setupInfoAllowed).
+bool parseSetCodeCommand(const char* line, std::string& code);
+
 // Setup info may be shown while the board has no factory short code, or within 60 s of boot.
 bool setupInfoAllowed(bool hasShortCode, uint32_t uptimeMs);
 

@@ -15,6 +15,11 @@ void uploaderBegin() {
   if (!gTrust) gTrust = new BearSSL::X509List(kPinnedRoots);  // parsed once; ~1.5 KB of heap
 }
 
+BearSSL::X509List* pinnedTrust() {
+  uploaderBegin();
+  return gTrust;
+}
+
 static uint32_t parseRetryAfter(const String& body) {
   int i = body.indexOf("\"retry_after_s\":");
   return i < 0 ? 0 : static_cast<uint32_t>(body.substring(i + 16).toInt());
