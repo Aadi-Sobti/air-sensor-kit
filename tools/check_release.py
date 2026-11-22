@@ -10,6 +10,10 @@ Fails if the release firmware could contain dev-only behavior:
      (a flashed .bin carries no symbol names, so the ELF is the only place a linked-in call shows up).
      Both skipped with --no-bin. The ELF check also covers third-party libraries.
 Dev-only code must live in firmware/src/dev/, which the release env excludes.
+
+Allowlist: exactly "http://192.168.4.1/", the sensor's own setup access point (captive-portal redirect). It is
+served by the device to a phone joined to the device's WPA2 setup network; no data goes over the internet, and
+HTTPS is impossible there (no certificate for a local IP, no internet to validate one).
 """
 from __future__ import annotations
 
@@ -20,7 +24,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC_FORBIDDEN = re.compile(r"setInsecure|http://|\bDEV_[A-Z0-9_]*|\bFAKE_PMS\b")
+ALLOWED_HTTP = "http://192.168.4.1/"
+SRC_FORBIDDEN = re.compile(r"setInsecure|http://(?!192\.168\.4\.1/)|\bDEV_[A-Z0-9_]*|\bFAKE_PMS\b")
 FLAG_FORBIDDEN = re.compile(r"DEV_|FAKE_PMS")
 BIN_FORBIDDEN = (b"http://",)
 ELF_FORBIDDEN = (b"setInsecure",)
@@ -77,7 +82,7 @@ def check_sources(fw: Path) -> list[str]:
 def scan_file(path: Path, needles) -> list[str]:
     if not path.exists():
         return [f"{path} not found: build the release env first (pio run -d firmware -e release)"]
-    data = path.read_bytes()
+    data = path.read_bytes().replace(ALLOWED_HTTP.encode(), b"")
     return [f"{path}: contains {s.decode()!r}" for s in needles if s in data]
 
 

@@ -2,6 +2,8 @@
 #pragma once
 #include <stdint.h>
 
+#include <string>
+
 #include "device_config.h"
 #include "identity.h"
 
@@ -13,3 +15,6 @@ typedef std::string (*ImprovRedirectFn)(bool fresh);
 void improvBegin(const Identity* id, ImprovSavedFn onSaved, ImprovRedirectFn redirect);
 void improvPoll(uint32_t nowMs, bool wifiConnected);  // reads Serial; non-blocking except network scans
 bool improvBusy();                                     // a credential test is running
+// Provides the setup AP name + password for the "PFCMD SETUPINFO" serial command (see improv_serial.cpp).
+typedef void (*SetupInfoFn)(std::string& ssid, std::string& password);
+void improvSetSetupInfo(SetupInfoFn fn);

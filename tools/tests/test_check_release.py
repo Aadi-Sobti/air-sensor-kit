@@ -100,3 +100,18 @@ def test_fake_pms_macro_outside_dev_fails(tmp_path):
 def test_real_platformio_ini_resolves():
     flags = cr.resolved_flags(cr.ROOT / "firmware" / "platformio.ini")
     assert "-Wall" in flags and "release" in flags and "DEV_" not in flags
+
+
+def test_only_the_local_setup_ap_address_is_allowed(tmp_path):
+    fw = make_fw(tmp_path, main='const char* u = "http://192.168.4.1/";\n')
+    assert cr.main(["--firmware-dir", str(fw), "--no-bin"]) == 0
+    for bad in ['"http://192.168.4.10/"', '"http://192.168.1.1/"', '"http://example.org"', '"http://192.168.4.1:8080/"']:
+        fw2 = make_fw(tmp_path / bad.strip('"').replace("/", "_").replace(":", "_"), main=f"auto u = {bad};\n")
+        assert cr.main(["--firmware-dir", str(fw2), "--no-bin"]) == 1, bad
+    b = fw / ".pio" / "build" / "release"
+    b.mkdir(parents=True)
+    (b / "firmware.elf").write_bytes(b"\x7fELF")
+    (b / "firmware.bin").write_bytes(b"\x00http://192.168.4.1/\x00")
+    assert cr.main(["--firmware-dir", str(fw)]) == 0
+    (b / "firmware.bin").write_bytes(b"\x00http://192.168.4.1/\x00http://x.org\x00")
+    assert cr.main(["--firmware-dir", str(fw)]) == 1

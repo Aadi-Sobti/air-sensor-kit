@@ -5,13 +5,31 @@
 #include <time.h>
 
 static bool gStaStarted = false;
-static bool gApLogged = false;
 static bool gNtpStarted = false;
 static std::string gSsid, gPass;
 static bool gTesting = false;
 static uint32_t gTestStart = 0;
 static char gTestReason[48] = "";
 static int gTestFailure = 3;  // WifiFailure::kTimeout
+static bool gApActive = false;  // set by the setup portal
+
+// One place decides the radio mode: station if we're using/testing a network, access point if the setup portal
+// is up. Both at once (AP+STA) while a phone user's credentials are being tested.
+static void applyMode() {
+  bool sta = gStaStarted || gTesting;
+  WiFiMode_t want = sta && gApActive ? WIFI_AP_STA : sta ? WIFI_STA : gApActive ? WIFI_AP : WIFI_OFF;
+  if (WiFi.getMode() == want) return;
+  if (want != WIFI_OFF) {
+    WiFi.forceSleepWake();
+    delay(2);
+  }
+  WiFi.mode(want);
+}
+
+void netSetApActive(bool on) {
+  gApActive = on;
+  applyMode();
+}
 
 void netBegin() {
   WiFi.persistent(false);  // credentials live in our /config, not the SDK's flash sector
@@ -25,25 +43,21 @@ void netApply(bool connectWifi, const DeviceConfig& cfg, bool apOn, uint32_t now
   if (connectWifi && cfg.hasWifi()) {
     if (!gStaStarted || gSsid != cfg.wifiSsid || gPass != cfg.wifiPass) {
       if (gStaStarted) WiFi.disconnect();  // new password for the same network: start over
-      WiFi.forceSleepWake();
-      WiFi.mode(WIFI_STA);
-      WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPass.c_str());
       gStaStarted = true;
+      applyMode();
+      WiFi.begin(cfg.wifiSsid.c_str(), cfg.wifiPass.c_str());
       gSsid = cfg.wifiSsid;
       gPass = cfg.wifiPass;
       Serial.println("[net] connecting to saved WiFi");  // never log SSID/password
     }
   } else if (gStaStarted) {
-    WiFi.disconnect(true);
-    WiFi.mode(WIFI_OFF);
+    WiFi.disconnect();
     gStaStarted = false;
+    applyMode();
     gSsid.clear();
     gPass.clear();
   }
-  if (apOn != gApLogged) {
-    gApLogged = apOn;
-    Serial.printf("[net] setup_ap=%s (access point is built in M6)\n", apOn ? "on" : "off");
-  }
+  (void)apOn;  // the setup portal (portal.cpp) owns the access point and calls netSetApActive()
   if (gStaStarted && WiFi.status() == WL_CONNECTED && !gNtpStarted) {
     // Time must be valid before TLS (cert dates). Two pools for redundancy.
     configTime(0, 0, "pool.ntp.org", "time.google.com");
@@ -58,9 +72,7 @@ bool timeValid() { return time(nullptr) > 1700000000; }  // after Nov 2023 = NTP
 void netTestBegin(const std::string& ssid, const std::string& pass) {
   gTesting = true;
   gTestStart = millis();
-  WiFi.forceSleepWake();
-  delay(2);  // the RF needs a moment after waking from forced sleep
-  WiFi.mode(WIFI_STA);
+  applyMode();  // STA (+ AP if the phone portal is up: the AP follows the router's channel during the test)
   WiFi.disconnect();
   WiFi.begin(ssid.c_str(), pass.c_str());
   gTestReason[0] = 0;
@@ -112,8 +124,11 @@ void netTestEnd() {
     gPass = WiFi.psk().c_str();
   } else {
     WiFi.disconnect();
+    applyMode();  // back to the saved network (netApply) or AP only
   }
 }
+
+bool netTesting() { return gTesting; }
 
 void netResyncTime() { gNtpStarted = false; }
 const char* netTestReason() { return gTestReason; }
