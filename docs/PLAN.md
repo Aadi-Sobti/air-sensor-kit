@@ -6,8 +6,13 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 
 **Current milestone:** M10 (drafts done; founder approval + user tests) · M9 built (founder checks pending) · M0–M8 merged to main 2026-11-22 · was: M5 (built + deployed to dev; founder browser checklist after the M4 soak) · M0–M3 merged, M4 in PR #5 + soak
 **Waiting on founder:**
-- [ ] 👤 4-day soak on home WiFi (founder 2026-11-22; was 7): board on 0.7.5 since 2026-11-22 (keep it plugged in; the agent records uptime, heap,
-      and uploads at the end). iPhone re-test passed 2026-11-22.
+- [x] Soak on home WiFi, fw 0.7.5 (planned 4 days; founder unplugged early 2026-11-24): **~58.7 h**, 2026-11-22 ~19:00Z →
+      last upload 2026-11-25 05:40Z (dev Firestore `readings_hourly`, read by ID). **1,376 uploads; every full hour had
+      23–24** (interval ~2.5 min + upload time), so no missed-upload gaps. Heap 36.1–36.6 KB across all 59 hours (no leak);
+      0 checksum errors, 0 sensor timeouts, 0 dropped frames; RSSI −71 to −34 dBm. **1 unexplained reboot** around
+      2026-11-23 06:30Z (uptime 39,312 s → 2,377 s; at most 1 upload lost), then **46.4 h** without a reboot. The cause
+      isn't known: uploads don't carry the reset reason (power blip, watchdog, or crash). Next: send the reset reason in
+      the upload health so a future reboot explains itself. iPhone re-test passed 2026-11-22.
 - [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
 - [ ] 👤 M10: approve the guide (`/guide`, ask the agent for a dev link), card, and volunteer drafts; add photos;
       price the long cable / charger options (#11) and decide #12; then run the first-user tests
@@ -138,6 +143,7 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       `logs/m4-soak-1795287726.log` (fw 0.3.0, iPhone hotspot): 1 boot / 0 reboots over 8,347 s, **54/54 uploads OK**,
       heap 36.5–37.4 KB (stable), min 7.4 KB during TLS, 0 checksum errors, 0 sensor timeouts, no secrets in the log.
       Full 24 h re-run pending when the board is back (on 0.5.0, together with the browser/phone checklists).
+      **Passed 2026-11-24 on 0.7.5:** 46.4 h continuous uptime, no upload gaps, heap flat at ~36 KB (see the soak item at top).
 - **Done when:** 👤 real-board readings appear in dev; 24 h soak passes (uptime, heap, ≥ 99% uploads).
 
 ### M5 Computer setup (USB + browser): primary path
@@ -405,6 +411,7 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
+- 2026-11-24 · Soak ended early (founder): ~58.7 h on 0.7.5, 1,376 uploads with no gaps, heap 36.1–36.6 KB, 0 sensor errors, 1 unexplained reboot then 46.4 h up · FUTURE: Fire Watch data sources (#14) + Home Beacon option · next: reset reason in upload health; founder M10 approvals + user tests.
 - 2026-11-22 · M10 drafts: /guide page (EN/ES, wiring diagram, 3 kit versions), card updated, first-user test kit; decisions #2, #13 · web 33 · next: founder approval, photos, user tests; 4-day soak running.
 - 2026-11-22 · M9 merged (#11). iPhone re-test: found + fixed an out-of-memory reboot loop in the new setup page (0.7.3 → 0.7.5); founder: "works perfectly" on 0.7.4; 0.7.5 via OTA, back on the map · native 91 · next: 7-day soak, founder M9 items.
 - 2026-11-22 · Merged M5–M8 (PRs #6–#10). M9: signed OTA (verified on hardware: update, unsigned rejected, recovery), factory endpoint (dev), SETCODE, provision.py + labels, RAM +3 KB · native 89, tools 48, backend 100 · next: spec-review fixes, founder: iPhone re-test, boards, label wording.
