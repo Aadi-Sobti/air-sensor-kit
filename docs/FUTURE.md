@@ -8,6 +8,10 @@ a firmware uploader/transport interface, server-side `lastSeen`, optional humidi
 - Offline buffering: store readings in LittleFS when uploads fail, then upload in batches later (no API change).
 - More languages, data-quality flags on the map.
 
+## Finished product, owner notices, first responders
+See `docs/PRODUCT_PLAN.md` (2026-11-25): printed case, "may need a replacement" and "higher than your usual" notices, optional app,
+a sellable v2 (ESP32-C3 module, FCC SDoC), family alerts, and a safe path for "I need help" to reach responders (never auto-dial 911).
+
 ## Phase 3: Fire Watch and Alerts integration
 Fire Watch is the founder's iOS and Android app (App Store id 6741443286, Android `com.aadisobti.firewatch`, v1.1.0, English) on Firebase.
 **Product shape (decided 2026-11-25):** two products that link together. The sensor never needs an app; Fire Watch adds sensor
