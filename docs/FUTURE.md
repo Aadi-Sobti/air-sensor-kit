@@ -105,5 +105,32 @@ Safety text: always "evacuate first"; never a smoke alarm replacement.
 **Validate before building:** (1) interview 10–20 older residents, caregivers, a senior center, and a fire department
 or CERT team; (2) 5 Meshtastic prototypes in one neighborhood, measuring range and alert delivery with WiFi off;
 (3) a pilot in one wildland-edge community with a fire-department partner, then grant funding.
+
+**Design choice first (open, founder):** the alarm must be **indoors** to wake people, but the smoke sensor is best
+**outdoors**. Recommended: **two boxes**, the v1 kit stays outside as the sensor and the beacon is an indoor alarm
+without a PMS (cheaper, v1 unchanged). Alternative: one indoor box with the PMS near a window (loses outdoor readings).
+
+**Cost estimate (2026-11-25; single-unit retail snapshots from different shops/dates, some in other currencies;
+get bulk quotes before deciding):**
+| Part | Job | Price found | Pilot pick |
+|---|---|---|---|
+| Heltec WiFi LoRa 32 V3 (ESP32-S3 + SX1262, LiPo charger on board) | Brain + WiFi + LoRa | $17.90–19.90 [Heltec](https://heltec.org/product-category/lora/lrnode/esp32-lora/); $29.97 US retail [Rokland](https://store.rokland.com/collections/heltec-products/products/heltec-wifi-lora-32v3) | $19 |
+| 915 MHz antenna | Range | ~$6 single [eBay](https://ebay.com/itm/233721694476); some boards include one | $3 |
+| 18650 cell + holder (or 3000 mAh LiPo, $16 [Meshnology](https://meshnology.com/collections/frontpage/products/3-7v-3000mah-rechargeable-battery-for-arduino-esp32)) | Runs through outages | $3.15–5.50 per cell [18650 Battery Store](https://www.18650batterystore.com/collections/all?page=19), [TME](https://www.tme.eu/dk/en/katalog/p,bak-battery_2030/) | $5 |
+| Piezo siren ~100 dB, 3–28 V | Alarm | ~$5–7 [Altronics](https://www.altronics.com.au/product/s6116-3-28v-continuous-tone-piezo-chassis-mount-alarm-siren) | $6 |
+| Bright LED/strobe + transistor | Light for people who are hard of hearing | estimate | $0.50 |
+| 2 large momentary buttons | I'm OK / I need help | $6.78 each economy 22 mm [Wolf](https://www.wolfautomation.com/pushbutton-economy-22mm-momentary-flush); generic far cheaper | $2 |
+| Indoor case | Housing (indoors: no IP65 needed) | $10.99 sealed IP65 box [Newegg Business](https://www.neweggbusiness.com/p/9B-072-001K-007A7) | $5 |
+| 5 V 1 A charger + USB cable | Power | $5.36 at 100+ [SparkFun](https://www.sparkfun.com/usb-wall-charger-5v-1a-black.html) | $5 |
+| Wires, screws | Assembly | estimate | $1.50 |
+| **Beacon, two-box design** | | | **≈ $47** |
+| + PMS5003 (one-box design) | Smoke sensor | $10–20 | **≈ $62** |
+Range across sellers ≈ $46–114. **5 pilot units ≈ $235–310** in parts.
+**At volume (custom PCB, estimate):** ESP32-S3 chip/board $3–4 ([Waveshare](https://www.waveshare.com/product/mcu-tools/development-boards.htm?mode=grid&p=3))
++ SX1262 module E22-900M22S $5–6.60 ([LCSC](https://www.lcsc.com/product-detail/C411293.html)) + PCB/assembly, bulk siren,
+case, charger (unquoted estimates) ≈ **$26 without PMS, $38–40 with it.** Needs manufacturer quotes.
+**Unknowns:** battery life (no published LoRa-listening current for the V3; measure on a prototype; switch the PMS fan
+off on battery). Lithium shipping rules. Use FCC-certified radio modules and check rules before distributing.
+Battery connector polarity differs between brands.
 **EPA AirNow Fire and Smoke Map:** currently shows PurpleAir sensors; EPA has a data acceptance protocol for
 other networks. Our single-PMS design (PurpleAir has two) and QC approach would need to meet its targets.
