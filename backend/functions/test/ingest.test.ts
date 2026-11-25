@@ -153,6 +153,15 @@ describe("ingest (emulator)", () => {
     assert.equal((await handleIngest(db, { ...badHeaders, method: "GET" }, NOW)).status, 405);
   });
 
+  it("stores the device's reset reason with the hour's health (fw 0.7.6+)", async () => {
+    const d = await enrolled();
+    const errors = { csum_err: 0, heap: 36000, reset_reason: 2, reset_exc: 28, reset_addr: 1075843636 };
+    const r = await handleIngest(db, req(d.id, d.secret, upload({ errors }, [reading(NOW_S - 5)])), NOW);
+    assert.equal(r.status, 200);
+    const h = (await db.doc(`readings_hourly/${d.id}_${hourKey(NOW_S)}`).get()).data()!.health;
+    assert.deepEqual(h.errors, errors);
+  });
+
   it("puts readings from an earlier hour into that hour's bucket", async () => {
     const d = await enrolled();
     const prev = NOW_S - 3600;

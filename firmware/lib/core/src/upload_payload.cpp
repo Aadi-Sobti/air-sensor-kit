@@ -4,6 +4,15 @@
 
 namespace core {
 
+void appendResetInfo(std::vector<std::pair<std::string, uint32_t>>& errors, uint32_t reason, uint32_t exccause,
+                     uint32_t epc1) {
+  errors.emplace_back("reset_reason", reason);
+  if (reason == 1 || reason == 2 || reason == 3) {  // watchdogs and crashes: where it happened
+    errors.emplace_back("reset_exc", exccause);
+    errors.emplace_back("reset_addr", epc1);
+  }
+}
+
 std::string jsonEscape(const std::string& s) {
   std::string o;
   o.reserve(s.size() + 2);

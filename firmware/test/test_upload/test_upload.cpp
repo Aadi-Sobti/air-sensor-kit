@@ -264,6 +264,26 @@ static void test_improv_result_and_state_frames() {
   TEST_ASSERT_TRUE(big.size() <= 9 + 255 + 1);
 }
 
+// Reset reason rides in the errors map; crash/watchdog details only when they mean something.
+void test_reset_info_fields() {
+  core::UploadInfo info;
+  info.fw = "0.7.6";
+  core::appendResetInfo(info.errors, 0, 29, 0x40201234u);  // power on: reason only
+  TEST_ASSERT_EQUAL_UINT32(1, info.errors.size());
+  TEST_ASSERT_EQUAL_STRING("reset_reason", info.errors[0].first.c_str());
+  TEST_ASSERT_EQUAL_UINT32(0, info.errors[0].second);
+  info.errors.clear();
+  core::appendResetInfo(info.errors, 2, 28, 0x40201234u);  // crash: cause + address
+  TEST_ASSERT_EQUAL_UINT32(3, info.errors.size());
+  std::string body = core::buildUploadJson(info, {});
+  TEST_ASSERT_NOT_NULL(std::strstr(body.c_str(),
+      "\"errors\":{\"reset_reason\":2,\"reset_exc\":28,\"reset_addr\":1075843636}"));
+  for (const auto& e : info.errors) {  // backend accepts only ^[a-z_]{1,24}$ keys (payload.ts)
+    TEST_ASSERT_TRUE(e.first.size() >= 1 && e.first.size() <= 24);
+    for (char c : e.first) TEST_ASSERT_TRUE((c >= 'a' && c <= 'z') || c == '_');
+  }
+}
+
 int main(int, char**) {
   UNITY_BEGIN();
   RUN_TEST(test_sha256_vectors);
@@ -271,6 +291,7 @@ int main(int, char**) {
   RUN_TEST(test_upload_signature_matches_backend_scheme);
   RUN_TEST(test_payload_shape);
   RUN_TEST(test_payload_setup_is_escaped);
+  RUN_TEST(test_reset_info_fields);
   RUN_TEST(test_pending_queue_drops_oldest);
   RUN_TEST(test_policy_cadence_and_backoff_with_jitter);
   RUN_TEST(test_policy_jitter_spreads_devices);
