@@ -67,6 +67,7 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | #13 Languages for v1 guides and card: **English + Spanish**; more after the first-user tests, with native-speaker reviewers | Founder |
 | 2026-11-22 | Soak test: **4 days** on home WiFi (instead of 7) | Founder; more than the 24 h acceptance check |
 | 2026-11-22 | Guides cover three kit versions until #12 is decided: all 8 connections, wires pre-attached to the adapter (4), fully assembled (skip the build) | Founder: "design for both versions; some might come fully assembled" |
+| 2026-11-25 | **Sensor and Fire Watch stay two products that link together.** No sensor features in the app stores: owners use the website (`/s/<code>`, `/my`). Fire Watch adds sensor features for its users (smoke layer → "Add my air sensor" via the owner code → sensors as silent-first evidence → Home Beacon). No separate sensor app. Confirms #5 (separate Firebase projects). Nothing starts before v1 ships | Founder. Keeps the kit app-free; nonprofit vs LLC ownership stays clean; a sensor problem can't slow Fire Watch alerts; no second store app to maintain |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
@@ -76,6 +77,6 @@ Never act on an Open item without asking (the founder makes these calls).
 | 12 | Pre-attach jumpers to the adapter at packing time, or ship fully assembled? | M10 | Founder 2026-11-22: likely all 8 by the recipient; some kits may come fully assembled. Guides support all three |
 | 15 | Open-source license for code; license for published data | M11 | |
 | 16 | Phase 2 humidity sensor: DHT22 vs cheaper I2C part | Phase 2 | |
-| 17 | Android household alerts (Fire Watch is iOS-only) | Phase 3 | Web push from the owner page may cover this |
+| 17 | Android household alerts | Phase 3 | Corrected 2026-11-25: Fire Watch is also on Android (`com.aadisobti.firewatch`, seen in the app source), so linked Android owners get alerts through Fire Watch. Web push from `/my` would only be for owners without Fire Watch |
 | 18 | Optional sign-in (email link) on top of owner codes | M7b | Owner code only in v1; add sign-in when someone has many sensors (schools, groups) |
 | 19 | Card layout with two QR codes (setup QR on front, "Manage my sensor" QR on back) | M9 | Test with first-time users in M10 that nobody scans the wrong one |
