@@ -26,6 +26,14 @@ struct UploadInfo {
   std::string claimTokenHash;  // 64 hex chars or empty
 };
 
+// Why the board last restarted, added to the upload's "errors" map (the backend already accepts any [a-z_] key).
+// reason = rst_info.reason from the ESP8266 SDK (tools/sdk/include/user_interface.h, enum rst_reason):
+// 0 power on, 1 hardware watchdog, 2 exception (crash), 3 software watchdog, 4 software restart (ESP.restart),
+// 5 deep-sleep wake, 6 reset pin. For crashes and watchdogs we also send the exception cause and the crash address
+// (epc1), which decodes against the release ELF to the function that crashed.
+void appendResetInfo(std::vector<std::pair<std::string, uint32_t>>& errors, uint32_t reason, uint32_t exccause,
+                     uint32_t epc1);
+
 std::string jsonEscape(const std::string& s);
 std::string buildUploadJson(const UploadInfo& info, const std::vector<UploadReading>& readings);
 

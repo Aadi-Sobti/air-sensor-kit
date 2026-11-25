@@ -11,8 +11,10 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
       23–24** (interval ~2.5 min + upload time), so no missed-upload gaps. Heap 36.1–36.6 KB across all 59 hours (no leak);
       0 checksum errors, 0 sensor timeouts, 0 dropped frames; RSSI −71 to −34 dBm. **1 unexplained reboot** around
       2026-11-23 06:30Z (uptime 39,312 s → 2,377 s; at most 1 upload lost), then **46.4 h** without a reboot. The cause
-      isn't known: uploads don't carry the reset reason (power blip, watchdog, or crash). Next: send the reset reason in
-      the upload health so a future reboot explains itself. iPhone re-test passed 2026-11-22.
+      isn't known: uploads don't carry the reset reason (power blip, watchdog, or crash). **0.7.6 (2026-11-24) sends it:**
+      `reset_reason` (SDK rst_reason: 0 power on, 1 HW watchdog, 2 crash, 3 SW watchdog, 4 ESP.restart, 6 reset pin)
+      every upload, plus `reset_exc` + `reset_addr` (decode against the ELF) after crashes/watchdogs. Unverified on the
+      board until it is plugged in again (OTA staged for the bench board). iPhone re-test passed 2026-11-22.
 - [ ] 👤 Chrome setup checklist (M5) and owner-page checklist (M7b), whenever convenient.
 - [ ] 👤 M10: approve the guide (`/guide`, ask the agent for a dev link), card, and volunteer drafts; add photos;
       price the long cable / charger options (#11) and decide #12; then run the first-user tests
@@ -411,7 +413,8 @@ Humidity sensor · offline buffering · more languages · Fire Watch integration
 
 ## Session log
 <!-- YYYY-MM-DD · what changed · evidence (command/result/log file) · next -->
-- 2026-11-24 · Soak ended early (founder): ~58.7 h on 0.7.5, 1,376 uploads with no gaps, heap 36.1–36.6 KB, 0 sensor errors, 1 unexplained reboot then 46.4 h up · FUTURE: Fire Watch data sources (#14) + Home Beacon option · next: reset reason in upload health; founder M10 approvals + user tests.
+- 2026-11-24 · Soak ended early (founder): ~58.7 h on 0.7.5, 1,376 uploads with no gaps, heap 36.1–36.6 KB, 0 sensor errors, 1 unexplained reboot then 46.4 h up · FUTURE: Fire Watch data sources (#14) + Home Beacon option · next: founder M10 approvals + user tests.
+- 2026-11-24 · fw 0.7.6: reset reason (+ crash cause/address) in upload health; test caught that the backend rejects digits in error keys (`reset_epc1` → `reset_addr`) · native 92, backend 102, release 544,127 B, guard OK · next: OTA to the bench board when it's plugged in, read `reset_reason` from dev.
 - 2026-11-22 · M10 drafts: /guide page (EN/ES, wiring diagram, 3 kit versions), card updated, first-user test kit; decisions #2, #13 · web 33 · next: founder approval, photos, user tests; 4-day soak running.
 - 2026-11-22 · M9 merged (#11). iPhone re-test: found + fixed an out-of-memory reboot loop in the new setup page (0.7.3 → 0.7.5); founder: "works perfectly" on 0.7.4; 0.7.5 via OTA, back on the map · native 91 · next: 7-day soak, founder M9 items.
 - 2026-11-22 · Merged M5–M8 (PRs #6–#10). M9: signed OTA (verified on hardware: update, unsigned rejected, recovery), factory endpoint (dev), SETCODE, provision.py + labels, RAM +3 KB · native 89, tools 48, backend 100 · next: spec-review fixes, founder: iPhone re-test, boards, label wording.

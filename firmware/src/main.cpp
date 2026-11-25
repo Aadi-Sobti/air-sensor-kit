@@ -1,4 +1,7 @@
 // M4 firmware: everything in M2 plus signed HTTPS uploads every ~2.5 min and Improv Wi-Fi over USB.
+extern "C" {
+#include <user_interface.h>  // struct rst_info (reset reason) for the upload health
+}
 #include <Arduino.h>
 #include <time.h>
 
@@ -152,6 +155,8 @@ static void maybeUpload(uint32_t now) {
                  {"sensor_ok", gPms->healthy(now) ? 1u : 0u},
                  {"dropped", gPending.dropped()},
                  {"heap", ESP.getFreeHeap()}};
+  const rst_info* ri = ESP.getResetInfoPtr();
+  core::appendResetInfo(info.errors, ri->reason, ri->exccause, ri->epc1);
   std::string claimSent = gClaimHash;
   info.claimTokenHash = claimSent;
   bool setupSent = core::attachSetupInfo(info, gCfg.setupInfoPending, gCfg.address, gCfg.zip, gCfg.indoor);
