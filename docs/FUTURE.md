@@ -70,5 +70,40 @@ sensor goes dark exactly when it matters.
 | Cellular (LTE-M/NB-IoT) | Module + monthly plan | Cell sites can also lose power |
 | "Last gasp" message | Small capacitor/battery | Cheap partial signal |
 The ESP8266 has no LoRa or Bluetooth, so most of these imply an ESP32-class revision.
+
+### Option: Fire Watch Home Beacon (v2 kit; founder idea 2026-11-24, NOT approved to build)
+**Problems it targets** (sources checked 2026-11-22):
+- Phone alerts fail when towers fail: in Lahaina (2023) all 21 cell towers serving West Maui failed and many residents
+  never got evacuation alerts ([NPR](https://www.npr.org/2024/04/17/1245396324/maui-fire-report-communications-breakdown),
+  [PBS](https://www.pbs.org/newshour/nation/maui-sues-cell-carriers-over-text-message-alerts-that-were-never-received-during-lahaina-wildfires)).
+  Every phone app (Fire Watch, Watch Duty) depends on cell service.
+- Most victims are older or disabled: 26 of 31 in the January 2025 LA fires (median age 76;
+  [CA Commission on Aging](https://www.ccoa.ca.gov/docs/Publications/2025/CCoA%20Disaster%20Response%20and%20Recovery%20Policy%20Brief.pdf));
+  Camp Fire victims averaged 71 ([SF Chronicle](https://preview-prod.w.sfchronicle.com/california-wildfires/article/Camp-Fire-victims-13450654.php)).
+  Evacuation centers lacked data on who needed help.
+
+**What it is:** a battery-backed box in each home (ESP32 + LoRa + the PMS sensor) that:
+1. Relays Fire Watch **confirmed** alerts and official evacuation orders house to house over LoRa, with no cell or
+   internet needed (one connected beacon, or a solar relay at a school/fire station, is enough).
+2. Sounds a loud alarm + strobe in the home (reaches people without smartphones, asleep, or hard of hearing).
+3. Has two big buttons, **"I'm OK" / "I need help"**, sent over the mesh to opted-in neighbors and Fire Watch, giving
+   responders a live picture of who still needs help evacuating.
+4. Keeps measuring smoke, so each beacon also grows the sensor network.
+
+**Already exists (pieces, not this combination):** [Meshtastic](https://meshtastic.org/) (open-source LoRa mesh),
+[MeshWX Pro](https://meshwxpro.com/) (NWS alerts over LoRa), LoRa home-security sirens (e.g. YoLink), NOAA Weather
+Radio (no cell needed, but NWS warnings only). No wildfire product found that combines alerts, in-home alarm,
+check-in buttons, and air sensing. Our edge is distribution (free kits via senior centers, community groups, fire
+departments) and community trust, not the technology itself.
+
+**Catches:** higher cost per kit (radio board, battery, alarm; get quotes first), so it is a **v2 kit, never v1**.
+LoRa range in dense cities must be measured. Alarms only for confirmed alerts and official orders, or people unplug
+them. "Needs help" data is sensitive: opt-in only, shared only with chosen neighbors and responders, covered by the
+privacy rules. Liability: build it with a fire department or emergency-management partner, not around them.
+Safety text: always "evacuate first"; never a smoke alarm replacement.
+
+**Validate before building:** (1) interview 10–20 older residents, caregivers, a senior center, and a fire department
+or CERT team; (2) 5 Meshtastic prototypes in one neighborhood, measuring range and alert delivery with WiFi off;
+(3) a pilot in one wildland-edge community with a fire-department partner, then grant funding.
 **EPA AirNow Fire and Smoke Map:** currently shows PurpleAir sensors; EPA has a data acceptance protocol for
 other networks. Our single-PMS design (PurpleAir has two) and QC approach would need to meet its targets.
