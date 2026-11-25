@@ -9,7 +9,9 @@ a firmware uploader/transport interface, server-side `lastSeen`, optional humidi
 - More languages, data-quality flags on the map.
 
 ## Phase 3: Fire Watch and Alerts integration
-Fire Watch is the founder's iOS app (App Store id 6741443286, v1.1.0, English, iOS 15+) on Firebase.
+Fire Watch is the founder's iOS and Android app (App Store id 6741443286, Android `com.aadisobti.firewatch`, v1.1.0, English) on Firebase.
+**Product shape (decided 2026-11-25):** two products that link together. The sensor never needs an app; Fire Watch adds sensor
+features for people who already use it.
 **What it does today** (App Store listing, read 2026-11-22):
 - NASA satellite hotspots (FIRMS) + user reports. One satellite detection or a camera-checked report = **possible**
   fire; independent confirmations upgrade it to **confirmed**.
@@ -31,7 +33,7 @@ Fire Watch is the founder's iOS app (App Store id 6741443286, v1.1.0, English, i
 4. **Linking + household alerts:** in Fire Watch → *Add my air sensor* → scan the card's Manage QR (or type
    the owner code). Fire Watch's backend calls our partner-link API (`POST /api/v1/links`, see backend rule) and
    gets a revocable, scoped link. The owner then gets Fire Watch alerts when their sensor or nearby sensors see smoke,
-   and can unlink on `/my`. Android households: web push from `/my` may cover them (decision #17).
+   and can unlink on `/my`. This works on iOS and Android; web push from `/my` is only for owners without Fire Watch (decision #17).
 5. **"Gone silent" clusters:** many sensors in one area going offline together can mean power or network
    loss near a fire. A weak signal.
 Interface: an event stream (Pub/Sub or webhook) between the two Firebase projects, with a documented schema.
