@@ -91,8 +91,9 @@ Never act on an Open item without asking (the founder makes these calls).
 | 27 | Build the Home Beacon pilot, and when | After v1 ships | Yes, after v1: start with 2 bench units, then 5 prototypes (`docs/HOME_BEACON.md`). ≈ $83 per pilot unit at verified US prices |
 | 28 | Beacon: two boxes (sensor outside + beacon inside) or one box with the PMS | Before pilot | Two boxes; one box adds ≈ $18–30 and only reads indoor air |
 | 29 | Beacon firmware: Meshtastic (GPL-3.0) or our own minimal firmware | Before pilot | Meshtastic for the pilot (our changes published under GPL-3.0; beacons stay reflashable over USB) |
-| 30 | Beacon radio board: Heltec V3 or V4 | Before ordering | V3 (proven, $17.90–19.90); V4 has a stronger radio (28 dBm) and solar input |
+| 30 | Beacon radio board: Heltec V3, Heltec V4.3 R2, RAK3312 kit, or Seeed XIAO kit | Before ordering | Updated 2026-11-26 (`docs/HOME_BEACON.md` §3a): not the V3. Bench-test a Heltec V4.3 R2 ($17.90) and a RAK3312 kit ($28.99, modular FCC approval, lower battery drain) with Meshtastic, then pick; lean toward the RAK3312 for a future product |
 | 31 | Alarm for deaf / hard-of-hearing residents: certified strobe or bed shaker | Before partner pilot | Add one for households that need it; the LED light is not a certified visual alarm |
 | 32 | "I need help" sharing in the pilot: household circle only, or also a partner view | Before 5-prototype pilot | Household circle only; partner view with a fire-department partner later |
-| 33 | Beacon battery: 4400 mAh ($19.95) or 6600 mAh ($24.50) | Before ordering | 4400 mAh for bench units; decide after measuring real current |
+| 33 | Beacon battery: 4400 mAh ($19.95), 6600 mAh ($24.50) or 10,050 mAh ($29.95) | Before ordering | Updated 2026-11-26: the protected 10 Ah Adafruit 5035 (lowest cost per Ah, ~2.3× the runtime of the 4400 mAh pack for $10 more); the case needs a bigger battery bay |
+| 35 | Beacon alarm: louder Same Sky CPS-7560-110L450 ($9.37, ~95 dB at 3 m) or the current SparkFun COM-13939 ($7.95, ~84–88 dB) | Before ordering | The louder one: about 10 dB above the smoke-alarm yardstick, for $1.42 more |
 | 34 | Who builds pilot beacons (soldering required) | Before 5-prototype pilot | Founder + volunteers with a test sheet per unit, or a maker partner |
