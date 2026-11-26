@@ -70,6 +70,46 @@ range keep hopping between houses.
 - **Placement trade-off:** it only reads *indoor* air unless it's placed near a window. That's why two boxes are
   recommended (decision #28).
 
+### 3a. Parts check (2026-11-26): are these the cheapest and the best?
+**Short answer: no.** The parts above were picked to be easy to buy and well documented, not cheapest or best. A second
+check compared every part with the alternatives, using prices from each seller's own page on 2026-11-26. Each price was
+then re-checked by a separate reviewer. DigiKey and Mouser blocked automated checks, so their prices are marked.
+
+**Out of stock today:** the Adafruit 5802 power supply (line 8), the FeatherWing Proto (line 7) and the Adafruit 355
+MOSFET (line 6). The 12 V LED strip (line 9) is discontinued.
+
+| Part | Current pick | Cheapest that works | Best | Why |
+|---|---|---|---|---|
+| Radio board | Heltec V3 $17.90 | **Seeed XIAO ESP32S3 + Wio-SX1262 kit, $11.99** (US warehouse, duty-free) ([Seeed](https://www.seeedstudio.com/Wio-SX1262-with-XIAO-ESP32S3-p-5982.html)) | **RAK WisMesh RAK3312 starter kit (RAK19007 base), $28.99** ([RAK](https://store.rakwireless.com/products/meshtastic-starter-kit-esp32-s3-lora-sx1262)) | The V3 is neither. **Seeed:** WiFi + LoRa, both radio parts FCC modular-approved, but only community-level Meshtastic support and a slow 100 mA charger. **RAK3312:** the only WiFi + LoRa board with a modular FCC approval (2AF6B-3112; the $15 bare module can go on our own board later), full Meshtastic support, a 350 mA charger and a JST-PH plug that fits the battery. Its LoRa receive draw is 25 mA (module, WiFi off) vs the V3's 90 mA (whole board), so it should last much longer on battery; bench-measure to confirm. It has only about 4–6 free pins (enough for 2 buttons, siren and light). **Same-price upgrade:** the **Heltec V4.3 R2, $17.90** ([Heltec](https://heltec.org/project/wifi-lora-32-v4-r2/)) has the same pin plan as the V3, a 540 mA charger, 75 mA listening and a stronger radio |
+| Ready-made device instead | n/a | Elecrow ThinkNode M2, $20.90 without battery (FCC 2BDNA-CL06) | none | No ready-made Meshtastic node has a smoke-alarm-loud siren or big buttons, and the long-battery ones have no WiFi. A ready-made node + siren comes out the same or higher than DIY. **Keep the DIY beacon** |
+| Battery | Adafruit 354 4400 mAh $19.95 | Keep the 354 (a loose protected 18650 + holder saves ~$4 in parts, but two extra shops' shipping cancels it for 5 units) | **Adafruit 5035 10,050 mAh, $29.95** ([Adafruit](https://www.adafruit.com/product/5035)) | Protected, lowest cost per Ah ($2.98 vs $4.53), about 2.3× the runtime for $10 more, and 37 Wh (under the 100 Wh mailing limit). Neither Heltec board has its own battery-protection chip, so always use a protected pack |
+| Alarm | SparkFun COM-13939 + Pololu 12 V boost ($15.90) | Same Sky CPI-5029-105T $7.25 + boost (meets 85 dB at 3 m on paper, **no margin**, only 39 in stock) | **Same Sky CPS-7560-110L450, $9.37** + the same boost | It's guaranteed 105 dB at 1 m, about 95 dB at 3 m: roughly 10 dB above the smoke-alarm yardstick (UL 217: 85 dBA at 10 ft, [CPSC report](https://www.cpsc.gov/s3fs-public/audibility%20(1).pdf)). The current pick only just reaches it (~84–88 dB), and a closed door takes ~10 dBA. **$1.42 more** |
+| Siren/light driver | Adafruit 355 MOSFET $2.25 ×2 (out of stock) | PN2222 transistors, 10 for $1.95 ([Adafruit 756](https://www.adafruit.com/product/756)) | Infineon IRLZ44N ×2 (~$1.80 each, Mouser, tariff note), or Adafruit 5648 driver boards ($3.95 each, no soldering of small parts) | The loads are small (siren ~0.15 A at 12 V) |
+| Buttons | Adafruit 30 mm LED buttons $2.50 ×2 | same | same (a 60 mm "I need help" button, $5.95, for older users needs a bigger case) | Nothing cheaper with an LED from a listed shop. Check the red one's LED brightness at 3.3 V |
+| Wall power | Adafruit 5802 (out of stock) | Adafruit 5801, $5.95 (same UL file), after a bench test | **Adafruit 501 UL-listed 5 V supply + USB-A-to-C cable, $8.90** | Meshtastic warns the Heltec V3 may not charge its battery over USB-C-to-C, and the 5801/5802 have an on/off switch a resident could turn off, after which the battery quietly drains |
+| Light | 12 V strip (discontinued) | Adafruit 5864 strip, a 5 cm cut ≈ $0.40 | same, plus a **bed shaker** ($17.99, Sonic Alert) for deaf or hard-of-hearing households | The LED isn't a certified visual alarm (decision #31) |
+| Solder board | FeatherWing Proto (out of stock) | SparkFun PRT-08808, ≈ $1.48 | same | |
+
+**Three ways to build one pilot beacon** (single-unit prices, plus about $6 of resistors, wire, battery adapter and
+printed case):
+| Build | Board | Battery | Alarm and driver | Power | Per beacon | Battery while off-grid (*estimate*, before bench tests) |
+|---|---|---|---|---|---|---|
+| **Lean** | Seeed XIAO kit $11.99 | Adafruit 354 4.4 Ah | CPI-5029-105T + boost + PN2222 | 501 + cable | **≈ $69** | ~1.5–3 days awake; more in power-save |
+| **Balanced** | Heltec V4.3 R2 $17.90 | Adafruit 5035 10 Ah | CPS-7560 + boost + IRLZ44N | 501 + cable | **≈ $90** | ~4–5 days awake |
+| **Best** | RAK3312 kit $28.99 | Adafruit 5035 10 Ah | CPS-7560 + boost + IRLZ44N | 501 + cable | **≈ $101** | possibly 1–2 weeks (if the 25 mA figure holds) |
+| Plan as written | Heltec V3 | 354 4.4 Ah | COM-13939 + boost + 355 | 5802 | ≈ $83 | ~1.5–2 days awake |
+
+**Recommendation:**
+- **Bench test before choosing a board:** buy one **Heltec V4.3 R2** ($17.90) and one **RAK3312 kit** ($28.99), about
+  $47. Measure real battery drain, charging and free pins with Meshtastic, then order 5 of the winner.
+- **For a future product, lean toward the RAK3312:** its certified module is what we'd put on our own board, and battery
+  life during an outage is the beacon's whole point.
+- **Pick the louder siren and the 10 Ah battery either way.** Both are about safety, and the extra cost is small.
+- **The case:** the generated case fits the Heltec V3/V4 and the 4,400 mAh pack. A RAK board or the 10 Ah pack needs the
+  board pocket and battery bay resized (`hardware/beacon/make_beacon_case.py` parameters).
+- **Not checked:** shipping, tariffs and DigiKey/Mouser prices. Mouser shows tariff notes of 10–38% on some imported
+  parts.
+
 ## 4. Wiring
 ### Pin map (Heltec V3)
 Sources:

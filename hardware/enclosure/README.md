@@ -8,7 +8,7 @@ tested yet.** Print one, run the test list at the bottom, then adjust the sizes 
 | `stl/shell.stl` | Roof, four walls, open-bottom rain skirt, mounting ears | Roof flat on the bed (it's already oriented). No supports. |
 | `stl/insert.stl` | Tray that holds the air sensor and the WiFi board | Floor flat on the bed. No supports. |
 
-Size: body 107 × 72 × 67 mm (135 mm wide with the mounting ears). Inside: 52 mm tall.
+Size: body 107 × 72 × 67 mm (135 mm wide with the mounting ears). Inside: 52 mm tall. Picture: `case_preview.png`.
 
 ## How it works
 - **The air sensor stands on its air-opening face** over a fully open window in the tray floor. Air comes up
