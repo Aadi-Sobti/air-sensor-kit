@@ -68,6 +68,7 @@ Never act on an Open item without asking (the founder makes these calls).
 | 2026-11-22 | Soak test: **4 days** on home WiFi (instead of 7) | Founder; more than the 24 h acceptance check |
 | 2026-11-22 | Guides cover three kit versions until #12 is decided: all 8 connections, wires pre-attached to the adapter (4), fully assembled (skip the build) | Founder: "design for both versions; some might come fully assembled" |
 | 2026-11-25 | **Sensor and Fire Watch stay two products that link together.** No sensor features in the app stores: owners use the website (`/s/<code>`, `/my`). Fire Watch adds sensor features for its users (smoke layer → "Add my air sensor" via the owner code → sensors as silent-first evidence → Home Beacon). No separate sensor app. Confirms #5 (separate Firebase projects). Nothing starts before v1 ships | Founder. Keeps the kit app-free; nonprofit vs LLC ownership stays clean; a sensor problem can't slow Fire Watch alerts; no second store app to maintain |
+| 2026-11-25 | **Setup always works without an app**; an optional app may come later. Owners get ways to manage a sensor after setup (replacement notices, "indoor air higher than your usual" notices). Long-term: sell a **finished product**, not only kits; link "I need help" to first responders in the Home Beacon phase. Plan and sources: `docs/PRODUCT_PLAN.md` | Founder direction; updates the same-day "no sensor app" line: still no app *required*. No v1 change; items needing a call are #20–#26 |
 
 ## Open (ask before building the part that needs it; ordered by when it's needed)
 | # | Question | Needed by | Recommendation / notes |
@@ -80,3 +81,10 @@ Never act on an Open item without asking (the founder makes these calls).
 | 17 | Android household alerts | Phase 3 | Corrected 2026-11-25: Fire Watch is also on Android (`com.aadisobti.firewatch`, seen in the app source), so linked Android owners get alerts through Fire Watch. Web push from `/my` would only be for owners without Fire Watch |
 | 18 | Optional sign-in (email link) on top of owner codes | M7b | Owner code only in v1; add sign-in when someone has many sensors (schools, groups) |
 | 19 | Card layout with two QR codes (setup QR on front, "Manage my sensor" QR on back) | M9 | Test with first-time users in M10 that nobody scans the wrong one |
+| 20 | Replace the kit's box + tubing with the printed case (`hardware/enclosure/`)? Changes recipient steps/wording | M10 | Print one, run its test list (fit, side-by-side readings vs bare sensor *and* vs box + tubing, hose test, sun, 2–4 week soak) first. ≈ $1.50–2.00 plastic + 3–5 h print per case |
+| 21 | Indoor "higher than your usual" notice: on or off by default? | When built (`/my`) | On for indoor sensors, with quiet hours and once per event |
+| 22 | Optional phone app for setup + manage | After M10 user tests | Build only if testers struggle with setup; `/my` already manages |
+| 23 | FCC status of giving the public assembled kits (47 CFR 15.3(p), 15.23) | Before scaling kit distribution | Ask an FCC test lab/TCB or communications lawyer (founder-only contact) |
+| 24 | Retail price of a finished sensor | v2 | Target ≈ $60–90; every public-map competitor is $209+ |
+| 25 | One or two PMS sensors in the finished outdoor unit | v2 | Two (≈ +$10–20) if we want the EPA Fire and Smoke Map's A/B check |
+| 26 | Family / "loved ones" alerts: inside Fire Watch first, or a separate nonprofit app | Phase 3 | Fire Watch first; a nonprofit app later with the Home Beacon if the nonprofit should own it |
