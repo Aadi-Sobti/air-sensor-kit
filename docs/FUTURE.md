@@ -78,6 +78,7 @@ sensor goes dark exactly when it matters.
 The ESP8266 has no LoRa or Bluetooth, so most of these imply an ESP32-class revision.
 
 ### Option: Fire Watch Home Beacon (v2 kit; founder idea 2026-11-24, NOT approved to build)
+**Full build plan (parts, wiring, firmware, printable case, tests, pilot): `docs/HOME_BEACON.md` (2026-11-25).**
 **Problems it targets** (sources checked 2026-11-22):
 - Phone alerts fail when towers fail: in Lahaina (2023) all 21 cell towers serving West Maui failed and many residents
   never got evacuation alerts ([NPR](https://www.npr.org/2024/04/17/1245396324/maui-fire-report-communications-breakdown),
