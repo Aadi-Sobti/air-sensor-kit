@@ -88,3 +88,11 @@ Never act on an Open item without asking (the founder makes these calls).
 | 24 | Retail price of a finished sensor | v2 | Target ≈ $60–90; every public-map competitor is $209+ |
 | 25 | One or two PMS sensors in the finished outdoor unit | v2 | Two (≈ +$10–20) if we want the EPA Fire and Smoke Map's A/B check |
 | 26 | Family / "loved ones" alerts: inside Fire Watch first, or a separate nonprofit app | Phase 3 | Fire Watch first; a nonprofit app later with the Home Beacon if the nonprofit should own it |
+| 27 | Build the Home Beacon pilot, and when | After v1 ships | Yes, after v1: start with 2 bench units, then 5 prototypes (`docs/HOME_BEACON.md`). ≈ $83 per pilot unit at verified US prices |
+| 28 | Beacon: two boxes (sensor outside + beacon inside) or one box with the PMS | Before pilot | Two boxes; one box adds ≈ $18–30 and only reads indoor air |
+| 29 | Beacon firmware: Meshtastic (GPL-3.0) or our own minimal firmware | Before pilot | Meshtastic for the pilot (our changes published under GPL-3.0; beacons stay reflashable over USB) |
+| 30 | Beacon radio board: Heltec V3 or V4 | Before ordering | V3 (proven, $17.90–19.90); V4 has a stronger radio (28 dBm) and solar input |
+| 31 | Alarm for deaf / hard-of-hearing residents: certified strobe or bed shaker | Before partner pilot | Add one for households that need it; the LED light is not a certified visual alarm |
+| 32 | "I need help" sharing in the pilot: household circle only, or also a partner view | Before 5-prototype pilot | Household circle only; partner view with a fire-department partner later |
+| 33 | Beacon battery: 4400 mAh ($19.95) or 6600 mAh ($24.50) | Before ordering | 4400 mAh for bench units; decide after measuring real current |
+| 34 | Who builds pilot beacons (soldering required) | Before 5-prototype pilot | Founder + volunteers with a test sheet per unit, or a maker partner |
