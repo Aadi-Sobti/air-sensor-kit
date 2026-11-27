@@ -204,10 +204,11 @@ cost of thousands of dollars; get quotes). The Home Beacon section of `FUTURE.md
   - family see "near Mom's home", never the address.
 
 ## 6. First responders: "who needs help" (Home Beacon phase)
-This could save lives: in the Camp Fire, 60% of deaths happened within 4 hours, and welfare-check requests were
-logged after neighborhoods had already burned
-([NIST TN 2252](https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.2252.pdf)). It must be built **with**
-agencies, not around them.
+This could save lives. In the Camp Fire, 60% of entrapments (35 of 58) happened between 8:00 and noon. Crews
+responded to 83% of entrapments but only 44% of non-urgent "help me leave" requests. At least 42% of the people who
+died had a mobility or medical condition, and 87% were found at home
+([NIST TN 2252](https://nvlpubs.nist.gov/nistpubs/TechnicalNotes/NIST.TN.2252.pdf), via NIST's summary slides). It
+must be built **with** agencies, not around them. The partner view's design is in `docs/PARTNER_VIEW.md`.
 
 **What the rules and experience say:**
 - **Never auto-dial 911.** Some states ban devices that call 911 by themselves (Illinois 50 ILCS 750/15.2a, a
@@ -216,8 +217,10 @@ agencies, not around them.
 - **Agencies are wary of registries.**
   - California's emergency agency strongly discourages voluntary disaster registries: they go stale, few people
     sign up, and they create false expectations of rescue.
-  - In Houston during Hurricane Harvey, fewer than 5% of registrants were contacted.
-  - **NYC has no registry.** It alerts organizations that serve people with disabilities instead.
+  - The National Council on Disability (2023) reports that in Houston during Hurricane Harvey, fewer than 5% of
+    registrants were contacted.
+  - **NYC uses its Advance Warning System** (alerts to organizations that serve people with disabilities) and
+    door-to-door canvassing after emergencies, rather than a registry.
 - **What helps:** current, time-stamped information that agencies can **pull** during an incident. After the
   2025 Eaton fire, the LA County Sheriff built a "Citizen Evacuation Tracker" of who has and hasn't evacuated.
   Plans that work go through **CERT teams, independent-living centers and neighborhood groups**.
