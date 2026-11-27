@@ -23,7 +23,8 @@ The plan is in [`docs/HOME_BEACON.md`](../../docs/HOME_BEACON.md).
 |---|---|---|
 | Heltec WiFi LoRa 32 V3 | 50.2 × 25.5 × 10.2 mm | [Heltec product page](https://heltec.org/project/wifi-lora-32-v3/), [datasheet V3.2](https://resource.heltec.cn/download/WiFi_LoRa_32_V3/HTIT-WB32LA_V3.2.pdf) |
 | OLED window position | 7 mm from the antenna end, 27 × 15 mm window | **Not in the datasheet text. Measure before printing** (`Parts.oled_*`) |
-| SparkFun COM-13939 piezo alarm | Ø35.8 × 35.7 mm | [SparkFun listing](https://www.sparkfun.com/large-piezo-alarm-16-tone.html) |
+| Alarm (prototype, Amazon): Wishiot 12 V mini piezo siren | 47 × 39 × 23.5 mm (`Parts.siren_l/w/h`) | Amazon B0BJDL3G7T listing spec; seller claims 110 dB at 1 m. For the round SparkFun COM-13939 (Ø35.8 × 35.7 mm, [SparkFun](https://www.sparkfun.com/large-piezo-alarm-16-tone.html)) set 35.8 / 35.8 / 35.7 |
+| Circuit board depth inside the Heltec V3 | front 5.5 mm, back 7.1 mm behind the OLED face; battery socket near the USB end reaches 10.2 | Heltec datasheet V3.2 §4 drawing (board holders are 9 mm deep so they grip the board's edge) |
 | Adafruit 30 mm arcade button | 30 mm hole; panel up to ~20 mm | [Adafruit 3487](https://www.adafruit.com/product/3487) |
 | Arcade button body behind the panel | Ø33 × 33 mm | **Not published. Measure before printing** (`Parts.button_body_*`) |
 | Adafruit 354 battery pack (2 × 18650) | 69 × 37 × 18 mm | [Adafruit 354](https://www.adafruit.com/product/354) |

@@ -34,14 +34,21 @@ class Parts:
     board_l: float = 50.2
     board_w: float = 25.5
     board_t: float = 10.2
+    # From the OLED face: the circuit board's front is ~5.5 mm back and its back ~7.1 mm back (datasheet drawing,
+    # section 4); only the battery socket near the USB end sticks out further behind it (to board_t).
+    pcb_front: float = 5.5
+    pcb_back: float = 7.1
+    back_parts_from_usb_end: float = 14.0  # conservative zone for the battery socket on the back
     # OLED window, measured along the board from its antenna end (opposite USB-C). NOT in the datasheet text:
     # measure before printing (the window is deliberately generous).
     oled_from_end: float = 7.0
     oled_len: float = 27.0
     oled_h: float = 15.0
-    # SparkFun COM-13939 piezo alarm: diameter 35.8, height 35.7 (SparkFun listing)
-    siren_d: float = 35.8
-    siren_h: float = 35.7
+    # Alarm: the Amazon prototype part, a square 12 V piezo siren with mounting ears, 47 x 39 x 23.5 mm (Wishiot
+    # listing, 6-15 V, 110 dB claimed at 1 m). For the round SparkFun COM-13939 use 35.8 x 35.8 x 35.7.
+    siren_l: float = 47.0  # along the width of the case
+    siren_w: float = 39.0  # front to back
+    siren_h: float = 23.5
     # Adafruit 30 mm arcade button (3487/3489): needs a 30 mm hole (Adafruit listing). Body size behind the panel is
     # not published: measure before printing.
     button_hole_d: float = 30.0
@@ -84,7 +91,8 @@ BOARD_X1 = W - 0.8  # USB-C end close to the right wall so the plug reaches the 
 BOARD_X0 = BOARD_X1 - P.board_l
 BOARD_Z0, BOARD_Z1 = 62.0, 62.0 + P.board_w
 BOARD_Y0, BOARD_Y1 = F.gap, F.gap + P.board_t  # OLED side against the front panel
-SIREN_X, SIREN_Y = 27.0, 20.0
+SIREN_X, SIREN_Y = 31.0, 25.0  # centre of the siren's footprint (clear of the top-left screw boss)
+RIB_DEPTH = 9.0  # board holders reach past the circuit board's edge (it sits ~5.5-7.1 mm behind the OLED face)
 SIREN_Z0 = H - P.siren_h - 0.5
 LED_X0, LED_Z0 = BOARD_X0, 49.0
 BTN = [(30.0, 26.0), (82.0, 26.0)]  # (x, z) centres: left = "I'm OK" (green), right = "I need help" (red)
@@ -139,24 +147,26 @@ def make_front() -> Manifold:
     for (x, z) in BOSSES:
         shell += ycyl(x, z, 0, D, F.boss_d)
         shell -= ycyl(x, z, 6, D + 1, F.screw_pilot)
-    # board holders: L-shaped corner ribs, 6 mm deep, around the board outline (corners only: header pins run along
-    # the long edges)
+    # board holders: L-shaped corner ribs around the board outline, deep enough to hold the circuit board's edge
+    # (corners only: header pins run along the long edges)
     g = F.gap / 2
     for (x, z, sx, sz) in ((BOARD_X0 - g, BOARD_Z0 - g, -1, -1), (BOARD_X1 + g, BOARD_Z0 - g, 1, -1),
                            (BOARD_X0 - g, BOARD_Z1 + g, -1, 1), (BOARD_X1 + g, BOARD_Z1 + g, 1, 1)):
         if sx > 0:
             continue  # the right wall itself holds the USB end
-        shell += box(min(x, x + sx * 1.6), 0, min(z, z - sz * 6), max(x, x + sx * 1.6), 6, max(z, z - sz * 6))
-        shell += box(min(x + sx * 1.6, x - sx * 6), 0, min(z, z + sz * 1.6), max(x + sx * 1.6, x - sx * 6), 6,
+        shell += box(min(x, x + sx * 1.6), 0, min(z, z - sz * 6), max(x, x + sx * 1.6), RIB_DEPTH,
+                     max(z, z - sz * 6))
+        shell += box(min(x + sx * 1.6, x - sx * 6), 0, min(z, z + sz * 1.6), max(x + sx * 1.6, x - sx * 6), RIB_DEPTH,
                      max(z, z + sz * 1.6))
-    shell += box(BOARD_X1 - 12, 0, BOARD_Z0 - g - 1.6, BOARD_X1 - 4, 6, BOARD_Z0 - g)  # ledge under the USB end
+    shell += box(BOARD_X1 - 12, 0, BOARD_Z0 - g - 1.6, BOARD_X1 - 4, RIB_DEPTH, BOARD_Z0 - g)  # ledge under the USB end
     # siren holder: a shelf under it and two side walls (printable: they rise from the front panel)
-    sx0, sx1 = SIREN_X - P.siren_d / 2 - g, SIREN_X + P.siren_d / 2 + g
-    shell += box(sx0 - 1.6, 0, SIREN_Z0 - 2.0, sx1 + 1.6, SIREN_Y + P.siren_d / 2 + 1, SIREN_Z0)
+    sx0, sx1 = SIREN_X - P.siren_l / 2 - g, SIREN_X + P.siren_l / 2 + g
+    sy1 = SIREN_Y + P.siren_w / 2 + 1
+    shell += box(sx0 - 1.6, 0, SIREN_Z0 - 2.0, sx1 + 1.6, sy1, SIREN_Z0)
     for x in (sx0 - 1.6, sx1):
-        shell += box(x, 0, SIREN_Z0 - 2.0, x + 1.6, SIREN_Y + P.siren_d / 2 + 1, SIREN_Z0 + 14)
-    # leave the siren's solder pins room under the shelf (they point down)
-    shell -= cyl(SIREN_X, SIREN_Y, SIREN_Z0 - 3, SIREN_Z0 + 0.1, 20.0)
+        shell += box(x, 0, SIREN_Z0 - 2.0, x + 1.6, sy1, SIREN_Z0 + min(14.0, P.siren_h - 2.0))
+    # a hole through the shelf for the siren's wires
+    shell -= cyl(SIREN_X, SIREN_Y, SIREN_Z0 - 3, SIREN_Z0 + 0.1, 12.0)
     return shell
 
 
@@ -192,17 +202,23 @@ def make_back() -> Manifold:
     for x in (px0 + 8, px0 + P.proto_l - 8):
         plate -= box(x - 1.5, D - 1, pz0 + 3, x + 1.5, D + F.back + 1, pz0 + 7)
         plate -= box(x - 1.5, D - 1, pz0 + P.proto_w - 7, x + 1.5, D + F.back + 1, pz0 + P.proto_w - 3)
-    # two fingers that keep the radio board against the front panel (at its antenna end and above the USB end)
-    for (x, z) in ((BOARD_X0 + 2.5, (BOARD_Z0 + BOARD_Z1) / 2), (BOARD_X1 - 2.5, BOARD_Z1 - 3.0)):
-        plate += box(x - 2, BOARD_Y1 + 0.5, z - 2, x + 2, D, z + 2)
+    # two fingers that keep the radio board against the front panel: one presses the back of the circuit board at
+    # the antenna end; the one above the USB end stops just behind the battery socket there
+    pcb_back_y = BOARD_Y0 + P.pcb_back
+    plate += box(BOARD_X0 + 0.5, pcb_back_y + 0.3, (BOARD_Z0 + BOARD_Z1) / 2 - 2,
+                 BOARD_X0 + 4.5, D, (BOARD_Z0 + BOARD_Z1) / 2 + 2)
+    plate += box(BOARD_X1 - 4.5, BOARD_Y1 + 0.5, BOARD_Z1 - 5.0, BOARD_X1 - 0.5, D, BOARD_Z1 - 1.0)
     return plate
 
 
 def ghosts() -> dict[str, Manifold]:
     sx, sy = SIREN_X, SIREN_Y
     g = {
-        "radio board": box(BOARD_X0, BOARD_Y0, BOARD_Z0, BOARD_X1, BOARD_Y1, BOARD_Z1),
-        "siren": cyl(sx, sy, SIREN_Z0, SIREN_Z0 + P.siren_h, P.siren_d),
+        # the board as three layers: front parts + OLED, the circuit board, and the battery socket near the USB end
+        "radio board": box(BOARD_X0, BOARD_Y0, BOARD_Z0, BOARD_X1, BOARD_Y0 + P.pcb_back, BOARD_Z1)
+        + box(BOARD_X1 - P.back_parts_from_usb_end, BOARD_Y0 + P.pcb_back, BOARD_Z0, BOARD_X1, BOARD_Y1, BOARD_Z1),
+        "siren": box(sx - P.siren_l / 2, sy - P.siren_w / 2, SIREN_Z0, sx + P.siren_l / 2, sy + P.siren_w / 2,
+                     SIREN_Z0 + P.siren_h),
         "battery": box(BATT_X0, BATT_Y0, BATT_Z0, BATT_X0 + P.batt_l, BATT_Y0 + P.batt_t, BATT_Z0 + P.batt_w),
         "driver board": box(PROTO_X0 + 0.3, D - 3 - P.proto_parts - 1.6, PROTO_Z0 + 0.3,
                             PROTO_X0 + 0.3 + P.proto_l, D - 3, PROTO_Z0 + 0.3 + P.proto_w),
