@@ -1,5 +1,9 @@
 # Home Beacon prototype: what to buy
 
+> **Newer version (2026-11-27):** the founder adopted the Help-First beacon (decision #39). Its parts list is
+> `docs/HOME_BEACON_HELP_FIRST_BUY.md` and its case is `hardware/beacon-help-first/`. This page is for the earlier
+> WiFi-plus-LoRa design; many of its small parts carry over.
+
 **What this is for:** one prototype of the **two-box design**. The air sensor stays outside; the beacon is the indoor
 box, with no air sensor. The printed case in `hardware/beacon/` (`stl/front.stl`, `stl/back.stl`) is sized for
 exactly these parts, and its fit checks pass. The outdoor sensor's parts are in [their own section](#the-outdoor-sensor-the-other-box)
