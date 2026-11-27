@@ -87,6 +87,8 @@ holes; and the wires soldered to the board's left header row (about 1.5–4 mm r
    - Stick the LTE antenna between the rails on the right wall, lead end at the top.
 6. **Wiring:**
    - Follow the proposed wiring plan in the buy list, and check every connection against LilyGO's schematic.
+   - Return the boost's and the amplifier's ground straight to the 18650 holder's − tab, not to the board's GND pins
+     (decision #45): board GND reaches that tab only through a small transistor on the LilyGO.
    - First checks: battery polarity with a meter, and 12 V at the boost output.
    - Plug the LTE antenna into the board's LTE ("NBIOT") socket.
 7. **Close up:** fit the SMA connector through the top hole and screw the antenna on. Close the case with the 4 M3
