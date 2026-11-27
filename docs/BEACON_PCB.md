@@ -79,7 +79,9 @@ are estimates, and PCB costs come from JLCPCB's published fee table and part-pri
    - reverse-battery protection, a resettable fuse on every output that leaves the box, a TVS diode (absorbs static
      zaps) on the shaker jack, and wide copper for the battery and 12 V paths;
    - labelled test points; parts no taller than 15 mm; a 2 mm strip clear along each long edge on the back for the
-     ledges; screw terminals facing right or down (the left wall is about 4 mm away).
+     ledges; screw terminals facing right (below the top 6 mm of that edge, where the LoRa antenna connector is) or
+     up; not down (the battery cradle is 3–5 mm below) or left (the wall is about 4 mm away). Parts in the board's
+     top 17 mm strip stay under 13 mm tall (the siren holder is behind them).
 6. **Get an experienced engineer to review it,** then compare quotes from JLCPCB, OSH Park and PCBWay. Accounts and
    payment are the founder's steps.
 7. **Order one spin and test every board** on a current-limited bench supply. No board that needed a patch wire goes into

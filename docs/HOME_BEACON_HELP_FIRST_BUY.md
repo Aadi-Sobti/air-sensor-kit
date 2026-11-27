@@ -115,13 +115,13 @@ plan-US $5 + $0.60 a month (carrier and 1.8 V support not stated); 1NCE about $1
 | **Screws for the board, screen and boost** | a small steel self-tapping assortment with M1.7 (or M1.6) and M2 | 4 + 4 + 2 | 4 × M1.7 × 5–6 mm for the LilyGO (its 2.0 mm holes are too tight for M2), 4 × M2 × 4–5 mm for the screen, and 2 × M2 × 5–6 mm for the boost. Nylon screws won't cut threads in plastic |
 | **Case screws**, M3 × 10 self-tapping | Amazon [B01M0P3EUK](https://www.amazon.com/dp/B01M0P3EUK) | 4 | |
 | **Battery strap**, hook-and-loop, 12 mm × 300 mm | Amazon [B0FQV8SRVL](https://www.amazon.com/dp/B0FQV8SRVL) | 1 | Goes through the slots beside the cradle, around the lower part of the pack. Or [Secure Cable Ties VW-38010-BK](https://www.securecableties.com/38-inch-continuous-black-hook-and-loop-wrap-10-yards), a 9.5 mm (3/8 in) roll, $4.87, in stock today: cut a 300 mm piece and check it sticks to itself |
-| **Double-sided foam tape** | any | a strip | Holds the LoRa module and the driver board on their ledges |
+| **Double-sided foam tape**, no thicker than 1 mm | any | a strip | Holds the LoRa module and the driver board on their ledges. Thicker tape lifts the board toward the siren holder: keep parts in the driver board's top 17 mm strip under 13 mm tall |
 | **Female spade terminals** | Twidec 2.8 + 4.8 mm, Amazon [B0H1KLDSV1](https://www.amazon.com/dp/B0H1KLDSV1), and 4.8 + 6.3 mm, Amazon [B08F784R9W](https://www.amazon.com/dp/B08F784R9W) | about 8 | Green button: 2.8 mm. Red button: 4.8 mm (switch) and 6.3 mm (light). Or [Adafruit 4748](https://www.adafruit.com/product/4748), all three sizes, $7.50, in stock today. Or solder |
 | **2-pin screw terminals** | Amazon [B07P5T3D4Q](https://www.amazon.com/dp/B07P5T3D4Q) | 2–3 | Battery branch, siren. Or [SparkFun PRT-08432](https://www.sparkfun.com/screw-terminals-5mm-pitch-2-pin.html), 5 mm pitch, $1.10 each, in stock today (not Adafruit 724: its 3.5 mm pitch doesn't match the board's holes) |
 | **Wire and heat shrink** | as on the earlier list | | |
 | **UL-listed USB-A charger** | [Adafruit 501](https://www.adafruit.com/product/501), $5.95, in stock today | 1 | Or Apple 12 W, Amazon [B08J5GQTVF](https://www.amazon.com/dp/B08J5GQTVF), sold by Amazon only (fakes are common). Its UL listing isn't confirmed, so check for a UL or ETL mark on the charger itself |
 | **USB-A to USB-C cable** | Amazon Basics [B085SBKFJR](https://www.amazon.com/dp/B085SBKFJR) | 1 | Slim plug; avoid braided or right-angle plugs. Or [Adafruit 4474](https://www.adafruit.com/product/4474), $4.95, in stock today (straight, not braided; measure its plug against the case's 13 × 10 mm) |
-| **Filament**, white PETG or PLA | as on the earlier list | about 200–250 g | White lets the alarm light show through |
+| **Filament**, white PETG or PLA | as on the earlier list | about 250–270 g (front about 200 g, back about 60 g, at 3 walls and 20% infill) | White lets the alarm light show through |
 
 **Already have from the earlier list?** These carry over:
 - the MOSFETs, resistor kit, wire and heat shrink;
