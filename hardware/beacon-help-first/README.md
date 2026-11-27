@@ -33,7 +33,7 @@ are no wall keyholes, because the driver board covers that part of the back.
 | LTE antenna (in the LilyGO box) | 110.5 × 19.9 mm flexible, stick-on; 126 mm lead leaving ~18 mm from one end | LilyGO antenna sheet (XY03-NB). **Measure** |
 | Waveshare Pico-LoRa-SX1262-915M | 21 × 52 mm; 28 mm allowed for headers and jumper plugs | [Waveshare wiki](https://www.waveshare.com/wiki/Pico-LoRa-SX1262). **Measure the height** |
 | Adafruit 5035 battery | Max 69.0 × 56.5 × 19.0 mm | Maker drawing (PKCELL, p. 8) via [Adafruit](https://www.adafruit.com/product/5035) |
-| 12 V square siren (Mallory PS-723BQ / Wishiot) | 47 × 39 × 23.5 mm; the Mallory's leads leave a 39 mm end face at the base | Mallory datasheet 47 × 39 × 23 (rev B drawing); Wishiot listing. **Measure** |
+| 12 V square siren: Mallory PS-723BQ (the pick, decision #35); Wishiot for wiring tests only | 47 × 39 × 23.5 mm; the Mallory's leads leave a 39 mm end face at the base | Mallory datasheet 47 × 39 × 23 (rev B drawing); Wishiot listing. **Measure** |
 | Pololu U3V50F12 | 48 × 15 × 10.5 mm; M2 holes ~43.2 × 10.2 mm apart, top-left and bottom-right when stood upright with parts forward | [Pololu 2568](https://www.pololu.com/product/2568) |
 | Driver board (5 × 7 cm perfboard) | 70 × 50 mm, parts up to 15 mm | Adafruit 4786 / ELEGOO kit |
 | Speaker 3 W 4 Ω | 70.2 × 31 × 16.6 mm | Adafruit 3351 drawing; CQRobot listing |
