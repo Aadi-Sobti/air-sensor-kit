@@ -6,7 +6,7 @@ The plan is in [`docs/HOME_BEACON.md`](../../docs/HOME_BEACON.md).
 | File | What | Print orientation |
 |---|---|---|
 | `stl/front.stl` | Front panel and walls: OLED window, two 30 mm button holes, a thin light window for the alarm LED, label recesses, siren grille on top, USB-C opening on the right. Inside: board holders, siren holder | Front panel flat on the bed (already oriented). No supports. |
-| `stl/back.stl` | Back plate: 2 wall-mount keyholes, a battery cradle with strap slots, a pocket for the driver board, 2 fingers that keep the radio board against the front | Outer face flat on the bed (already oriented). No supports. |
+| `stl/back.stl` | Back plate: 2 wall-mount keyholes, a battery cradle with strap slots, a pocket for the driver board (two rails, ledges it rests on, and zip-tie slots outside the rails), 2 fingers that keep the radio board against the front | Outer face flat on the bed (already oriented). No supports. |
 
 **Size:** 117 wide × 62 deep × 101 tall mm, about the size of a small clock radio. It stands on a shelf or hangs on a wall.
 
@@ -28,7 +28,7 @@ The plan is in [`docs/HOME_BEACON.md`](../../docs/HOME_BEACON.md).
 | Adafruit 30 mm arcade button | 30 mm hole; panel up to ~20 mm | [Adafruit 3487](https://www.adafruit.com/product/3487) |
 | Arcade button body behind the panel | Ø33 × 33 mm | **Not published. Measure before printing** (`Parts.button_body_*`) |
 | Adafruit 354 battery pack (2 × 18650) | 69 × 37 × 18 mm | [Adafruit 354](https://www.adafruit.com/product/354) |
-| Adafruit FeatherWing Proto (driver board) | 50.9 × 22.9 mm, parts up to 15 mm | [Adafruit 2884](https://www.adafruit.com/product/2884) |
+| Driver board: 2 × 8 cm perfboard cut to 50–53 mm long | 20 × 53 mm max, parts up to 15 mm; first hole row ~3.6 mm from each long edge | [Adafruit 4858](https://www.adafruit.com/product/4858) (6 × 28 holes, 2.54 mm). The FeatherWing Proto (50.9 × 22.9, [Adafruit 2884](https://www.adafruit.com/product/2884)) is out of stock; for it set `proto_l/w` to 50.9 / 22.9 |
 | 12 V LED strip segment | 50 × 10.5 × 3 mm | [Adafruit 12 V flexi-strip spec](https://www.adafruit.com/product/887) |
 | Pololu U3V16F12 12 V boost | 13.1 × 8.1 × 3 mm (sits on the driver board) | [Pololu 4945](https://www.pololu.com/product/4945) |
 

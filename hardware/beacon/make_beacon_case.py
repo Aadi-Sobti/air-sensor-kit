@@ -4,7 +4,8 @@ Two printed parts, closed with 4 x M3 self-tapping screws:
   * front.stl - front panel + four walls. Front: OLED window, two 30 mm button holes ("I'm OK" / "I need
                 help"), a thin light window for the alarm LED strip, label recesses. Top: siren grille.
                 Right side: USB-C opening. Inside: holders for the board, the siren and the LED strip.
-  * back.stl  - back plate: wall-mount keyholes, a cradle for the battery pack, a pocket + zip-tie slots
+  * back.stl  - back plate: wall-mount keyholes, a cradle for the battery pack, a driver-board pocket with ledges
+                and zip-tie slots outside its rails
                 for the small driver board, and two fingers that keep the radio board pressed forward.
 
 Run:  hardware/.venv/bin/python hardware/beacon/make_beacon_case.py [--preview DIR]
@@ -58,9 +59,12 @@ class Parts:
     batt_l: float = 69.0
     batt_w: float = 37.0
     batt_t: float = 18.0
-    # Adafruit 2884 FeatherWing Proto: 50.9 x 22.9 x 1.6 mm (Adafruit listing); parts on it up to ~15 mm tall
-    proto_l: float = 50.9
-    proto_w: float = 22.9
+    # Driver board: a 2 x 8 cm perfboard (Adafruit 4858 / Sscon, 6 x 28 holes, 2.54 mm pitch) cut down to 50-53 mm
+    # long; 20 mm wide, 1.6 mm thick; parts on it up to ~15 mm tall. (The FeatherWing Proto, 50.9 x 22.9 mm, is out
+    # of stock: for it set proto_l/w to 50.9 / 22.9.) The first row of holes is ~3.6 mm in from each long edge, so the
+    # 1.5 mm support ledges under those edges stay clear of solder joints.
+    proto_l: float = 53.0
+    proto_w: float = 20.0
     proto_parts: float = 15.0
     # 12 V LED strip segment: 50 mm long, 10.5 mm wide, 3 mm thick (Adafruit 12 V flexi-strip spec)
     led_l: float = 50.0
@@ -99,7 +103,9 @@ BTN = [(30.0, 26.0), (82.0, 26.0)]  # (x, z) centres: left = "I'm OK" (green), r
 BATT_X0 = (W - P.batt_l) / 2
 BATT_Y0 = D - P.batt_t - F.gap
 BATT_Z0 = 2.5  # above the back plate's alignment lip
-PROTO_X0, PROTO_Z0 = 52.0, 30.0 + 15.0
+PROTO_X0 = 52.0
+PROTO_Z1 = 68.5  # top edge of the pocket, kept 2 mm under the radio board's back finger
+PROTO_Z0 = PROTO_Z1 - P.proto_w - 0.6
 BOSSES = [(3.5, 3.5), (W - 3.5, 3.5), (3.5, H - 3.5), (W - 3.5, H - 3.5)]  # (x, z)
 
 
@@ -195,13 +201,18 @@ def make_back() -> Manifold:
     plate += box(bx0 - 1.6, BATT_Y0 - 0.01, bz1, bx1 + 1.6, D, bz1 + 1.6)
     for x in (bx0 + 12, bx1 - 12):
         plate -= box(x - 2, D - 1, bz1 + 1.8, x + 2, D + F.back + 1, bz1 + 4.8)
-    # driver board pocket (FeatherWing Proto) + zip-tie slots
+    # driver board pocket: two 3 mm rails along its long edges, a 1.5 mm ledge inside each rail that the board rests
+    # on (leaving 3 mm under it for solder joints), and a pair of zip-tie slots just OUTSIDE the rails at each end,
+    # so a tie can go up through one slot, across the board's front and back down through the other
     px0, pz0 = PROTO_X0, PROTO_Z0
-    plate += box(px0 - 1.6, D - 3, pz0 - 1.6, px0 + P.proto_l + 0.6 + 1.6, D, pz0)
-    plate += box(px0 - 1.6, D - 3, pz0 + P.proto_w + 0.6, px0 + P.proto_l + 0.6 + 1.6, D, pz0 + P.proto_w + 2.2)
-    for x in (px0 + 8, px0 + P.proto_l - 8):
-        plate -= box(x - 1.5, D - 1, pz0 + 3, x + 1.5, D + F.back + 1, pz0 + 7)
-        plate -= box(x - 1.5, D - 1, pz0 + P.proto_w - 7, x + 1.5, D + F.back + 1, pz0 + P.proto_w - 3)
+    px1, pz1 = px0 + P.proto_l + 0.6, pz0 + P.proto_w + 0.6
+    plate += box(px0 - 1.6, D - 3, pz0 - 1.6, px1 + 1.6, D, pz0)
+    plate += box(px0 - 1.6, D - 3, pz1, px1 + 1.6, D, pz1 + 1.6)
+    plate += box(px0, D - 3, pz0, px1, D, pz0 + 1.5)
+    plate += box(px0, D - 3, pz1 - 1.5, px1, D, pz1)
+    for x in (px0 + 6, px1 - 8):
+        plate -= box(x - 1.5, D - 1, pz0 - 1.6 - 0.5 - 3.3, x + 1.5, D + F.back + 1, pz0 - 1.6 - 0.5)
+        plate -= box(x - 1.5, D - 1, pz1 + 1.6 + 0.5, x + 1.5, D + F.back + 1, pz1 + 1.6 + 0.5 + 3.3)
     # two fingers that keep the radio board against the front panel: one presses the back of the circuit board at
     # the antenna end; the one above the USB end stops just behind the battery socket there
     pcb_back_y = BOARD_Y0 + P.pcb_back
@@ -246,6 +257,19 @@ def checks(front: Manifold, back: Manifold) -> list[str]:
     v = (front ^ back).volume()
     if v > 0.01:
         problems.append(f"front and back overlap by {v:.1f} mm^3")
+    # each zip tie's path must be open: through the plate (both slots), over the rails and across the board's front.
+    # The driver board ghost is left out: the builder keeps these two 3 mm strips free of tall parts.
+    others = [front, back] + [m for n, m in gs.items() if n != "driver board"]
+    pz0, pz1 = PROTO_Z0, PROTO_Z0 + P.proto_w + 0.6
+    for x in (PROTO_X0 + 6, PROTO_X0 + P.proto_l + 0.6 - 8):
+        slots = (box(x - 1.4, D - 3.1, pz0 - 1.6 - 0.5 - 3.2, x + 1.4, D + F.back + 0.5, pz0 - 1.6 - 0.6)
+                 + box(x - 1.4, D - 3.1, pz1 + 1.6 + 0.6, x + 1.4, D + F.back + 0.5, pz1 + 1.6 + 0.5 + 3.2))
+        over = box(x - 1.4, D - 3 - 1.6 - 1.5, pz0 - 1.6 - 0.5 - 3.2, x + 1.4, D - 3.1, pz1 + 1.6 + 0.5 + 3.2)
+        for label, path in (("slots", slots), ("path over the board", over)):
+            for m in others:
+                v = (path ^ m).volume()
+                if v > 0.01:
+                    problems.append(f"zip tie at x={x:.1f}: {label} blocked ({v:.1f} mm^3)")
     return problems
 
 

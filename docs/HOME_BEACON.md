@@ -41,15 +41,15 @@ range keep hopping between houses.
 | 2 | **Li-ion pack, 3.7 V 4400 mAh** (2 × 18650, built-in protection) | 1 | $19.95 | [Adafruit 354](https://www.adafruit.com/product/354) | Protection against over-charge, over-discharge and over-current; cuts out at 2.5 V |
 | 3 | **12 V boost regulator**, Pololu U3V16F12 | 1 | $7.95 | [Pololu 4945](https://www.pololu.com/product/4945) | Starts at 2.7 V, so it runs the siren from the battery; draws under 1 mA when idle |
 | 4 | **Piezo alarm**, SparkFun COM-13939 (5–16 V, 16 tones) | 1 | $7.55–7.95 | [SparkFun](https://www.sparkfun.com/large-piezo-alarm-16-tone.html) | 103 dB(A) at 16 V and 90 dB(A) at 5 V, both at 61 cm; ~40 mA ([DigiKey listing](https://www.digikey.ca/en/products/detail/sparkfun-electronics/13939/17830296)) |
-| 5 | **30 mm arcade buttons with LED**, green ("I'm OK") + red ("I need help") | 2 | $2.50 each | [Adafruit 3487](https://www.adafruit.com/product/3487), [3489](https://www.adafruit.com/product/3489) | Big and easy to press; 30 mm hole |
-| 6 | **N-channel MOSFET** (30 V, logic-level, TO-220) | 2 | $2.25 each | [Adafruit 355](https://www.adafruit.com/product/355) | Lets the board switch the siren and the light (gate threshold 2.35 V max, so 3.3 V logic works) |
-| 7 | **FeatherWing Proto** (small solder board for the drivers) | 1 | $4.95 | [Adafruit 2884](https://www.adafruit.com/product/2884) | 50.9 × 22.9 mm, fits the case pocket |
+| 5 | **30 mm arcade buttons with LED**, green ("I'm OK") + red ("I need help") | 2 | $2.50 each | [Adafruit 3487](https://www.adafruit.com/product/3487), [3489](https://www.adafruit.com/product/3489) | Big and easy to press; 30 mm hole. **The red 3489 won't light from a 3.3 V pin**: Adafruit says its red and yellow LEDs are two in series and need 5 V or more. The green one runs dim at 3.3 V. See the open question in § 4 |
+| 6 | **N-channel MOSFET** (logic-level, TO-220): IRLZ44N | 2 | $1.50 each | [SparkFun COM-24144](https://www.sparkfun.com/n-channel-mosfet-55v-30a.html) (IRLZ34N), or an IRLZ44N 10-pack on Amazon | Lets the board switch the siren and the light (gate threshold 2.0 V max, so 3.3 V logic works). The earlier pick, IRLB8721 / Adafruit 355, is obsolete at DigiKey and out of stock at Adafruit |
+| 7 | **Perfboard, 2 × 8 cm**, cut to 50–53 mm long (small solder board for the drivers) | 1 | $2.25 for 3 | [Adafruit 4858](https://www.adafruit.com/product/4858) | 20 mm wide; the case pocket was resized for it on 2026-11-26. The FeatherWing Proto (Adafruit 2884) is out of stock |
 | 8 | **USB-C 5 V 3 A wall supply** with a 1.5 m cable | 1 | $5.95 | [Adafruit 5802](https://www.adafruit.com/product/5802) | Its listing links a test report and a compliance certificate. It has an inline switch: tape it on |
 | 9 | 12 V white LED strip, one 50 mm segment (3 LEDs, 60 mA at 12 V) | 1 | ≈ $1 *estimate* | spec: [Adafruit 887](https://www.adafruit.com/product/887) (that reel is discontinued) | A visible flash. **Not a certified strobe** (§ 13) |
 | 10 | Resistors: 2 × 100 Ω, 2 × 100 kΩ, 2 × 10 kΩ | — | ≈ $0.30 *estimate* | any | Gate resistors, gate pull-downs, button pull-ups |
 | 11 | Wire, a JST-PH to SH1.25 battery lead, button quick-connects, heat-shrink | — | ≈ $3 *estimate* | any | |
 | 12 | Printed case (`hardware/beacon/`), ~75–95 g PETG/PLA, + 4 × M3 × 10 self-tapping screws | 1 | ≈ $2.50 *estimate* | — | |
-| | **Total, pilot, from US shops** | | **≈ $83** (verified items ≈ $76 + estimates ≈ $7) | | |
+| | **Total, pilot, from US shops** | | **≈ $79** (verified items ≈ $72 + estimates ≈ $7; was ≈ $83 before the transistor and solder-board swaps on 2026-11-26) | | |
 
 **Cost compared with earlier estimates:**
 - **Earlier estimate:** `docs/FUTURE.md` estimated about $47. That assumed cheaper equivalents: a bare 18650 cell with
@@ -57,7 +57,7 @@ range keep hopping between houses.
 - **Lean pilot:** swapping in those equivalents gives roughly **$50–55** (*estimate*).
 - **At volume:** a custom circuit board, molded case and bulk parts bring it to roughly **$26–40** (FUTURE.md
   estimate; needs factory quotes).
-- **5 pilot units:** about **$415** at the verified prices. Add a soldering iron and a multimeter if you don't have
+- **5 pilot units:** about **$395** at the verified prices. Add a soldering iron and a multimeter if you don't have
   them.
 
 **One-box variant (adds the PMS5003 so the beacon also measures smoke):**
@@ -77,8 +77,9 @@ range keep hopping between houses.
 check compared every part with the alternatives, using prices from each seller's own page on 2026-11-26. Each price was
 then re-checked by a separate reviewer. DigiKey and Mouser blocked automated checks, so their prices are marked.
 
-**Out of stock today:** the Adafruit 5802 power supply (line 8), the FeatherWing Proto (line 7) and the Adafruit 355
-MOSFET (line 6). The 12 V LED strip (line 9) is discontinued.
+**Out of stock today:** the Adafruit 5802 power supply (line 8), the FeatherWing Proto and the Adafruit 355 MOSFET
+(both since replaced above: lines 6 and 7). The 12 V LED strip (line 9) is discontinued. The prototype's in-stock
+buy list is `docs/HOME_BEACON_PROTOTYPE_BUY.md`.
 
 | Part | Current pick | Cheapest that works | Best | Why |
 |---|---|---|---|---|
@@ -87,10 +88,10 @@ MOSFET (line 6). The 12 V LED strip (line 9) is discontinued.
 | Battery | Adafruit 354 4400 mAh $19.95 | Keep the 354 (a loose protected 18650 + holder saves ~$4 in parts, but two extra shops' shipping cancels it for 5 units) | **Adafruit 5035 10,050 mAh, $29.95** ([Adafruit](https://www.adafruit.com/product/5035)) | Protected, lowest cost per Ah ($2.98 vs $4.53), about 2.3× the runtime for $10 more, and 37 Wh (under the 100 Wh mailing limit). Neither Heltec board has its own battery-protection chip, so always use a protected pack |
 | Alarm | SparkFun COM-13939 + Pololu 12 V boost ($15.90) | Same Sky CPI-5029-105T $7.25 + boost (meets 85 dB at 3 m on paper, **no margin**, only 39 in stock) | **Same Sky CPS-7560-110L450, $9.37** + the same boost | It's guaranteed 105 dB at 1 m, about 95 dB at 3 m: roughly 10 dB above the smoke-alarm yardstick (UL 217: 85 dBA at 10 ft, [CPSC report](https://www.cpsc.gov/s3fs-public/audibility%20(1).pdf)). The current pick only just reaches it (~84–88 dB), and a closed door takes ~10 dBA. **$1.42 more** |
 | Siren/light driver | Adafruit 355 MOSFET $2.25 ×2 (out of stock) | PN2222 transistors, 10 for $1.95 ([Adafruit 756](https://www.adafruit.com/product/756)) | Infineon IRLZ44N ×2 (~$1.80 each, Mouser, tariff note), or Adafruit 5648 driver boards ($3.95 each, no soldering of small parts) | The loads are small (siren ~0.15 A at 12 V) |
-| Buttons | Adafruit 30 mm LED buttons $2.50 ×2 | same | same (a 60 mm "I need help" button, $5.95, for older users needs a bigger case) | Nothing cheaper with an LED from a listed shop. Check the red one's LED brightness at 3.3 V |
+| Buttons | Adafruit 30 mm LED buttons $2.50 ×2 | same | same (a 60 mm "I need help" button, $5.95, for older users needs a bigger case) | Nothing cheaper with an LED from a listed shop. The red one may not light at 3.3 V at all (§ 4) |
 | Wall power | Adafruit 5802 (out of stock) | Adafruit 5801, $5.95 (same UL file), after a bench test | **Adafruit 501 UL-listed 5 V supply + USB-A-to-C cable, $8.90** | Meshtastic warns the Heltec V3 may not charge its battery over USB-C-to-C, and the 5801/5802 have an on/off switch a resident could turn off, after which the battery quietly drains |
 | Light | 12 V strip (discontinued) | Adafruit 5864 strip, a 5 cm cut ≈ $0.40 | same, plus a **bed shaker** ($17.99, Sonic Alert) for deaf or hard-of-hearing households | The LED isn't a certified visual alarm (decision #31) |
-| Solder board | FeatherWing Proto (out of stock) | SparkFun PRT-08808, ≈ $1.48 | same | |
+| Solder board | 2 × 8 cm perfboard, Adafruit 4858, $2.25 for 3 (the case now fits it) | SparkFun PRT-08808, ≈ $1.48 (check it fits the 20 × 53 mm pocket) | same | |
 
 **Three ways to build one pilot beacon** (single-unit prices, plus about $6 of resistors, wire, battery adapter and
 printed case):
@@ -126,11 +127,21 @@ Sources:
 | "I'm OK" button | J3-15 | 4 | to GND when pressed; 10 kΩ pull-up to 3V3; can wake the chip from sleep |
 | "I need help" button | J3-16 | 5 | same |
 | Green button LED | J3-17 | 6 | the button LED is rated 5 V 10 mA; dimmer at 3.3 V |
-| Red button LED | J3-18 | 7 | same |
+| Red button LED | J3-18 | 7 | same, **but may stay dark at 3.3 V** (see below) |
 | Silence / test | on-board PRG button | 0 | don't hold it while plugging in (boot pin) |
 | 3.3 V for pull-ups | J3-2 | — | |
 | GND | J3-1 / J2-1 | — | one common ground for everything, including the boost and MOSFETs |
 | Battery voltage | on-board | 1 (+37 enable) | already wired on the board |
+
+**Open question: the red button's LED at 3.3 V (2026-11-26).** Adafruit says its red and yellow 30 mm LED buttons
+have two LEDs in series and "cannot run at 3.3V"; its green, blue and white ones run dim at 3.3 V
+([Adafruit 3489](https://www.adafruit.com/product/3489)). The Amazon 5 V buttons look like the same generic part, so
+the red one may stay dark on GPIO 7. **Bench-test it as soon as the buttons arrive:** put 3.3 V and GND on its LED
+terminals (swap them once if it stays dark). If it still stays dark, the fix changes the wiring, so the founder decides:
+- **Power it from the 12 V boost** through a spare MOSFET and a resistor (parts are already in the kits; works on
+  battery). The resistor value has to be worked out from the button's own built-in resistor.
+- **Or use a white or blue button for "I need help"** with a red label (no wiring change, but red is the colour
+  people expect).
 
 **Already in use, don't touch:**
 - 8–14 (LoRa radio)
@@ -165,7 +176,9 @@ Sources:
 This isn't a "no tools" kit like the v1 sensor. Pilot units are built by the founder or volunteers (decision #34).
 1. **Print the case:** print `front.stl` and `back.stl` (`hardware/beacon/README.md`), then test-fit the board,
    siren and buttons.
-2. **Driver board:** solder onto the FeatherWing Proto:
+2. **Driver board:** cut the perfboard to 50–53 mm long (score both sides along a row of holes, snap, file the edge).
+   Leave two 3 mm strips free of tall parts, about 6 mm in from the left end and 8 mm in from the right end: the zip
+   ties cross the board there. Solder onto it:
    - the 2 MOSFETs;
    - their 100 Ω and 100 kΩ resistors;
    - the 12 V boost;
@@ -177,7 +190,9 @@ This isn't a "no tools" kit like the v1 sensor. Pilot units are built by the fou
    segment behind the light window, and set the siren on its shelf.
 6. **Radio board:** set the Heltec in its holders, with the screen facing the window and the USB-C at the side
    opening. Route the LoRa antenna along the top wall.
-7. **Back plate:** put the battery and driver board in the back plate (straps or zip ties), and screw the back on.
+7. **Back plate:** strap the battery into its cradle. Lay the driver board on the ledges between its two rails, and
+   hold it with 2 small zip ties: each goes up through the slot below the lower rail, across the board's front, and
+   down through the slot above the upper rail. Then screw the back on.
 8. **Firmware and tests:** flash the firmware over USB-C (§ 6), then run the bench tests (§ 10).
 
 ## 6. Firmware plan
