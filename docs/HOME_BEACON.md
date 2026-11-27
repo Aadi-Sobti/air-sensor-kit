@@ -5,8 +5,8 @@ kit.** Background and the problem it solves: `docs/FUTURE.md` → "Option: Fire 
 selling hardware: `docs/PRODUCT_PLAN.md` § 4. First responders: `docs/PRODUCT_PLAN.md` § 6. Prices were checked on the
 sellers' own pages on 2026-11-25; anything not checked is marked *estimate*.
 
-**Update 2026-11-26: a recommended pilot version** (Help-First: a Leave-Early Plan plus a bedside beacon with its own
-cell connection, about $125–150) **is in `docs/BEACON_RECOMMENDATION.md`, pending decision #39.** If adopted, it replaces
+**Update 2026-11-26: the founder adopted the Help-First pilot version** (a Leave-Early Plan plus a bedside beacon with
+its own cell connection, about $125–150; decision #39, `docs/BEACON_RECOMMENDATION.md`). Where they differ, it replaces
 the parts list (§ 3), the Meshtastic firmware and alarm rules (§ 6), the weather-radio and satellite verdicts (§ 2a: a weather-radio alert would never set off the siren), the pilot plan (§ 11) and the costs (§ 12) below. The $125–150 is an *estimate*: some parts aren't priced.
 
 ## 1. What it is, and what it must never claim
@@ -677,7 +677,7 @@ The research is summarized in `docs/PRODUCT_PLAN.md` § 6, with sources. In shor
 - **#30** Radio board: Heltec V3 (proven, $17.90–19.90) or the newer V4 (stronger radio at 28 dBm, solar input).
 - **#31** Alarm for deaf and hard-of-hearing residents: add a certified strobe or a bed shaker?
 - **#32** "I need help" sharing in the pilot: household circle only (recommended), or also a partner view.
-- **#33** Battery: recommended the protected 10 Ah Adafruit 5035 ($29.95). Also open: **#35** louder siren, **#38** partner view, **#39** Help-First pilot design (`docs/BEACON_RECOMMENDATION.md`).
+- **#33** Battery: recommended the protected 10 Ah Adafruit 5035 ($29.95). Also open: **#35** louder siren, **#38** partner view, **#40** who pays cell data. **#39** (Help-First pilot design) was decided 2026-11-26.
 - **#34** Who builds pilot units (soldering): the founder and volunteers, or a maker partner?
 - **#36** Alert paths for a beacon with no internet and no other beacons nearby (§ 2a). Recommended, after asking
   each county whether it uses weather radio for fires: a Public Alert weather radio for each pilot beacon (wired to it

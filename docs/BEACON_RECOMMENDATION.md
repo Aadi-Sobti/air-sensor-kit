@@ -1,7 +1,8 @@
 # Which Home Beacon version best gets people the alert, on time, and gets them help?
 
-Written 2026-11-26. **A recommendation for the founder to decide (decision #39). Nothing here is built, and none of it
-starts before v1 ships or adds cost or steps to the v1 kit (decision #27).**
+Written 2026-11-26. **Adopted by the founder on 2026-11-26 (decision #39).** Cabins: count them first, not in the first
+pilot. Who pays the cell data is still open (#40). Nothing here starts before v1 ships or adds cost or steps to the v1
+kit (decision #27).
 
 **How it was made:**
 - **Research:** two researchers covered homes with no cell signal (satellite options and prices, weather-radio gaps,
