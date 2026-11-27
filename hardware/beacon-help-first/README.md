@@ -67,7 +67,10 @@ holes; and the wires soldered to the board's left header row (about 1.5–4 mm r
 3. **Main board,** before it's mounted, with its power switch OFF:
    - Insert the SIM.
    - Solder wires straight to the header holes you need (no header pins).
-   - Last, solder the battery leads to the 18650 holder's tabs (leave the holder empty; check + and − with a meter).
+   - Last, solder the battery leads to the 18650 holder's tabs: + is the tab at the ESP32 end, − the one at the LTE-antenna
+     end (check with a meter). Leave the holder empty: it's for one 18650 lithium cell, and AA batteries must never go in.
+   - **The OFF switch doesn't make the tabs safe:** they connect before the switch, so once the pack is on, the tabs and
+     everything wired to them are live.
 4. **Back plate:**
    - Strap the battery into its cradle, with the lead toward the right.
    - Screw the LilyGO board onto its 4 posts with M1.7 screws: 18650 holder facing the plate, antenna end up, USB-C
