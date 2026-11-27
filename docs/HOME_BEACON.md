@@ -70,6 +70,8 @@ range keep hopping between houses.
 - **Placement trade-off:** it only reads *indoor* air unless it's placed near a window. That's why two boxes are
   recommended (decision #28).
 
+**Buying a prototype quickly (Amazon):** see `docs/HOME_BEACON_PROTOTYPE_BUY.md` (parts matched to the printed case).
+
 ### 3a. Parts check (2026-11-26): are these the cheapest and the best?
 **Short answer: no.** The parts above were picked to be easy to buy and well documented, not cheapest or best. A second
 check compared every part with the alternatives, using prices from each seller's own page on 2026-11-26. Each price was
