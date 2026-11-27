@@ -47,13 +47,23 @@ failed: home internet and most cell sites were down, and Iowa State's archive sh
 weather radio. Each
 layer covers part of the gap:
 1. **Home internet** (WiFi): what the plan has now.
-2. **A cellular backup:** covers outages where home internet or power is out but cell towers still work.
+2. **A second way to reach Fire Watch:** covers outages where home internet or power is out but cell towers still
+   work. Either the household's phone passes alerts to the beacon over Bluetooth through the Fire Watch app (free, but
+   the phone has to be home), or a cell modem inside the beacon does it without a phone (≈ $15–40 + ≈ $1/month).
 3. **NOAA Weather Radio:** of these paths, the only one that can keep working with power, internet and cell all down.
    That holds only while the transmitter has backup power (most do, not all) and the radio has batteries. **It only
    carries a fire or evacuation alert if officials send one there, and for the biggest recent fires Iowa State's
    archive shows none** (Los Angeles still to be confirmed with NWS Los Angeles).
 
-Community relays help where a partner hosts one. **The box never replaces official orders:** if officials tell you to
+Community relays help where a partner hosts one.
+
+**Without a phone or home internet, the beacon can reach the Fire Watch server two ways:** its own cell modem
+(Path 2), or LoRa hops to any beacon or relay in range that still has a connection (§ 2 and Path 3). Shared IoT
+networks such as Helium or Amazon Sidewalk also exist, but they depend on other people's internet and haven't been
+checked. With cell towers down and nothing connected in range, only satellite gives a two-way link, and the weather
+radio only receives.
+
+**The box never replaces official orders:** if officials tell you to
 leave, or you feel unsafe, leave right away (§ 1).
 
 ### Path 1: NOAA Weather Radio (NWR)
@@ -118,9 +128,10 @@ quoting them publicly.
 
 | Option | Cost per home | Monthly | Verdict |
 |---|---|---|---|
-| **B. A weather radio placed next to each beacon**, not connected | About $20 to over $100 ([NWS](https://www.weather.gov/nwr/nwr_receivers)), plus 3 AA batteries | $0 | **Recommended for the 5-prototype pilot.** It gives an offline alarm with no engineering and no wiring change. The beacon doesn't know about the alert, so there's no check-in prompt |
-| **A. Wire the radio to the beacon** through the radio's external-alert jack | About $50 for a radio with the jack, such as the Midland WR120 (search snippet, not verified; the NWS's $20 low end is for radios without one). Plus a 3.5 mm cable, an optocoupler and a resistor (not priced) | $0 | **Bench-test first.** The jack is only an on/off signal: the beacon can't tell what the alert is, which part of the county it covers, or whether it's a test. **So the beacon wouldn't sound its own siren** (the radio's siren is the alarm). Instead it would flash its light, show "Weather radio alert: listen to the radio" and ask "I'm OK / I need help". It wouldn't relay the alert over LoRa. If the jack also fires for the weekly test, the beacon would do this every Wednesday, unless it treats a short trigger on Wednesday between 10 a.m. and 1 p.m. as a test (bench-test how long the trigger lasts). Midland doesn't publish how the jack behaves electrically. A also needs a spare input pin, which the RAK3312 may not have, and a jack hole in the case. That's a wiring change, so the founder decides |
+| **B. A weather radio placed next to each beacon**, not connected | About $20 to over $100 ([NWS](https://www.weather.gov/nwr/nwr_receivers)), plus 3 AA batteries | $0 | **Stopgap for the 5-prototype pilot** until A passes its bench test. It gives an offline alarm with no engineering and no wiring change, but the beacon doesn't know about the alert: no check-in prompt, no relay to neighbors, and a second device to look after. **It isn't the product** |
+| **A. Wire the radio to the beacon** through the radio's external-alert jack | About $50 for a radio with the jack, such as the Midland WR120 (search snippet, not verified; the NWS's $20 low end is for radios without one). Plus a 3.5 mm cable, an optocoupler and a resistor (not priced) | $0 | **Bench-test first; the likely pilot choice if it passes** (see "Does the radio alert for tests?" below). The jack is only an on/off signal: the beacon can't tell what the alert is, which part of the county it covers, or whether it's a test. **So the beacon wouldn't sound its own siren** (the radio's siren is the alarm). Instead it would flash its light, show "Weather radio alert: listen to the radio" and ask "I'm OK / I need help". It wouldn't relay the alert over LoRa. If the jack also fires for the weekly test, the beacon would do this every Wednesday, unless it treats a short trigger on Wednesday between 10 a.m. and 1 p.m. as a test (bench-test how long the trigger lasts). Midland doesn't publish how the jack behaves electrically. A also needs a spare input pin, which the RAK3312 may not have, and a jack hole in the case. That's a wiring change, so the founder decides |
 | C. Build a receiver chip into the beacon (Si4707, which decodes SAME) | Unknown | $0 | **Not now.** The maker dropped it from its programming guide in Oct 2024 and the hobby boards are retired, so it's probably discontinued. It would also need FCC receiver testing |
+| **E. Build a receiver into the beacon and read the code in our own software** | Unknown | $0 | **The goal for a product:** one box that knows what the alert is (type, county, test), shows it, sounds only for fire and evacuation, and asks for a check-in. The code format is published (NWSI 10-1712), so decoding it in firmware is doable. Needs a weather-band receiver chip that's still in production, firmware work, and FCC receiver testing. Not researched yet |
 | D. A walkie-talkie radio module tuned to NWR | Unknown | $0 | **No:** it contains a transmitter, and one such module (NiceRF SA818Pro) draws 76 mA just listening |
 
 **New steps for the household (founder decides, since these are recipient steps):**
@@ -131,6 +142,20 @@ quoting them publicly.
 
 Sounding the beacon's siren, or flashing its light, for weather-radio alerts would change § 1 and § 6 (the light is part
 of the alarm there), so that's also the founder's call.
+
+**Does the radio alert for tests? (founder's question, 2026-11-26)** Probably not for routine tests, but it isn't
+confirmed:
+- The Midland WR120's manual says weekly and monthly tests only light an LED and show a message; its siren for tests is
+  off by default. Nobody publishes whether the alert jack fires for a test. **That's the bench test.**
+- **If the jack doesn't fire for tests,** set the radio to sound only for **Fire Warning (FRW)** and **Evacuation
+  Immediate (EVI)** for the home's county. Its manual has a menu for switching alert types on and off; confirm it on the
+  bench. The jack firing then effectively means "an official fire or evacuation alert for this county".
+- **The beacon could then sound its own alarm** for it, which fits § 1, because these are official alerts. It's still
+  the founder's call, and it still has limits:
+  - it covers the whole county, not the neighborhood;
+  - a test sent out coded as a real alert is rare, but it has happened (Colorado, Oct 5, 2026);
+  - **Civil Emergency (CEM)** is a trade-off. Officials sometimes send evacuations under it (Boulder County has), but
+    it's also used for things like power outages. Including it catches more evacuations but adds non-fire alarms.
 
 ### Path 2: Cellular backup
 **What it is:** a small **LTE-M** modem (a low-power kind of cell connection made for devices) inside the beacon. When
@@ -177,6 +202,23 @@ WiFi is down, the beacon checks the Fire Watch server over the cell network inst
 
 **Verdict: worth a bench test** as the beacon's second path. It changes the cost per beacon and adds a monthly fee, so
 it's the founder's call (decision #36).
+
+**A free alternative for the same case: the household's phone, through the Fire Watch app** (added 2026-11-26).
+Fire Watch is already a native iOS and Android app; the v1 sensor kit's "no app" rule doesn't apply to the beacon,
+which links to Fire Watch.
+- **How it works:** when home WiFi is down but the phone still has cell data, the Fire Watch app receives the signed
+  alert and passes it to the beacon over Bluetooth. "I need help" presses can go out the same way.
+- **Why it's still useful when the phone already has the alert:** the beacon sounds loudly for people in the home
+  without a phone, or asleep. It also relays the alert to neighbors' beacons over LoRa, so one phone with signal can
+  feed a street.
+- **Catches:**
+  - the phone has to be home and in Bluetooth range;
+  - iOS may stop a background app (Apple allows background Bluetooth but doesn't guarantee it);
+  - pairing the phone is a new household step;
+  - it needs work in the Fire Watch app.
+- **Cost:** $0 in hardware.
+- **Verdict: prototype it alongside the cell modem.** It may cover enough homes that the modem is only needed where
+  nobody has a smartphone.
 
 ### Path 3: Community relay
 **What it is:**
@@ -238,14 +280,12 @@ host site, a gateway and a range test.
   antenna with a clear view of the sky ([SparkFun](https://www.sparkfun.com/rockblock-9603n-iridium-satcomm-module.html)).
 - **Satellite-capable cell modems (NB-NTN):** new, cost $0.80 per KB of data, and probably need a view of the sky.
   Worth watching.
-- **A phone app relaying alerts over Bluetooth:** it needs a native app, which breaks the no-app rule, and it adds
-  little. When the phone has service it can alert its owner directly. When it has none, it has nothing to relay.
 - **Higher-power ham or GMRS radio:** not legal for this.
 
 ### Always show which paths are working
 A beacon that silently misses alerts is worse than no beacon. Proposed (needs the founder's OK, because it's
 recipient-facing wording):
-- **The screen shows each path,** for example "Internet ✓ · Cellular –".
+- **The screen shows each path,** for example "Internet ✓ · Phone ✓ · Cellular –".
 - **The weather radio** can show ✓ only if the beacon has a way to see it working. A wired radio (A) qualifies only if
   the bench test shows its jack reports the weekly test. A radio placed next to the beacon (B) can't be shown at all;
   it has its own check instead. Per its manual, the WR120 shows "CHECK RECEPTION" and beeps every 10 minutes if it
@@ -259,6 +299,7 @@ recipient-facing wording):
 |---|---|---|---|
 | Weather radio next to the beacon (B) | ≈ $20–100+ | $0 | 5 pilot units: about +$100–500 |
 | Weather radio wired to the beacon (A) | ≈ $50 radio + parts not priced | $0 | After a bench test |
+| Phone over Bluetooth (Fire Watch app) | $0 | $0 | The phone must be home; app work needed |
 | Cellular backup | ≈ $15–40 (prototype board ≈ $30) | ≈ $1 (not measured) | Plus network certification for a product |
 | Community relay | ≈ $66–299 per node + a gateway (not priced), shared | $0 if the host provides internet | Per-home cost depends on how many homes it reaches |
 
@@ -268,12 +309,16 @@ recipient-facing wording):
    - whether they send Fire Warnings or evacuation orders to NOAA Weather Radio;
    - which codes they use;
    - whether the transmitter has backup power.
-2. **Bench test:** connect a Midland WR120's alert jack to the beacon. Measure the voltage, how long it stays on, and
-   whether a weekly test triggers it.
+2. **Bench test:** connect a Midland WR120's alert jack to the beacon. Measure the voltage and how long it stays on.
+   Check whether a weekly test triggers it, and confirm the radio can be set to Fire Warning and Evacuation Immediate
+   only.
 3. **Bench test:** the LilyGO T-SIM7080G-S3 as a cellular backup. Measure data use, battery draw in each mode, and
    wake-up by text.
-4. **Range test:** a solar relay at a real fire station or school, reaching indoor beacons.
-5. **Decide #36** (`docs/decisions.md`).
+4. **Prototype:** the Fire Watch app passing a signed alert to the beacon over Bluetooth, including with the app in
+   the background on iOS and Android.
+5. **Range test:** a solar relay at a real fire station or school, reaching indoor beacons.
+6. **Research:** a weather-band receiver chip that's still in production, for option E.
+7. **Decide #36 and #37** (`docs/decisions.md`).
 
 This is all beacon work (a later phase). None of it changes the v1 sensor kit.
 
@@ -507,7 +552,8 @@ The research is summarized in `docs/PRODUCT_PLAN.md` § 6, with sources. In shor
   - few people sign up;
   - people come to expect rescue.
 
-  California discourages them. In Houston during Hurricane Harvey, fewer than 5% of registrants were contacted.
+  California discourages them. The National Council on Disability (2023) reports that in Houston during Hurricane
+  Harvey, fewer than 5% of registrants were contacted.
 - **Plan, in steps (all opt-in):**
   1. **Household circle (pilot):** "I need help" goes only to the people the household picked: family, a neighbor,
      a CERT volunteer. The device and screen say "This does not call 911".
@@ -520,9 +566,34 @@ The research is summarized in `docs/PRODUCT_PLAN.md` § 6, with sources. In shor
      - phone;
      - **last check-in time**.
 
-     Old statuses show as "unknown". A printable list covers the case where networks fail.
+     Old statuses show as "unknown". A printable list covers the case where networks fail. **The full design (what
+     responders see, how it takes work off them, privacy and pilot tests) is in `docs/PARTNER_VIEW.md`.**
   3. **911 integration** only through an established company with human verification (e.g. RapidSOS), after a legal
      review.
+- **What a press sends (added 2026-11-26):**
+  - **What travels:** the beacon's ID, which button was pressed, and the time. No GPS position (the board has no GPS)
+    and no address.
+  - **How the server knows where it is:** it already knows which home the beacon belongs to from setup. The exact
+    address is stored privately, and only if the household opted in to partner sharing.
+  - **Why no address in the message:** neighbors' beacons relay the message over LoRa, so the address is never
+    broadcast along the way.
+- **How it gets out, in order:**
+  1. home WiFi;
+  2. the household's phone over Bluetooth;
+  3. the beacon's cell modem, if it has one;
+  4. LoRa hops to any beacon or relay in range that has a connection.
+- **When no path works:**
+  - The beacon never drops the request. The screen says "Not sent yet. Call or text 911 if you can."
+  - It sends the request with the original time as soon as any path comes back.
+  - Newer phones (iPhone 14 and later, Pixel 9 and later) can text 911 by satellite with no cell service; the guide
+    should say so.
+- **Proposed: "Someone nearby needs help" on neighbors' beacons** (decision #37, founder decides). This works with
+  zero internet anywhere: the request reaches every beacon in LoRa range directly. Nearby people are often the fastest
+  help.
+  - **Opt-in** for both the household sending it and the neighbors receiving it. The household decides what it reveals
+    (a label it chose, such as a house number, or just "nearby").
+  - **Signed,** so nobody can fake a request.
+  - **The wording must not send neighbors into danger:** "Check on them only if it's safe. Call 911 if you can."
 - **Consent and wording:**
   - Consent is given field by field.
   - It's easy to delete.
@@ -604,9 +675,12 @@ The research is summarized in `docs/PRODUCT_PLAN.md` § 6, with sources. In shor
 - **#32** "I need help" sharing in the pilot: household circle only (recommended), or also a partner view.
 - **#33** Battery: 4400 mAh ($19.95) or 6600 mAh ($24.50, about 50% longer)?
 - **#34** Who builds pilot units (soldering): the founder and volunteers, or a maker partner?
-- **#36** Alert paths for a beacon with no internet and no other beacons nearby (§ 2a). Recommended: a Public Alert
-  weather radio placed next to each pilot beacon (after asking each county whether it uses weather radio for fires);
-  bench-test wiring the radio to the beacon and a cellular backup; add community relays where a partner hosts one.
+- **#36** Alert paths for a beacon with no internet and no other beacons nearby (§ 2a). Recommended, after asking
+  each county whether it uses weather radio for fires: a Public Alert weather radio for each pilot beacon (wired to it
+  if the bench test passes, otherwise placed next to it as a stopgap). Prototype the Fire Watch app's Bluetooth bridge
+  and a cell modem. Add community relays where a partner hosts one. The product goal is a receiver built into the
+  beacon (option E).
+- **#37** "Someone nearby needs help" on neighbors' beacons over LoRa, opt-in (§ 8).
 
 ## 15. Not verified (check before ordering or building)
 - **The Heltec V3's FCC ID:** none found.
