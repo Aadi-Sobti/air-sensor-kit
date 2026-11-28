@@ -151,6 +151,27 @@ plan-US $5 + $0.60 a month (carrier and 1.8 V support not stated); 1NCE about $1
 - **Serial port:** the chip's serial pins (UART0, GPIO 43/44) are used below. Firmware must log over USB (USB CDC) and
   never start UART0.
 
+## Driver PCB instead of perfboard (#44)
+The custom driver board, its JLCPCB order files and the list of everything that plugs into it are in
+`hardware/beacon-driver-pcb/` (README "What you need with this board"). The 2 bench units stay on perfboard with the
+same circuit, using the parts below.
+
+## Bench units: extra parts to match the PCB circuit (#45–#49)
+| Job (PCB ref) | Part | Where / price (read 2026-11-27) | Notes |
+|---|---|---|---|
+| Reverse-battery protection (Q11) | **Pololu [#2810](https://www.pololu.com/product/2810)** Mini MOSFET Slide Switch with Reverse Voltage Protection, LV (#49) | $4.49, "Rationed", backorders allowed | 26 mΩ, 3.0 A at 55 °C; the LilyGO can charge back through it. J1 + → VIN; VOUT → the + bus (boost VIN, amp Vin, LilyGO holder + tab); GND → the − bus; glue its slide switch ON |
+| Battery socket (J1) | Genuine **JST S2B-PH-K-S** (side entry) | DigiKey or Mouser (check in a browser) | **Pin 1 = pack +, pin 2 = GND** (Adafruit packs put + on JST circuit 1). Meter-check the pack first: looking into the opening, the LEFT pin reads +. Not SparkFun PRT-09749 (its drawing says 1 A) |
+| Shaker high-side switch (Q16, #47) | **AO3401A** P-FET on a SparkFun BOB-00717 SOT-23 adapter, plus 10 kΩ (gate to +12 V) and 4.7 kΩ (gate to the shaker driver MOSFET's drain) | AO3401A LCSC C15127 ≈ $0.08; adapter $1.25 | Jack sleeve and bushing → − bus; tip ← shaker fuse ← Q16 drain. Weaker in a dead short than the PCB's AON7421, which the bench short test checks |
+| Jack TVS (TVS1) | **P6KE15A**, unidirectional | DigiKey or Mouser (not stock-checked) | Band on the fused tip line, on the jack side of the fuse; other lead to the − bus |
+| Internal 12 V fuse (F2) | **Bourns MF-R050** (0.5 A hold) | DigiKey ≈ $0.47 (not stock-checked) | Between the boost output and the + wires of the siren, light strip and red light |
+| Amplifier parts (R15, R21–R23) | 10 kΩ from the amp's Vin to SD; 3 × 100 kΩ from BCLK, LRC and DIN to GND | Resistor kit | Left-channel mode on one battery cell; keeps the amp quiet during resets |
+| Button, LED and silence parts | 2 × 4.7 kΩ (buttons), 100 Ω (green LED), 3 × 10 nF, 100 nF, 1 MΩ, 1 kΩ | Resistor kit + a ceramic capacitor kit | Same values as the PCB, so firmware behaves the same |
+| Boost input capacitor (C1) | 100 µF, 16 V or more, electrolytic | Any | Right at the U3V40F12's VIN and GND |
+| Silence button (#48) | Adafruit [1502](https://www.adafruit.com/product/1502), 16 mm yellow momentary | $0.95, in stock | On top of the case, with a "SILENCE" sticker |
+
+**Cost:** about +$5.60 per bench unit for the protector and TVS, plus about $2.70 for the high-side parts, over the
+first list.
+
 ## Wiring plan (proposed: check against LilyGO's schematic before soldering)
 All 20 free pins on the LilyGO board are used. So the "spare port for add-ons" in `docs/BEACON_RECOMMENDATION.md` can
 only be the screen's I2C bus (GPIO 1/2, 3.3 V), and the case has no opening for one yet.
@@ -166,11 +187,11 @@ only be the screen's I2C bus (GPIO 1/2, 3.3 V), and the case has no opening for 
 | LoRa BUSY | 44 | GP2 (pin 4) | An input. Pin 44 has a weak pull-up at boot, which is harmless for an input |
 | LoRa power | DC1 (the header's 3.3 V pin), GND | 3V3 (pin 36), GND | The LilyGO header has no pin marked 3V3: DC1 is its 3.3 V rail |
 | Screen I2C SDA / SCL | 2 / 1 | | These already have pull-ups; set the board's ALDO2 rail to 3.3 V |
-| Amplifier BCLK / LRC / DIN | 47 / 48 / 18 | | |
+| Amplifier BCLK / LRC / DIN | 47 / 48 / **45** (#46) | | DIN moved from 18 to 45 (#46). 100 kΩ from each of the 3 lines to GND at the amp, and 10 kΩ from the amp's Vin to SD (left-channel mode) |
 | "I'm OK" / "I need help" buttons | 17 / 16 | | To ground when pressed. They can wake the chip from sleep |
-| Siren / light / shaker / red-button-light switches (MOSFET gates) | 45 / 46 / 21 / 14 | | Each with 100 Ω in series and 100 kΩ to ground. **Never put a gate on 43 or 44:** they float high at boot and would switch the siren on |
+| Siren / light / shaker / red-button-light switches (MOSFET gates) | **21** / 46 / **18** / 14 (#46) | | Each with 100 Ω in series and 100 kΩ to ground. **Never put a gate on 43 or 44:** they float high at boot and would switch the siren on. **Not 45 for the siren:** GPIO45 is read at every reset to set the flash voltage, so a reset with the siren on could stop the beacon booting (#46). The shaker is switched on its + side (#47): its gate drives a small N-FET that turns on a P-FET between +12 V and the jack tip (see "Bench units" below) |
 | Green button's light | 43 | | It glows briefly at boot, which is harmless |
-| Silence / test | 0 (the board's BOOT button) | | **Bench only:** BOOT is shut inside the case. `docs/BEACON_RECOMMENDATION.md` needs a separate stop press that never marks the home OK. So before any home use, add a reachable silence control: a hole or plunger over BOOT, a panel button wired to GPIO0, or a defined press on an existing button. That's the founder's call (a household step). **Don't hold GPIO0 down while the board restarts:** it would start in download mode |
+| Silence | 0, from a **third front-panel button** (#48) | | The button pulls its line to GND; a 100 nF capacitor passes only a short pulse to GPIO0 through 1 kΩ (1 MΩ bleeds it, 10 nF to GND soaks up static). So holding the button through a restart still boots normally. It only silences: it never marks the home OK and never asks for help |
 | **Don't connect** | 3, 35, 36, 37 | | 3 is the modem's wake line; 35–37 are memory lines |
 
 ## Measure when the parts arrive (then update the case before printing)

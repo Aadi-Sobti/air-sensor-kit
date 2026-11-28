@@ -121,6 +121,14 @@ class Parts:
     jack_body_d: float = 12.5      # the solder lugs span up to 11.4 mm
     jack_body_depth: float = 12.5
     jack_wall: float = 2.0
+    # Silence button (#48): Adafruit 1502, 16 mm yellow momentary pushbutton (R13 drawing: M16 x 1 thread with a flat,
+    # D-shaped 16.0 mm hole with 15.0 mm across the flat; bezel ~18.1 mm; cap 13 mm). Nut/washer ~22 mm (estimate);
+    # ~16 mm behind the panel bare, ~22 mm with soldered wires
+    sil_hole: float = 16.3
+    sil_flat: float = 15.2
+    sil_nut_d: float = 22.0
+    sil_body_d: float = 16.0
+    sil_depth: float = 22.0
     # LTE antenna included with the LilyGO: flexible, 110.5 x 19.9 mm, stick-on (LilyGO antenna sheet)
     lte_l: float = 110.5
     lte_w: float = 19.9
@@ -179,6 +187,8 @@ PROTO_X0, PROTO_Z0 = 4.0, 70.0                     # driver board above the batt
 BOOST_X0, BOOST_Z0 = 92.0, 20.0                    # 12 V boost standing upright under the LoRa module
 JACK = (100.0, 11.0)                               # bed-shaker jack on the back plate, under the boost
 SMA = (81.0, 62.0)                                 # LoRa antenna connector through the top wall (x, y)
+SIL = (115.0, 31.0)                                # silence button on the top wall (x, y), like a snooze button (#48)
+TAPE = 1.0                                         # foam tape under the driver board: at most 1 mm (buy list)
 LTE_Y0, LTE_Z0 = 5.0, 9.0                          # LTE antenna on the RIGHT wall's inside face, in front of the main
                                                    # board, lead end at the top (near the board's LTE socket)
 BOSSES = [(3.5, 3.5), (W - 3.5, 3.5), (3.5, H - 3.5), (W - 3.5, H - 3.5)]  # (x, z)
@@ -200,10 +210,10 @@ def xcyl(y, z, x0, x1, d) -> Manifold:
     return Manifold.cylinder(x1 - x0, d / 2).rotate([0, 90, 0]).translate([x0, y, z])
 
 
-def pocket(x0, z0, l, w, ties_along_x=True, ties=True):
+def pocket(x0, z0, l, w, ties_along_x=True, ties=True, rail_top=None):
     """A board pocket on the back plate's inside face: ledges the board rests on (3 mm up, for solder joints), rails
     that rise to its front face, and zip-tie slots outside the rails. Returns (added, cut, tie_paths, rail_top_y)."""
-    face = D - 3 - 1.6
+    face = D - 3 - 1.6 if rail_top is None else rail_top
     if ties_along_x:   # long side along x; ties go across it in z
         x1, z1 = x0 + l + 0.6, z0 + w + 0.6
         add = (box(x0 - 1.6, face, z0 - 1.6, x1 + 1.6, D, z0) + box(x0 - 1.6, face, z1, x1 + 1.6, D, z1 + 1.6)
@@ -288,6 +298,12 @@ def make_front() -> Manifold:
             a = 2 * np.pi * i / n
             shell -= cyl(port_x + r * np.cos(a), scy + r * np.sin(a), H - 1, H + F.wall + 1, 3.5)
     shell -= cyl(SMA[0], SMA[1], H - 1, H + F.wall + 1, P.sma_hole)
+    # silence button (#48) on the top wall: D-shaped hole (the button's thread has a flat, so it can't turn), and a
+    # 0.6 mm recess in front of it for the "SILENCE" sticker
+    shell -= (cyl(SIL[0], SIL[1], H - 1, H + F.wall + 1, P.sil_hole)
+              ^ box(SIL[0] - 10, SIL[1] - 10, H - 2, SIL[0] + 10, SIL[1] - P.sil_hole / 2 + P.sil_flat, H + F.wall + 2))
+    shell -= box(SIL[0] - 12.0, SIL[1] - P.sil_hole / 2 - 14.0, H + F.wall - 0.6, SIL[0] + 12.0,
+                 SIL[1] - P.sil_hole / 2 - 2.5, H + F.wall + 1)
     usb_y = LILY_PCB_FRONT - 1.6
     shell -= box(W - 1, usb_y - 6.0, USB_Z - 8.0, W + F.wall + 1, usb_y + 6.0, USB_Z + 8.0)
     # screw bosses (M3 self-tapping from the back)
@@ -346,8 +362,15 @@ def make_back() -> tuple[Manifold, dict[str, list[Manifold]]]:
     # would have to cross its pin headers) and driver-board pocket (horizontal, ledges, rails and two ties)
     add, cut, p = pocket(LORA_X0, LORA_Z0, P.lora_l, P.lora_w, ties_along_x=False, ties=False)
     plate += add
-    add, cut, p = pocket(PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, ties_along_x=True, ties=False)
+    # rails and end stops rise 1 mm above the face of a board sitting on 1 mm of foam tape
+    proto_rail_top = D - 3 - TAPE - 1.6 - 1.0
+    add, cut, p = pocket(PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, ties_along_x=True, ties=False, rail_top=proto_rail_top)
     plate += add  # held on its ledges with double-sided foam tape (it's light; ties would cross its parts)
+    # end stops at the pocket's short ends: plugging the battery and ribbon in from the right pushes the board left.
+    # Left: the full height. Right: only the top 7 mm, clear of the plugs (driver PCB J3 starts 8.9 mm down)
+    px1 = PROTO_X0 + P.proto_l + 0.6
+    plate += box(PROTO_X0 - 1.6, proto_rail_top, PROTO_Z0, PROTO_X0, D, PROTO_Z0 + P.proto_w + 0.6)
+    plate += box(px1, proto_rail_top, PROTO_Z0 + P.proto_w + 0.6 - 7.0, px1 + 1.6, D, PROTO_Z0 + P.proto_w + 0.6)
     # 12 V boost (Pololu U3V50F12, standing upright): two posts for M2 self-tapping screws, diagonal corners
     bcx, bcz = BOOST_X0 + P.boost_w / 2, BOOST_Z0 + P.boost_l / 2
     for (sx, sz) in ((-1, 1), (1, -1)):  # U3V50Fx holes: top-left and bottom-right when upright, parts forward (Pololu)
@@ -382,8 +405,23 @@ def ghosts() -> dict[str, Manifold]:
                            LORA_Z0 + 0.3 + P.lora_l),
         "battery": box(BATT_X0, BATT_Y0, BATT_Z0, BATT_X0 + P.batt_l, BATT_Y0 + P.batt_t, BATT_Z0 + P.batt_w),
         "siren": box(sx, SIREN_Y0, SIREN_Z0, sx + P.siren_l, SIREN_Y0 + P.siren_w, SIREN_Z0 + P.siren_h),
-        "driver board": box(PROTO_X0 + 0.3, D - 3 - P.proto_parts - 1.6, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l,
-                            D - 3, PROTO_Z0 + 0.3 + P.proto_w),
+        # parts up to 15 mm, but only 13 mm in the board's top 17 mm strip, which sits behind the siren holder (the
+        # driver PCB's layout rule; keep the perfboard to the same)
+        "driver board": box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE,
+                            PROTO_Z0 + 0.3 + P.proto_w)
+        + box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6 - P.proto_parts, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l,
+              D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 17.0)
+        + box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6 - (P.proto_parts - 2.0), PROTO_Z0 + 0.3 + P.proto_w - 17.0,
+              PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w),
+        # driver PCB plugs on its right edge (hardware/beacon-driver-pcb): the battery plug in J1 and the ribbon
+        # socket in J3, each with ~10 mm of plug and cable bend past the board edge
+        "battery plug (PCB J1)": box(PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6 - 6.5,
+                                     PROTO_Z0 + 0.3 + P.proto_w - 48.1, PROTO_X0 + 0.3 + P.proto_l + 10.0,
+                                     D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 41.2),
+        "ribbon socket (PCB J3)": box(PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6 - 9.5,
+                                      PROTO_Z0 + 0.3 + P.proto_w - 34.3, PROTO_X0 + 0.3 + P.proto_l + 10.0,
+                                      D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 8.9),
+        "silence button": cyl(SIL[0], SIL[1], H - 3.0, H, P.sil_nut_d) + cyl(SIL[0], SIL[1], H - P.sil_depth, H, P.sil_body_d),
         "12 V boost (U3V50F12 only)": box(BOOST_X0, D - 4 - P.boost_h, BOOST_Z0, BOOST_X0 + P.boost_w, D - 4, BOOST_Z0 + P.boost_l),
         "speaker": box(SPK_X - P.spk_l / 2, 0.0, SPK_Z - P.spk_w / 2, SPK_X + P.spk_l / 2, P.spk_h,
                        SPK_Z + P.spk_w / 2),
@@ -542,6 +580,7 @@ def layout_drawing(path: Path) -> None:
     circ(a, RED[0], RED[1], P.red_bezel, "I NEED HELP\n60 mm", "red")
     a.text(SIREN_X0 + P.siren_port_from_end, H - 3, "siren grille on top", ha="center", va="top", fontsize=8)
     a.text(W - 2, USB_Z, "USB-C\n(right side)", ha="right", va="center", fontsize=8)
+    a.text(SIL[0], H - 3, "SILENCE button on top", ha="center", va="top", fontsize=8)
     a = axes[1]
     a.set_title("Back plate, inside face (seen from the front)")
     rect(a, BATT_X0, BATT_Z0, P.batt_l, P.batt_w, "10 Ah battery", "purple", fill=True)

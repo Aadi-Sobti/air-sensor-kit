@@ -11,8 +11,8 @@ the WiFi-plus-LoRa design is in `hardware/beacon/`.
 
 | File | What | Print orientation |
 |---|---|---|
-| `stl/front.stl` | Front panel and walls. **Front:** screen window, speaker grille, light window, 30 mm green and 60 mm red button holes, label recesses. **Top:** siren grille and the LoRa antenna's SMA hole. **Right side:** USB-C opening, and inside it a frame for the stick-on LTE antenna in front of the main board. **Inside:** screen posts, speaker frame, siren holder (with a wire slot on each side, open at the back, and a front stop) | Front panel flat on the bed (already oriented). No supports |
-| `stl/back.stl` | Back plate. **Battery:** cradle with a strap. **Boards:** 4 screw posts for the LilyGO board; pockets for the LoRa module and the 5 × 7 cm driver board. **Also:** posts for a U3V50F12 boost (empty with the U3V40F12, #42), and the bed-shaker jack hole (plate thinned to 2 mm there). **Outside:** a 0.6 mm recess for the safety label | Outer face flat on the bed (already oriented). No supports; the label recess's floor prints as a 30 mm bridge, so it may sag a little (the label covers it) |
+| `stl/front.stl` | Front panel and walls. **Front:** screen window, speaker grille, light window, 30 mm green and 60 mm red button holes, label recesses. **Top:** siren grille, the LoRa antenna's SMA hole, and the SILENCE button's 16 mm D-shaped hole (#48) with a 0.6 mm sticker recess in front of it. **Right side:** USB-C opening, and inside it a frame for the stick-on LTE antenna in front of the main board. **Inside:** screen posts, speaker frame, siren holder (with a wire slot on each side, open at the back, and a front stop) | Front panel flat on the bed (already oriented). No supports |
+| `stl/back.stl` | Back plate. **Battery:** cradle with a strap. **Boards:** 4 screw posts for the LilyGO board; pockets for the LoRa module and the 70 × 50 mm driver board (perfboard or the driver PCB in `hardware/beacon-driver-pcb/`), with end stops and rails that rise 1 mm above a board on 1 mm foam tape. **Also:** posts for a U3V50F12 boost (empty with the U3V40F12, #42), and the bed-shaker jack hole (plate thinned to 2 mm there). **Outside:** a 0.6 mm recess for the safety label | Outer face flat on the bed (already oriented). No supports; the label recess's floor prints as a 30 mm bridge, so it may sag a little (the label covers it) |
 
 **Size:** 155 wide × 81 deep × 135 tall mm, about the size of a small bedside speaker. It stands on a nightstand. There
 are no wall keyholes, because the driver board covers that part of the back.
@@ -65,6 +65,10 @@ are no wall keyholes, because the driver board covers that part of the back.
 A test that deliberately blocks the strap slot, or moves the red button onto the main board, makes the checks fail as
 they should.
 
+**Driver board stand-in:** 15 mm of parts, 13 mm in its top 17 mm strip (behind the siren holder), sitting on 1 mm
+of foam tape, plus the driver PCB's battery plug and ribbon socket on its right edge. **Silence button:** a 22 mm nut
+and a 16 mm body 22 mm deep under the top wall.
+
 **Size-limit tests (2026-11-27):** the checks still pass with the speaker at 70.3 × 31.2 × 17.6 mm, the LilyGO's
 holder at 15–20 mm and its front parts up to 14 mm, the siren up to 47.5 × 39.5 × 24 mm, the red button's body 34 mm
 and collar 40 mm, the green nut 37 mm and 35 mm deep, the LoRa module 31 mm tall, the screen 14 mm deep with 3 mm
@@ -102,13 +106,16 @@ holes; and the wires soldered to the board's left header row (about 1.5–4 mm r
      lead with 22–24 AWG stranded wire and heat-shrink only if it doesn't reach.
    - Screw the LilyGO board onto its 4 posts with M1.7 screws: 18650 holder facing the plate, antenna end up, USB-C
      toward the right wall.
-   - Fix the LoRa module and the driver board on their ledges with foam tape no thicker than 1 mm.
+   - Fix the LoRa module and the driver board on their ledges with foam tape no thicker than 1 mm. With the driver
+     PCB, plug the battery and the ribbon in before pressing the board down onto its tape.
    - The U3V40F12 boost is soldered flat on the driver board (#42). Only a U3V50F12 goes on the boost posts.
    - Fit the shaker jack.
 5. **Front:**
    - Stick the LED strip into the light-window pocket first (leads soldered on), then mount the screen on its posts
      (glass toward the window, either way up) and the speaker in its frame, with its leads out through a notch.
    - Fit the two buttons; cut the two alignment posts off the red one first.
+   - Fit the yellow **SILENCE** button (Adafruit 1502) in the top hole: line its thread's flat up with the hole's
+     flat, then tighten the nut from inside. Put the "SILENCE" sticker in the recess in front of it (#48).
    - Slide the siren in from the back, leads in the **right-hand** slot (so its round sound port is on the left, under
      the grille), until it meets the front stop. Fix it with a dab of hot glue: nothing else stops it sliding back
      about 2.4 mm onto the driver board's parts.
