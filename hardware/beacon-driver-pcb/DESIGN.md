@@ -47,7 +47,7 @@ JLCPCB makes the board and fits all the small parts on one side. You then solder
 | 13 | **J1 polarity corrected** (after a second sourcing check and a 3-agent investigation with a judge): pad 1 = pack +, pad 2 = GND. | Adafruit's and SparkFun's Eagle libraries number the two JST-PH pins mirror-image to JST and KiCad, so "pin 1 = GND" copied from them reversed the battery on KiCad's footprint. Q11 would have blocked it (no damage), but the beacon wouldn't have powered up. |
 | 14 | **Drill files on the same origin as the Gerbers**, and `build.py` now checks every plated hole lands on a pad or via. | The first export put every hole 100 mm right of and 150 mm below its pad. |
 | 15 | **TP1/TP2 read R1 from its pads' inner edges** on their own 0.25 mm traces; the battery path is 3 mm wide, the VBAT_PROT trunk 2.5 mm, and the big ground pads get 4 vias each. | The test points sat on the wide power copper, so the shunt reading included the joints. |
-| 16 | **Silkscreen at 1.0 mm** (JLCPCB's minimum), with test-pad names, BATTERY ONLY + / −, and pin legends for J3, J4 and J5. | Builders plug cables by these labels. TP4, TP5, TP6 and TP10 have no room: they're named on `beacon-driver-assembly.pdf`. |
+| 16 | **Silkscreen at 1.0 mm** (JLCPCB's minimum), with test-pad names, BATTERY ONLY + / −, and pin legends for J3, J4 and J5. | Builders plug cables by these labels. TP4, TP6 and TP10 have no room: they're named on `beacon-driver-assembly.pdf`. |
 | 12 | **Bench gate before ordering** (list below), plus watchdog, alarm-resume and current-limit firmware rules. | A shorted shaker lead may trip the battery's own protection before any fuse acts, and an alarm can sag the battery enough to switch the LilyGO off. |
 
 **Where the reviewers disagreed, and what I chose:**
@@ -149,8 +149,8 @@ JLCPCB makes the board and fits all the small parts on one side. You then solder
   - 1 = VBAT_IN (pack +, red), 2 = GND (pack −, black). Pad 1 is JST's circuit No. 1, where Adafruit packs put the
     red wire ("Polarity matches all Adafruit LiPoly/LiIon chargers and boards", Adafruit 5035 page). Adafruit's and
     SparkFun's Eagle libraries number these pins the other way round, so don't copy "pin 1 = GND" from them.
-  - **Meter-check the first pack:** in a bare S2B-PH-K-S, looking into the opening, the LEFT pin must read +.
-  - Silkscreen: "BATTERY ONLY + / −".
+  - **Meter-check the first pack:** Hold a bare JST S2B-PH-K-S as it sits on a board (its PCB pins pointing down, the opening facing you), plug the pack in and meter the two pins underneath: the LEFT pin is pin 1 and must read + (3.6–4.2 V). If it reads −, stop and don't plug that pack into a beacon.
+  - Silkscreen: "BATTERY ONLY", with + beside pad 1 and − beside pad 2.
 - **J2 LilyGO battery:** wire pads, 1.15 mm holes, 22 AWG.
   - 1 = VBAT_PROT → holder + tab (ESP32 end).
   - 2 = GND → holder − tab (antenna end).
@@ -161,14 +161,13 @@ JLCPCB makes the board and fits all the small parts on one side. You then solder
   - 3 = +12V_INT (strip +), 4 = LIGHT_SW (strip −).
   - 5 = +12V_INT (red light +), 6 = REDLED_SW (red light −).
   - There is no GND pin, so a bridge can never latch a load on.
-- **J5 buttons:** JST B6B-PH-K-S, top entry.
+- **J5 buttons:** JST B6B-PH-K-S, top entry. Silkscreen: "J5 NOT BATT".
   - 1 = GND (daisy-chain it to the green LED −, green COM, red COM and the silence button).
   - 2 = LED_OK_J (green LED +), 3 = BTN_OK_J (green switch NO), 4 = BTN_HELP_J (red switch NO), 5 = SIL_J (silence button), 6 = no connection.
-  - Silkscreen: "BUTTONS – NOT BATTERY".
 - **J6 shaker:** wire pads, 0.85 mm holes, 24–26 AWG.
   - 1 = SHK_JACK → jack TIP.
   - 2 = GND → jack SLEEVE/bushing.
-  - Silkscreen: "SHAKER TIP / SLEEVE – Bed shaker only".
+  - Silkscreen: "SHAKER", with "TIP" and "SLV" under the pads. Label the jack itself "Bed shaker only".
 - **U1 pads (left to right):** OUT, GND, GND, VIN, VIN, EN. **U2 pads (left to right):** Vin, GND, SD, GAIN, DIN, BCLK, LRC.
 
 ## Layout (how it fits the case)
@@ -245,6 +244,9 @@ JLCPCB makes the board and fits all the small parts on one side. You then solder
   - With the modules (+$15.10 at 5, +$14.51 at 10), before duty and shipping: ≈ $27.80 (5) or $22.40 (10).
   - Perfboard: ≈ $24.
   - So at 5 boards the PCB costs a few dollars more and saves wiring time and mistakes. At 10 it roughly breaks even.
+  - **Like for like, delivered:** a perfboard unit also needs the #45–#49 parts (≈ $8.40: Pololu #2810, TVS, genuine
+    J1 socket, high-side parts, F2, silence button), which the PCB has on board or shares (the silence button). With
+    those added, the PCB costs about $3–10 more per beacon at 5 boards delivered, and about the same at 10.
 - **The review fixes cost** about +$0.40 per PCB, mostly the second AON7421.
 - **Monthly cloud cost:** $0.
 
@@ -325,7 +327,7 @@ See the buy-list rows in this package. In short:
 - **Spin-1 limit:** firmware can't see a tripped F1/F2 or a missing 12 V, so plan a periodic audible self-test.
 
 ## Decisions for you
-Decided 2026-11-27: pin plan (#46), high-side shaker (#47), silence button (#48), bench-unit protector (#49); case end stops added. Still open: the order gate after the bench tests (and the fallback if a shorted jack trips the pack), the LilyGO − lead (default: the holder's − tab, #45), the shaker fuse rating after measuring the shaker, fault visibility (periodic audible self-test vs a spin-2 sensing chip), a spin-2 12 V kill switch, the JLCPCB order option and quantity, an engineer's review, and the account (under 18: a parent's permission or an adult officer of the nonprofit).
+Decided 2026-11-27: pin plan (#46), high-side shaker (#47), silence button (#48), bench-unit protector (#49); case end stops added. Still open, in `docs/decisions.md`: #50 shaker fuse after measuring the shaker, #51 the order gate (and the fallback if a shorted jack trips the pack), #52 fault visibility, #53 a spin-2 12 V kill switch, #54 the JLCPCB order option and quantity. The LilyGO − lead follows #45 (the holder's − tab). Founder steps (in `docs/PLAN.md`): the bench tests, an engineer's review, and the JLCPCB account (under 18: a parent's permission, or an adult officer of the nonprofit orders).
 
 ## Not verified
 - The routing was done by this repo's own small router (`route.py`), not by hand or by Freerouting: have an experienced engineer look over it before ordering (BEACON_PCB.md step 6).

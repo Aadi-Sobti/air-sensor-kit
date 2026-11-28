@@ -60,7 +60,7 @@ LABELS = [  # silkscreen text (x, y, size, text, justify); positions checked aga
     (3.0, 1.9, 1.0, "J4 12V: 1 SIREN+ 2 SIREN- 3 LIGHT+ 4 LIGHT- 5 RED+ 6 RED-", "left"),
     (3.0, 3.6, 1.0, "J5: 1 GND 2 GREEN LED+ 3 OK 4 HELP 5 SILENCE", "left"),
     (12.5, 5.4, 1.0, "J3: wires 1-7 LilyGO P1, 8-14 P2", "left"),
-    (2.2, 16.2, 1.0, "BUTTONS-NOT BATT", "left"),
+    (2.2, 16.2, 1.0, "J5 NOT BATT", "left"),
     (69.5, 40.0, 1.0, "BATTERY ONLY", "right"),
     (61.4, 46.6, 1.2, "+", "center"),
     (61.4, 42.6, 1.2, "-", "center"),
@@ -362,20 +362,29 @@ def tp_labels(b):
         for item in fp.GraphicalItems():
             if item.GetLayer() == pcbnew.F_CrtYd and not fp.GetReference().startswith("TP"):
                 blocked.append(box_mm(item.GetBoundingBox(), 0.05))
+            elif item.GetLayer() == pcbnew.F_SilkS:
+                blocked.append(box_mm(item.GetBoundingBox(), 0.2))
     for d in b.GetDrawings():
         if d.GetLayer() == pcbnew.F_SilkS:
             blocked.append(box_mm(d.GetBoundingBox(), 0.2))
     edge = (OX + 0.4, OY + 0.4, OX + W - 0.4, OY + H - 0.4)
+    tp_centres = [(pcbnew.ToMM(f.Pads()[0].GetPosition().x), pcbnew.ToMM(f.Pads()[0].GetPosition().y))
+                  for f in b.GetFootprints() if f.GetReference().startswith("TP")]
     missing = []
     for fp in sorted(b.GetFootprints(), key=lambda f: f.GetReference()):
         ref = fp.GetReference()
-        if not ref.startswith("TP"):
+        if not ref.startswith("TP") and ref not in ("J3", "J4"):
             continue
         c = fp.Pads()[0].GetPosition()
         cx, cy = pcbnew.ToMM(c.x), pcbnew.ToMM(c.y)
         placed = False
-        for (dx, dy) in ((0, -1.75), (0, 1.75), (2.4, 0), (-2.4, 0), (2.0, -1.5), (-2.0, -1.5), (2.0, 1.5), (-2.0, 1.5),
-                         (0, -2.8), (0, 2.8), (3.4, 0), (-3.4, 0)):
+        import math
+        rings = [(0, -1.75), (0, 1.75), (2.4, 0), (-2.4, 0)] + [
+            (round(r * math.cos(math.radians(a)), 2), round(r * math.sin(math.radians(a)), 2))
+            for r in (1.8, 2.2, 2.6, 3.0, 3.4, 3.8, 4.4) for a in range(0, 360, 20)]
+        if ref in ("J3", "J4"):   # connectors: search around pin 1 a little further out
+            rings = [(dx * 1.4, dy * 1.4) for (dx, dy) in rings]
+        for (dx, dy) in rings:
             t = pcbnew.PCB_TEXT(b)
             t.SetText(ref)
             t.SetLayer(pcbnew.F_SilkS)
@@ -389,6 +398,10 @@ def tp_labels(b):
                 continue
             if any(hit(bb, k) for k in blocked):
                 continue
+            tcx, tcy = (bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2
+            own = (tcx - cx) ** 2 + (tcy - cy) ** 2
+            if any((tcx - ox) ** 2 + (tcy - oy) ** 2 < own for (ox, oy) in tp_centres if (ox, oy) != (cx, cy)):
+                continue   # the label would read as the neighbouring pad's
             b.Add(t)
             blocked.append(box_mm(t.GetBoundingBox(), 0.2))
             placed = True
@@ -497,6 +510,9 @@ def pictures():
 
 def main():
     design = json.load(open(os.path.join(HERE, "design.json")))
+    j1 = [c for c in design["components"] if c["ref"] == "J1"][0]
+    # Adafruit packs put + on JST circuit 1 = KiCad pad 1 (Adafruit/SparkFun Eagle libraries number these mirror-image)
+    assert j1["pins"] == {"1": "VBAT_IN", "2": "GND"}, "J1 must be pad 1 = pack +, pad 2 = GND (DESIGN.md fix 13)"
     libs = kigen.SymbolLibs(os.path.join(SHARED, "symbols"))
     make_module_footprints(design)
     lib_tables(design["components"])

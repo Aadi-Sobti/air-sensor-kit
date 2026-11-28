@@ -19,7 +19,7 @@
    "x": 63.7,
    "y": 45.6,
    "rot": 90,
-   "why": "Battery socket, side entry, opening on the right edge. Pad 1 = pack + (JST circuit No. 1, where Adafruit packs put the red wire), pad 2 = GND. Corrected 2026-11-27: Adafruit's/SparkFun's Eagle libraries number these two pins mirror-image to JST and KiCad. Anchor = pad 1 (GND); pad 2 VBAT_IN at (63.7, 43.6). Rotation 90 puts the mating face on the right edge (body x 62.35-69.95). Lowest connector on the right edge, nearest the battery cradle's open right end; down is blocked (pack top 4.8 mm below the board)",
+   "why": "Battery socket, side entry, opening on the right edge. Pad 1 = pack + (JST circuit No. 1, where Adafruit packs put the red wire), pad 2 = GND. Corrected 2026-11-27: Adafruit's/SparkFun's Eagle libraries number these two pins mirror-image to JST and KiCad. Anchor = pad 1 (VBAT_IN, pack +); pad 2 GND at (63.7, 43.6). Rotation 90 puts the mating face on the right edge (body x 62.35-69.95). Lowest connector on the right edge, nearest the battery cradle's open right end; down is blocked (pack top 4.8 mm below the board)",
    "pins": {
     "1": "VBAT_IN",
     "2": "GND"
@@ -191,7 +191,7 @@
    "x": 56.5,
    "y": 45.6,
    "rot": 180,
-   "why": "2512 shunt in the battery path right next to J1 pad 2; pad 1 (VBAT_IN) at x 59.46, pad 2 (VBAT_SH) at x 53.54. Sense traces to TP1/TP2 from the inner pad edges",
+   "why": "2512 shunt in the battery path right next to J1 pad 1; pad 1 (VBAT_IN) at x 59.46, pad 2 (VBAT_SH) at x 53.54. Sense traces to TP1/TP2 from the inner pad edges",
    "pins": {
     "1": "VBAT_IN",
     "2": "VBAT_SH"
@@ -1292,13 +1292,13 @@
   "Copper to board edge at least 0.5 mm. No vias inside the Q11 or Q16 pads (thermal vias at least 0.3 mm outside the pad, tented).",
   "Bottom layer: keep the battery-return area x 20-70, y 36-50 free of bottom-layer traces (solid GND under the J1 -> Q11 -> U1 path), and keep the plane unbroken under the I2S traces (x 46-60, y 15-21).",
   "SGND copper only between J3 pins 1/8/14 and R20 pin 1; it must not touch the GND pours.",
-  "Silkscreen (front, at least 1.0 mm text): 'BATTERY ONLY + -' at J1; 'LILYGO BATT + -' at J2; 'BUTTONS - NOT BATTERY' and pin names at J5; '12V OUT' and pin names at J4; 'SHAKER TIP / SLEEVE - bed shaker only' at J6; J3 pin 1 plus the LilyGO hole for each pin; U1 outline with OUT and EN; U2 outline with Vin and LRC; every test-point name."
+  "Silkscreen (as printed, 1.0 mm text, 0.16 mm stroke): pin legends for J4, J5 and J3 along the top edge; 'J3', 'J4' and 'J5 NOT BATT' at the connectors; 'BATTERY ONLY' with + beside J1 pad 1 and - beside pad 2; 'LILYGO BATT' with + and - over J2's pads; 'SHAKER', 'TIP', 'SLV' at J6; test-pad names where there is room (TP4, TP6 and TP10 are named on the assembly drawing); U1/U2 pin names inside their outlines."
  ],
  "trace_widths": [
-  "Battery path VBAT_IN and VBAT_SH (J1 pin 2 -> R1 -> Q11 drain): top-layer copper pours, at least 3.0 mm wide (IPC-2221 external, 1 oz, 10 C rise, my calculation: about 1.4 mm for 3 A, 2.8 mm for 5 A peaks).",
+  "Battery path VBAT_IN and VBAT_SH (J1 pin 1 -> R1 -> Q11 drain): top-layer copper pours, at least 3.0 mm wide (IPC-2221 external, 1 oz, 10 C rise, my calculation: about 1.4 mm for 3 A, 2.8 mm for 5 A peaks).",
   "VBAT_PROT main bus (Q11 source -> U1 VIN pads 4/5, C1, C2): pour or track at least 2.5 mm; 2.0 mm minimum in necks.",
   "VBAT_PROT branches: to J2 pad 1 at least 1.5 mm (2 A bursts both ways); to U2 Vin, C3, C4 and R15 at least 1.0 mm.",
-  "GND: bottom layer solid plane. J1 pin 1, U1 pads 2/3, C1-, C2-, TVS1 anode, D1 anode and J6 pin 2 reach it through at least 4-6 vias each (0.3 mm drill / 0.6 mm pad). Through-hole GND pads use thermal reliefs (4 spokes, at least 0.5 mm; at least 0.75 mm on U1 GND); SMD pads connect solid.",
+  "GND: bottom layer solid plane. J1 pin 2, U1 pads 2/3, C1-, C2-, TVS1 anode, D1 anode and J6 pin 2 reach it through at least 4-6 vias each (0.3 mm drill / 0.6 mm pad). Through-hole GND pads use thermal reliefs (4 spokes, at least 0.5 mm; at least 0.75 mm on U1 GND); SMD pads connect solid.",
   "+12V (U1 OUT -> C5, F2 pin 1, Q16 source, R11): at least 1.0 mm. +12V_INT (F2 pin 2 -> C7, D2, J4 pins 1/3/5): at least 0.6 mm.",
   "SIREN_SW, LIGHT_SW, REDLED_SW (MOSFET drain -> J4): at least 0.5 mm. SHK_OUT and SHK_JACK (Q16 -> F1 -> J6, TVS1, D1): at least 0.6 mm; TVS1 anode to the plane 5 mm or shorter and at least 1.0 mm wide.",
   "SGND (J3 pins 1, 8, 14 -> R20 pin 1): at least 1.0 mm (the three ribbon grounds can carry up to about 1.5 A of LilyGO current together, estimate).",

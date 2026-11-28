@@ -4,7 +4,12 @@ Written 2026-11-27 from a research run:
 - **Approaches:** 3 researchers, each checked by an adversarial reviewer.
 - **Judging:** 3 judges, looking at cost, founder time and build quality.
 
-**This is a recommendation.** The founder decides (open decision #44). Nothing here is designed or ordered. All hour figures
+**Status (2026-11-27):** decided as #44: perfboard for the bench units, and a JLCPCB-assembled driver PCB (the A1 style),
+now designed in `hardware/beacon-driver-pcb/` (not ordered). Step 1 below ("no PCB work") was superseded by the founder's
+choice. A separate exploration of the full one-board version (B) has started. The original recommendation follows as
+written.
+
+**This was a recommendation.** The founder decided #44. All hour figures
 are estimates, and PCB costs come from JLCPCB's published fee table and part-price snapshots, not real quotes.
 
 **Terms:**

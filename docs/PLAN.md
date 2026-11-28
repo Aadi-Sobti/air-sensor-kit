@@ -25,6 +25,12 @@ per session. Acceptance checks marked 👤 need the founder (hardware, phone, br
 - [ ] Borrow an Android phone for the M6 phone-setup check (10 min), whenever convenient.
 - [ ] Final project/nonprofit name (decisions.md #1). "ProseFire" is a placeholder; needed before M9 labels.
 - [ ] Review provisional decisions #3, #4, #5, #6 in docs/decisions.md (and docs/COSTS.md).
+- [ ] 👤 Help-First beacon (later phase): print the case (`hardware/beacon-help-first/stl/`), then measure the parts on
+      arrival (buy list "Measure when the parts arrive": shaker current and plug polarity, SILENCE button, holder height).
+- [ ] 👤 Beacon driver PCB (`hardware/beacon-driver-pcb/`), before ordering: run the bench tests in DESIGN.md on the
+      perfboard units; get an experienced engineer to look over the schematic and board; a JLCPCB account (under 18: a
+      parent's or guardian's permission, or an adult officer of the nonprofit orders); decisions #50–#54. Optional:
+      `brew install --cask kicad` in your own terminal (needs your password) to open the design in KiCad.
 
 ---
 
