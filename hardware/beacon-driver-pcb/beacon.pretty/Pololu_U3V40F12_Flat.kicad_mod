@@ -1,0 +1,210 @@
+(footprint "Pololu_U3V40F12_Flat"
+	(version 20260206)
+	(generator "kicad-footprint-generator")
+	(layer "F.Cu")
+	(descr "U3V40F12 (parts up) on its own straight header; the outline is the module board (courtyard)")
+	(tags "Through hole pin header THT 1x06 2.54mm single row")
+	(property "Reference" "REF**"
+		(at 0 -2.38 0)
+		(layer "F.SilkS")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "PinHeader_1x06_P2.54mm_Vertical"
+		(at 0 15.08 0)
+		(layer "F.Fab")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "KiLib_Generator" "connector/pin_header_socket"
+		(at 0 0 0)
+		(layer "F.SilkS")
+		(hide yes)
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr through_hole)
+	(duplicate_pad_numbers_are_jumpers no)
+	(fp_rect
+		(start -13.93 -1.23)
+		(end 1.27 13.97)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "65a8d725-7b30-51bc-b305-61205a2040d0")
+	)
+	(fp_rect
+		(start -13.93 -1.23)
+		(end 1.27 13.97)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "b7e2dbdc-2ae9-50a5-a75b-4132b39326cd")
+	)
+	(fp_rect
+		(start -13.93 -1.23)
+		(end 1.27 13.97)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "4caec588-6b52-5d36-addb-929c8c9f347e")
+	)
+	(fp_text user "OUT"
+		(at -2.2 0 0)
+		(layer "F.SilkS")
+		(uuid "3bbdc906-5315-55c0-b765-9a4639f28d3c")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "GND"
+		(at -2.2 2.54 0)
+		(layer "F.SilkS")
+		(uuid "5b887995-380d-5580-8b73-51ac3095054f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "GND"
+		(at -2.2 5.08 0)
+		(layer "F.SilkS")
+		(uuid "9d708d9f-f3a6-572a-bbef-54c8df7162b1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "VIN"
+		(at -2.2 7.62 0)
+		(layer "F.SilkS")
+		(uuid "ffeb7c1e-1d1a-5eb7-9cc5-d14426f00a9d")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "VIN"
+		(at -2.2 10.16 0)
+		(layer "F.SilkS")
+		(uuid "0a861f7f-a6fc-516f-b3da-b3f46cae54f0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "EN"
+		(at -2.2 12.7 0)
+		(layer "F.SilkS")
+		(uuid "c29779a4-1411-5da9-9454-3ad94fa1d4f6")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.16)
+			)
+			(justify right)
+		)
+	)
+	(fp_text user "U3V40F12 (parts up)"
+		(at -6.33 6.37 90)
+		(layer "F.Fab")
+		(uuid "67af1dbe-7da8-5d63-841a-c644cf2d6308")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" thru_hole rect
+		(at 0 0)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(pad "2" thru_hole circle
+		(at 0 2.54)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(pad "3" thru_hole circle
+		(at 0 5.08)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(pad "4" thru_hole circle
+		(at 0 7.62)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(pad "5" thru_hole circle
+		(at 0 10.16)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(pad "6" thru_hole circle
+		(at 0 12.7)
+		(size 1.7 1.7)
+		(drill 1)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+	)
+	(embedded_fonts no)
+	(model "${KICAD10_3DMODEL_DIR}/Connector_PinHeader_2.54mm.3dshapes/PinHeader_1x06_P2.54mm_Vertical.step"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)

@@ -1,0 +1,1309 @@
+{
+ "about": "Help-First beacon driver PCB, spin 1. Source of truth for build.py. Coordinates in mm from the board's top-left corner (x right, y down, parts side), rotation in degrees CCW as KiCad shows it. Designed 2026-11-27 (see DESIGN.md); pin plan per decision #46, high-side shaker #47, silence button #48.",
+ "board": {
+  "w": 70.0,
+  "h": 50.0,
+  "thickness": 1.6,
+  "layers": 2
+ },
+ "components": [
+  {
+   "ref": "J1",
+   "value": "BATTERY (JST-PH 2p side entry)",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_JST:JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal",
+   "lcsc": "C173752",
+   "mpn": "JST S2B-PH-K-S(LF)(SN)",
+   "assembly": "JLCPCB THT (wave/hand) or founder hand-solder; option A vs B",
+   "jlcpcb": true,
+   "x": 63.7,
+   "y": 45.6,
+   "rot": 90,
+   "why": "Battery socket, side entry, opening on the right edge. Pad 1 = pack + (JST circuit No. 1, where Adafruit packs put the red wire), pad 2 = GND. Corrected 2026-11-27: Adafruit's/SparkFun's Eagle libraries number these two pins mirror-image to JST and KiCad. Anchor = pad 1 (VBAT_IN, pack +); pad 2 GND at (63.7, 43.6). Rotation 90 puts the mating face on the right edge (body x 62.35-69.95). Lowest connector on the right edge, nearest the battery cradle's open right end; down is blocked (pack top 4.8 mm below the board)",
+   "pins": {
+    "1": "VBAT_IN",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "J2",
+   "value": "LILYGO_BATT (wire pads, 22 AWG)",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_Wire:SolderWire-0.5sqmm_1x02_P4.6mm_D0.9mm_OD2.1mm",
+   "lcsc": "",
+   "mpn": "none (wire)",
+   "assembly": "no part: founder solders 2 wires; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 61,
+   "y": 37.7,
+   "rot": 0,
+   "why": "Anchor = pad 1 (VBAT_PROT, square); pad 2 GND at x 65.6. Right edge between J3 and J1 so the LilyGO battery wires leave toward the LilyGO; next to the protected battery rail. Different footprint and place from J6 so the two wire pairs cannot be swapped",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "J3",
+   "value": "LILYGO_SIG (2x7 IDC box header, right angle)",
+   "symbol": "Connector_Generic:Conn_02x07_Odd_Even",
+   "footprint": "Connector_IDC:IDC-Header_2x07_P2.54mm_Horizontal",
+   "lcsc": "C5372874",
+   "mpn": "HCTL HC-JN254-2-07-W",
+   "assembly": "JLCPCB THT (wave/hand) or founder hand-solder; option A vs B",
+   "jlcpcb": true,
+   "x": 56.72,
+   "y": 14,
+   "rot": 0,
+   "why": "Anchor = pad 1 (odd column, top). Box body x 54.9-70.0, mating face flush with the right edge; pins 1-14 at x 56.72/59.26, y 14.00-29.24. Right edge is the only cable edge; the mated IDC socket sits about case z 87-110, at least ~4 mm below the LoRa SMA body (case z >= 114). 9 mm tall: OK in the 13 mm strip",
+   "pins": {
+    "1": "SGND",
+    "2": "SIREN_IN",
+    "3": "I2S_BCLK",
+    "4": "I2S_LRC",
+    "5": "I2S_DIN",
+    "6": "SIL_IN",
+    "7": "LED_OK",
+    "8": "SGND",
+    "9": "REDLED_IN",
+    "10": "LIGHT_IN",
+    "11": "SHAKER_IN",
+    "12": "BTN_OK",
+    "13": "BTN_HELP",
+    "14": "SGND"
+   }
+  },
+  {
+   "ref": "J4",
+   "value": "12V_LOADS (JST-XH 6p top entry)",
+   "symbol": "Connector_Generic:Conn_01x06",
+   "footprint": "Connector_JST:JST_XH_B6B-XH-A_1x06_P2.50mm_Vertical",
+   "lcsc": "C144397",
+   "mpn": "JST B6B-XH-A(LF)(SN)",
+   "assembly": "JLCPCB THT (wave/hand) or founder hand-solder; option A vs B",
+   "jlcpcb": true,
+   "x": 18.3,
+   "y": 21,
+   "rot": 0,
+   "why": "Anchor = pad 1. 12 V harness, top entry, just below the 13 mm strip (body y 18.65-24.4) so the plug and wires do not sit under the siren holder. Pins 1-6 at x 18.3-30.8, y 21.0. XH 2.5 mm pitch: the button plug (PH 2.0 mm) does not fit",
+   "pins": {
+    "1": "+12V_INT",
+    "2": "SIREN_SW",
+    "3": "+12V_INT",
+    "4": "LIGHT_SW",
+    "5": "+12V_INT",
+    "6": "REDLED_SW"
+   }
+  },
+  {
+   "ref": "J5",
+   "value": "BUTTONS (JST-PH 6p top entry)",
+   "symbol": "Connector_Generic:Conn_01x06",
+   "footprint": "Connector_JST:JST_PH_B6B-PH-K_1x06_P2.00mm_Vertical",
+   "lcsc": "C131342",
+   "mpn": "JST B6B-PH-K-S(LF)(SN)",
+   "assembly": "JLCPCB THT (wave/hand) or founder hand-solder; option A vs B; pin 6 is no-connect",
+   "jlcpcb": true,
+   "x": 2.6,
+   "y": 21,
+   "rot": 0,
+   "why": "Anchor = pad 1 (GND). Button/LED/silence harness, top entry, far left: about 50 mm from the battery socket J1 so the battery plug is not pushed into it by mistake. Pins 1-6 at x 2.6-12.6, y 21.0",
+   "pins": {
+    "1": "GND",
+    "2": "LED_OK_J",
+    "3": "BTN_OK_J",
+    "4": "BTN_HELP_J",
+    "5": "SIL_J"
+   }
+  },
+  {
+   "ref": "J6",
+   "value": "SHAKER_JACK (wire pads, 24-26 AWG)",
+   "symbol": "Connector_Generic:Conn_01x02",
+   "footprint": "Connector_Wire:SolderWire-0.25sqmm_1x02_P4.2mm_D0.65mm_OD1.7mm",
+   "lcsc": "",
+   "mpn": "none (wire)",
+   "assembly": "no part: founder solders 2 wires; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 7.4,
+   "y": 46.3,
+   "rot": 180,
+   "why": "Anchor = pad 1 (SHK_JACK = jack tip). Rotation 180 puts pad 1 on the right next to TVS1, pad 2 (GND = sleeve/bushing) on the left. Smaller pads than J2 and in the opposite corner, labelled SHAKER TIP/SLEEVE. Wires run about 130-200 mm to the jack at case (100, 11): measure",
+   "pins": {
+    "1": "SHK_JACK",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "U1",
+   "value": "Pololu U3V40F12 (12 V boost)",
+   "symbol": "Connector_Generic:Conn_01x06",
+   "footprint": "beacon:Pololu_U3V40F12_Flat",
+   "lcsc": "",
+   "mpn": "Pololu U3V40F12",
+   "assembly": "founder hand-solders after delivery on its straight 6x1 header; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 20,
+   "y": 36,
+   "rot": 90,
+   "why": "Anchor = pad 1 (OUT, square). Rotation 90: pads OUT, GND, GND, VIN, VIN, EN run left to right at y 36.0 (x 20.00-32.70); the Pololu board (components up, on its straight header) covers x 18.77-33.97, y 34.73-49.93 BELOW the row. Rule area: no parts under it. VIN end faces the battery input; OUT end faces the 12 V parts. About 8 mm tall",
+   "pins": {
+    "1": "+12V",
+    "2": "GND",
+    "3": "GND",
+    "4": "VBAT_PROT",
+    "5": "VBAT_PROT",
+    "6": "BOOST_EN"
+   }
+  },
+  {
+   "ref": "U2",
+   "value": "Adafruit 3006 (MAX98357A I2S amp)",
+   "symbol": "Connector_Generic:Conn_01x07",
+   "footprint": "beacon:Adafruit_3006_MAX98357A",
+   "lcsc": "",
+   "mpn": "Adafruit 3006",
+   "assembly": "founder hand-solders after delivery on its 1x7 header; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 37.8,
+   "y": 20,
+   "rot": 90,
+   "why": "Anchor = pad 1 (Vin, square). Rotation 90: pads Vin, GND, SD, GAIN, DIN, BCLK, LRC run left to right at y 20.0 (x 37.80-53.04); the Adafruit board covers x 36.53-54.31, y 17.46-36.51 BELOW the row, with its speaker screw terminal at the bottom (pins near x 43.7/47.2, y 33.0). I2S pins end up 5-10 mm from J3. Outside the 13 mm strip (estimated 11-12.6 mm tall). Rule area: no parts under it; no vias under the terminal pins",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND",
+    "3": "AMP_SD",
+    "4": "AMP_GAIN",
+    "5": "I2S_DIN",
+    "6": "I2S_BCLK",
+    "7": "I2S_LRC"
+   }
+  },
+  {
+   "ref": "R1",
+   "value": "10mR 1% 3W (pack-current shunt)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_2512_6332Metric",
+   "lcsc": "C5375464",
+   "mpn": "Milliohm HoYLR2512-3W-10mR-1%",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 56.5,
+   "y": 45.6,
+   "rot": 180,
+   "why": "2512 shunt in the battery path right next to J1 pad 1; pad 1 (VBAT_IN) at x 59.46, pad 2 (VBAT_SH) at x 53.54. Sense traces to TP1/TP2 from the inner pad edges",
+   "pins": {
+    "1": "VBAT_IN",
+    "2": "VBAT_SH"
+   }
+  },
+  {
+   "ref": "Q11",
+   "value": "AON7421 (reverse-battery P-FET)",
+   "symbol": "Transistor_FET:DMP3013SFV",
+   "footprint": "Package_SO:Vishay_PowerPAK_1212-8_Single",
+   "lcsc": "C115842",
+   "mpn": "AOS AON7421",
+   "assembly": "JLCPCB SMT (Economic, top side); symbol pins 1-3 S, 4 G, 5 D (+EP)",
+   "jlcpcb": true,
+   "x": 49,
+   "y": 45.6,
+   "rot": 0,
+   "why": "Reverse-battery P-FET: drain pad (VBAT_SH) faces R1, source pins 1-3 and gate pin 4 face left toward the VBAT_PROT bus. No vias in its pads; VBAT_SH copper around it for cooling",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "VBAT_PROT",
+    "3": "VBAT_PROT",
+    "4": "Q11_G",
+    "5": "VBAT_SH"
+   }
+  },
+  {
+   "ref": "R2",
+   "value": "10k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25804",
+   "mpn": "UNI-ROYAL 0603WAF1002T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 44.6,
+   "y": 47.6,
+   "rot": 180,
+   "why": "Q11 gate pull-down; pin 1 (Q11_G) next to Q11 pin 4, pin 2 to a GND via",
+   "pins": {
+    "1": "Q11_G",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C1",
+   "value": "100uF 25V electrolytic",
+   "symbol": "Device:C_Polarized",
+   "footprint": "Capacitor_SMD:CP_Elec_6.3x7.7",
+   "lcsc": "C72477",
+   "mpn": "ROQANG RVT1E101M0607",
+   "assembly": "JLCPCB SMT (Economic, top side); pin 1 = +",
+   "jlcpcb": true,
+   "x": 28.6,
+   "y": 29,
+   "rot": 0,
+   "why": "100 uF bulk on VBAT_PROT within ~7 mm of U1 VIN; + pad (pin 1) on the left at (25.9, 29.0). 8 mm tall, outside the 13 mm strip",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C2",
+   "value": "10uF 25V X5R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "lcsc": "C15850",
+   "mpn": "Samsung CL21A106KAYNNNE",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 28.9,
+   "y": 33.6,
+   "rot": 0,
+   "why": "10 uF right above U1 VIN pads (pin 1 at 27.95, 33.6 to pad 4)",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C5",
+   "value": "10uF 25V X5R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "lcsc": "C15850",
+   "mpn": "Samsung CL21A106KAYNNNE",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 20.4,
+   "y": 33.6,
+   "rot": 0,
+   "why": "10 uF on +12V right above U1 OUT (pin 1 at 19.45, 33.6)",
+   "pins": {
+    "1": "+12V",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "F2",
+   "value": "PTC 0.50A hold / 1.00A trip 30V",
+   "symbol": "Device:Polyfuse",
+   "footprint": "Fuse:Fuse_1206_3216Metric",
+   "lcsc": "C883126",
+   "mpn": "BHFUSE BSMD1206-050-30V",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 16,
+   "y": 30,
+   "rot": 180,
+   "why": "Internal-load PTC between U1 OUT and the 12 V harness; rotation 180 puts pin 1 (+12V) on the right toward U1, pin 2 (+12V_INT) on the left toward J4/C7",
+   "pins": {
+    "1": "+12V",
+    "2": "+12V_INT"
+   }
+  },
+  {
+   "ref": "C7",
+   "value": "1uF 50V X7R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "lcsc": "C28323",
+   "mpn": "Samsung CL21B105KBFNNNE",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 13,
+   "y": 27,
+   "rot": 90,
+   "why": "1 uF on +12V_INT near F2 pin 2 and J4",
+   "pins": {
+    "1": "+12V_INT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "D2",
+   "value": "SS14 (siren clamp)",
+   "symbol": "Diode:SS14",
+   "footprint": "Diode_SMD:D_SMA",
+   "lcsc": "C2480",
+   "mpn": "MDD SS14",
+   "assembly": "JLCPCB SMT (Economic, top side); pin 1 = cathode",
+   "jlcpcb": true,
+   "x": 19.9,
+   "y": 26.9,
+   "rot": 0,
+   "why": "Siren clamp right under J4 pins 1-2: cathode (pin 1) at (17.9, 26.9) to J4.1, anode at (21.9, 26.9) to J4.2",
+   "pins": {
+    "1": "+12V_INT",
+    "2": "SIREN_SW"
+   }
+  },
+  {
+   "ref": "Q12",
+   "value": "AO3400A (siren low-side)",
+   "symbol": "Transistor_FET:AO3400A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "lcsc": "C20917",
+   "mpn": "AOS AO3400A",
+   "assembly": "JLCPCB SMT (Economic, top side); Q_NMOS_GSD numbering 1 G, 2 S, 3 D",
+   "jlcpcb": true,
+   "x": 20.8,
+   "y": 15.6,
+   "rot": 270,
+   "why": "Siren switch right above J4 pin 2; rotation 270 puts the drain (pin 3) at the bottom (20.8, 16.54), gate top-right, source top-left",
+   "pins": {
+    "1": "SIREN_G",
+    "2": "GND",
+    "3": "SIREN_SW"
+   }
+  },
+  {
+   "ref": "Q13",
+   "value": "AO3400A (LED strip low-side)",
+   "symbol": "Transistor_FET:AO3400A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "lcsc": "C20917",
+   "mpn": "AOS AO3400A",
+   "assembly": "JLCPCB SMT (Economic, top side); Q_NMOS_GSD numbering 1 G, 2 S, 3 D",
+   "jlcpcb": true,
+   "x": 25.8,
+   "y": 15.6,
+   "rot": 270,
+   "why": "LED-strip switch right above J4 pin 4 (same orientation as Q12)",
+   "pins": {
+    "1": "LIGHT_G",
+    "2": "GND",
+    "3": "LIGHT_SW"
+   }
+  },
+  {
+   "ref": "Q15",
+   "value": "AO3400A (red-button light low-side)",
+   "symbol": "Transistor_FET:AO3400A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "lcsc": "C20917",
+   "mpn": "AOS AO3400A",
+   "assembly": "JLCPCB SMT (Economic, top side); Q_NMOS_GSD numbering 1 G, 2 S, 3 D",
+   "jlcpcb": true,
+   "x": 30.8,
+   "y": 15.6,
+   "rot": 270,
+   "why": "Red-light switch right above J4 pin 6 (same orientation as Q12)",
+   "pins": {
+    "1": "REDLED_G",
+    "2": "GND",
+    "3": "REDLED_SW"
+   }
+  },
+  {
+   "ref": "Q14",
+   "value": "AO3400A (shaker driver low-side)",
+   "symbol": "Transistor_FET:AO3400A",
+   "footprint": "Package_TO_SOT_SMD:SOT-23",
+   "lcsc": "C20917",
+   "mpn": "AOS AO3400A",
+   "assembly": "JLCPCB SMT (Economic, top side); Q_NMOS_GSD numbering 1 G, 2 S, 3 D",
+   "jlcpcb": true,
+   "x": 8,
+   "y": 36.5,
+   "rot": 0,
+   "why": "Shaker driver; gate (pin 1) at (7.06, 35.55) next to R7/R8, drain (pin 3) at (8.94, 36.5) next to R12 pin 2",
+   "pins": {
+    "1": "SHAKER_G",
+    "2": "GND",
+    "3": "SHK_DRV"
+   }
+  },
+  {
+   "ref": "R3",
+   "value": "100R",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22775",
+   "mpn": "UNI-ROYAL 0603WAF1000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 22,
+   "y": 11.2,
+   "rot": 270,
+   "why": "Siren 100 ohm series gate resistor; rotation 270: pin 1 (SIREN_IN) top, pin 2 (SIREN_G) bottom next to Q12 gate",
+   "pins": {
+    "1": "SIREN_IN",
+    "2": "SIREN_G"
+   }
+  },
+  {
+   "ref": "R4",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 19.8,
+   "y": 11.2,
+   "rot": 90,
+   "why": "Siren gate 100k pull-down at the MOSFET; rotation 90: pin 1 (SIREN_G) bottom, pin 2 GND top",
+   "pins": {
+    "1": "SIREN_G",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R5",
+   "value": "100R",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22775",
+   "mpn": "UNI-ROYAL 0603WAF1000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 27,
+   "y": 11.2,
+   "rot": 270,
+   "why": "LED-strip 100 ohm series gate resistor (as R3)",
+   "pins": {
+    "1": "LIGHT_IN",
+    "2": "LIGHT_G"
+   }
+  },
+  {
+   "ref": "R6",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 24.8,
+   "y": 11.2,
+   "rot": 90,
+   "why": "LED-strip gate 100k pull-down (as R4)",
+   "pins": {
+    "1": "LIGHT_G",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R9",
+   "value": "100R",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22775",
+   "mpn": "UNI-ROYAL 0603WAF1000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 32,
+   "y": 11.2,
+   "rot": 270,
+   "why": "Red-light 100 ohm series gate resistor (as R3)",
+   "pins": {
+    "1": "REDLED_IN",
+    "2": "REDLED_G"
+   }
+  },
+  {
+   "ref": "R10",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 29.8,
+   "y": 11.2,
+   "rot": 90,
+   "why": "Red-light gate 100k pull-down (as R4)",
+   "pins": {
+    "1": "REDLED_G",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R7",
+   "value": "100R",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22775",
+   "mpn": "UNI-ROYAL 0603WAF1000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 4.2,
+   "y": 33.6,
+   "rot": 0,
+   "why": "Shaker 100 ohm series gate resistor; pin 1 (SHAKER_IN) on the left toward TP11 and the incoming trace",
+   "pins": {
+    "1": "SHAKER_IN",
+    "2": "SHAKER_G"
+   }
+  },
+  {
+   "ref": "R8",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 4.2,
+   "y": 35.4,
+   "rot": 180,
+   "why": "Shaker gate 100k pull-down at Q14; rotation 180 puts pin 1 (SHAKER_G) next to the gate",
+   "pins": {
+    "1": "SHAKER_G",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "Q16",
+   "value": "AON7421 (shaker high-side P-FET)",
+   "symbol": "Transistor_FET:DMP3013SFV",
+   "footprint": "Package_SO:Vishay_PowerPAK_1212-8_Single",
+   "lcsc": "C115842",
+   "mpn": "AOS AON7421",
+   "assembly": "JLCPCB SMT (Economic, top side); symbol pins 1-3 S, 4 G, 5 D (+EP)",
+   "jlcpcb": true,
+   "x": 15.6,
+   "y": 38.6,
+   "rot": 180,
+   "why": "Shaker high-side P-FET next to U1 OUT; rotation 180 puts source pins 1-3 and gate pin 4 on the right (x 17.04) toward +12V, drain pad on the left toward F1. No vias in its pads",
+   "pins": {
+    "1": "+12V",
+    "2": "+12V",
+    "3": "+12V",
+    "4": "SHK_PG",
+    "5": "SHK_OUT"
+   }
+  },
+  {
+   "ref": "R11",
+   "value": "10k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25804",
+   "mpn": "UNI-ROYAL 0603WAF1002T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 16.6,
+   "y": 35.6,
+   "rot": 0,
+   "why": "Q16 gate-to-source 10k between Q16 gate and the +12V node; pin 2 (+12V) on the right",
+   "pins": {
+    "1": "SHK_PG",
+    "2": "+12V"
+   }
+  },
+  {
+   "ref": "R12",
+   "value": "4.7k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C23162",
+   "mpn": "UNI-ROYAL 0603WAF4701T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 12,
+   "y": 35.6,
+   "rot": 180,
+   "why": "Q16 gate drive 4.7k; rotation 180 puts pin 1 (SHK_PG) on the right next to R11, pin 2 (SHK_DRV) toward Q14 drain",
+   "pins": {
+    "1": "SHK_PG",
+    "2": "SHK_DRV"
+   }
+  },
+  {
+   "ref": "F1",
+   "value": "PTC 0.25A hold / 0.50A trip 33V",
+   "symbol": "Device:Polyfuse",
+   "footprint": "Fuse:Fuse_1206_3216Metric",
+   "lcsc": "C2977524",
+   "mpn": "BHFUSE BSMD1206-025-33V",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 12,
+   "y": 41.8,
+   "rot": 180,
+   "why": "Shaker PTC; rotation 180 puts pin 1 (SHK_OUT) toward Q16 drain and pin 2 (SHK_JACK) toward D1/TVS1/J6",
+   "pins": {
+    "1": "SHK_OUT",
+    "2": "SHK_JACK"
+   }
+  },
+  {
+   "ref": "D1",
+   "value": "SS14 (shaker flyback)",
+   "symbol": "Diode:SS14",
+   "footprint": "Diode_SMD:D_SMA",
+   "lcsc": "C2480",
+   "mpn": "MDD SS14",
+   "assembly": "JLCPCB SMT (Economic, top side); pin 1 = cathode",
+   "jlcpcb": true,
+   "x": 5,
+   "y": 41.9,
+   "rot": 180,
+   "why": "Shaker flyback; rotation 180 puts the cathode (pin 1, SHK_JACK) at (7.0, 41.9) next to F1 pin 2, anode to a GND via",
+   "pins": {
+    "1": "SHK_JACK",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "TVS1",
+   "value": "SMAJ13A (unidirectional TVS)",
+   "symbol": "Diode:SMAJ13A",
+   "footprint": "Diode_SMD:D_SMA",
+   "lcsc": "C153724",
+   "mpn": "MDD SMAJ13A (alt. Littelfuse SMAJ13A, C148214)",
+   "assembly": "JLCPCB SMT (Economic, top side); pin 1 = cathode (bar end, checked on the symbol graphic)",
+   "jlcpcb": true,
+   "x": 12.6,
+   "y": 45.6,
+   "rot": 0,
+   "why": "Jack TVS, the last part before the jack wires: cathode (pin 1) at (10.6, 45.6) is 3.3 mm from J6 pin 1; anode to GND vias within 5 mm",
+   "pins": {
+    "1": "SHK_JACK",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C3",
+   "value": "10uF 25V X5R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0805_2012Metric",
+   "lcsc": "C15850",
+   "mpn": "Samsung CL21A106KAYNNNE",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 38.6,
+   "y": 16,
+   "rot": 0,
+   "why": "10 uF at U2 Vin/GND pads (just above the row)",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C4",
+   "value": "100nF 50V X7R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "lcsc": "C14663",
+   "mpn": "YAGEO CC0603KRX7R9BB104",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 38.6,
+   "y": 13.9,
+   "rot": 0,
+   "why": "100 nF at U2 Vin/GND pads",
+   "pins": {
+    "1": "VBAT_PROT",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R13",
+   "value": "100k (gain 15 dB)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 45.4,
+   "y": 15.7,
+   "rot": 90,
+   "why": "GAIN 100k to GND straight above U2 pad 4",
+   "pins": {
+    "1": "AMP_GAIN",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R15",
+   "value": "10k (SD high = left channel)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25804",
+   "mpn": "UNI-ROYAL 0603WAF1002T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 42.9,
+   "y": 15.7,
+   "rot": 90,
+   "why": "SD pull-up to VBAT_PROT (left-channel mode); pin 1 (AMP_SD) at the bottom, straight above U2 pad 3",
+   "pins": {
+    "1": "AMP_SD",
+    "2": "VBAT_PROT"
+   }
+  },
+  {
+   "ref": "R21",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 48,
+   "y": 15.7,
+   "rot": 90,
+   "why": "I2S_DIN 100k pull-down straight above U2 pad 5",
+   "pins": {
+    "1": "I2S_DIN",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R22",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 50.5,
+   "y": 15.7,
+   "rot": 90,
+   "why": "I2S_BCLK 100k pull-down straight above U2 pad 6",
+   "pins": {
+    "1": "I2S_BCLK",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R23",
+   "value": "100k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C25803",
+   "mpn": "UNI-ROYAL 0603WAF1003T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 53,
+   "y": 15.7,
+   "rot": 90,
+   "why": "I2S_LRC 100k pull-down straight above U2 pad 7",
+   "pins": {
+    "1": "I2S_LRC",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R20",
+   "value": "0R (SGND link)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_1206_3216Metric",
+   "lcsc": "C17888",
+   "mpn": "UNI-ROYAL 1206W4F0000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 54,
+   "y": 7,
+   "rot": 180,
+   "why": "SGND-GND 0 ohm link near J3; rotation 180 puts pin 1 (SGND) toward J3 pin 1",
+   "pins": {
+    "1": "SGND",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R16",
+   "value": "4.7k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C23162",
+   "mpn": "UNI-ROYAL 0603WAF4701T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 6.6,
+   "y": 13.2,
+   "rot": 90,
+   "why": "BTN_OK 4.7k series; column above J5 pin 3; pin 1 (BTN_OK_J) at the bottom",
+   "pins": {
+    "1": "BTN_OK_J",
+    "2": "BTN_OK"
+   }
+  },
+  {
+   "ref": "R17",
+   "value": "4.7k",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C23162",
+   "mpn": "UNI-ROYAL 0603WAF4701T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 8.6,
+   "y": 13.2,
+   "rot": 90,
+   "why": "BTN_HELP 4.7k series; column above J5 pin 4; pin 1 (BTN_HELP_J) at the bottom",
+   "pins": {
+    "1": "BTN_HELP_J",
+    "2": "BTN_HELP"
+   }
+  },
+  {
+   "ref": "C8",
+   "value": "10nF 50V X7R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "lcsc": "C57112",
+   "mpn": "FH 0603B103K500NT",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 6.6,
+   "y": 26.5,
+   "rot": 270,
+   "why": "BTN_OK filter at the connector: rotation 270 puts pin 1 (BTN_OK_J) on top, straight below J5 pin 3",
+   "pins": {
+    "1": "BTN_OK_J",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "C9",
+   "value": "10nF 50V X7R",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "lcsc": "C57112",
+   "mpn": "FH 0603B103K500NT",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 8.6,
+   "y": 26.5,
+   "rot": 270,
+   "why": "BTN_HELP filter at the connector, straight below J5 pin 4",
+   "pins": {
+    "1": "BTN_HELP_J",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "R18",
+   "value": "100R (green LED)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22775",
+   "mpn": "UNI-ROYAL 0603WAF1000T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 4.6,
+   "y": 13.2,
+   "rot": 270,
+   "why": "Green-LED 100 ohm; column above J5 pin 2; rotation 270: pin 2 (LED_OK_J) at the bottom toward J5",
+   "pins": {
+    "1": "LED_OK",
+    "2": "LED_OK_J"
+   }
+  },
+  {
+   "ref": "C10",
+   "value": "100nF 50V X7R (silence coupling)",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "lcsc": "C14663",
+   "mpn": "YAGEO CC0603KRX7R9BB104",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 10.6,
+   "y": 13.2,
+   "rot": 90,
+   "why": "Silence coupling 100 nF; column above J5 pin 5; pin 1 (SIL_J) at the bottom, pin 2 (SIL_C) on top",
+   "pins": {
+    "1": "SIL_J",
+    "2": "SIL_C"
+   }
+  },
+  {
+   "ref": "R19",
+   "value": "1M (silence bleed)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C22935",
+   "mpn": "UNI-ROYAL 0603WAF1004T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 12.6,
+   "y": 13.2,
+   "rot": 90,
+   "why": "1 M bleed across C10, in the free column to its right (both pins jump 2 mm to the C10 pads)",
+   "pins": {
+    "1": "SIL_J",
+    "2": "SIL_C"
+   }
+  },
+  {
+   "ref": "R24",
+   "value": "1k (silence series)",
+   "symbol": "Device:R",
+   "footprint": "Resistor_SMD:R_0603_1608Metric",
+   "lcsc": "C21190",
+   "mpn": "UNI-ROYAL 0603WAF1001T5E",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 10.6,
+   "y": 9.8,
+   "rot": 90,
+   "why": "1k series between C10 and the GPIO0 line, above C10",
+   "pins": {
+    "1": "SIL_C",
+    "2": "SIL_IN"
+   }
+  },
+  {
+   "ref": "C11",
+   "value": "10nF 50V X7R (silence ESD/filter)",
+   "symbol": "Device:C",
+   "footprint": "Capacitor_SMD:C_0603_1608Metric",
+   "lcsc": "C57112",
+   "mpn": "FH 0603B103K500NT",
+   "assembly": "JLCPCB SMT (Economic, top side)",
+   "jlcpcb": true,
+   "x": 10.6,
+   "y": 26.5,
+   "rot": 270,
+   "why": "Silence-line ESD/filter cap at the connector, straight below J5 pin 5",
+   "pins": {
+    "1": "SIL_J",
+    "2": "GND"
+   }
+  },
+  {
+   "ref": "TP1",
+   "value": "VBAT_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 59.6,
+   "y": 41.6,
+   "rot": 0,
+   "why": "VBAT_IN sense point (Kelvin, from R1 pad 1 inner edge)",
+   "pins": {
+    "1": "VBAT_IN"
+   }
+  },
+  {
+   "ref": "TP2",
+   "value": "VBAT_SH",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 53.6,
+   "y": 41.6,
+   "rot": 0,
+   "why": "VBAT_SH sense point (Kelvin, from R1 pad 2 inner edge): TP1-TP2 = 10 mV per amp of pack current",
+   "pins": {
+    "1": "VBAT_SH"
+   }
+  },
+  {
+   "ref": "TP3",
+   "value": "VBAT_PROT",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 44.6,
+   "y": 43.6,
+   "rot": 0,
+   "why": "VBAT_PROT test point on the bus next to Q11",
+   "pins": {
+    "1": "VBAT_PROT"
+   }
+  },
+  {
+   "ref": "TP4",
+   "value": "+12V",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 22,
+   "y": 30.5,
+   "rot": 0,
+   "why": "+12V test point between U1 OUT and F2 (check 12 V before plugging anything in)",
+   "pins": {
+    "1": "+12V"
+   }
+  },
+  {
+   "ref": "TP5",
+   "value": "+12V_INT",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 12,
+   "y": 30.2,
+   "rot": 0,
+   "why": "+12V_INT test point after F2",
+   "pins": {
+    "1": "+12V_INT"
+   }
+  },
+  {
+   "ref": "TP6",
+   "value": "SHK_JACK",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 12,
+   "y": 38.4,
+   "rot": 0,
+   "why": "SHK_JACK test point between F1 and Q16 (jack must read 0 V with the shaker off)",
+   "pins": {
+    "1": "SHK_JACK"
+   }
+  },
+  {
+   "ref": "TP7",
+   "value": "GND",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 40.4,
+   "y": 47.4,
+   "rot": 0,
+   "why": "GND test point near the battery input (meter black lead)",
+   "pins": {
+    "1": "GND"
+   }
+  },
+  {
+   "ref": "TP8",
+   "value": "GND",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 63,
+   "y": 4,
+   "rot": 0,
+   "why": "GND test point in the free top-right corner (on-board; the SMA is off-board)",
+   "pins": {
+    "1": "GND"
+   }
+  },
+  {
+   "ref": "TP9",
+   "value": "SIREN_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 21,
+   "y": 7.4,
+   "rot": 0,
+   "why": "SIREN_IN test point (GPIO side of R3; same DC voltage as the gate)",
+   "pins": {
+    "1": "SIREN_IN"
+   }
+  },
+  {
+   "ref": "TP10",
+   "value": "LIGHT_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 26,
+   "y": 7.4,
+   "rot": 0,
+   "why": "LIGHT_IN test point (GPIO side of R5)",
+   "pins": {
+    "1": "LIGHT_IN"
+   }
+  },
+  {
+   "ref": "TP11",
+   "value": "SHAKER_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 1.6,
+   "y": 31.6,
+   "rot": 0,
+   "why": "SHAKER_IN test point next to R7 pin 1",
+   "pins": {
+    "1": "SHAKER_IN"
+   }
+  },
+  {
+   "ref": "TP12",
+   "value": "REDLED_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 31,
+   "y": 7.4,
+   "rot": 0,
+   "why": "REDLED_IN test point (GPIO side of R9)",
+   "pins": {
+    "1": "REDLED_IN"
+   }
+  },
+  {
+   "ref": "TP13",
+   "value": "SHK_PG",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 9,
+   "y": 33,
+   "rot": 0,
+   "why": "SHK_PG test point (Q16 gate): about 8.5 V below +12V (about 4 V to GND) when the shaker is on, equal to +12V when off",
+   "pins": {
+    "1": "SHK_PG"
+   }
+  },
+  {
+   "ref": "TP14",
+   "value": "BOOST_EN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 35.3,
+   "y": 38,
+   "rot": 0,
+   "why": "BOOST_EN test point next to U1 pad 6 (EN): measure only, nothing else connects",
+   "pins": {
+    "1": "BOOST_EN"
+   }
+  },
+  {
+   "ref": "TP15",
+   "value": "SIL_IN",
+   "symbol": "Connector:TestPoint",
+   "footprint": "TestPoint:TestPoint_Pad_D1.5mm",
+   "lcsc": "",
+   "mpn": "none (bare 1.5 mm pad)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 10.6,
+   "y": 6.4,
+   "rot": 0,
+   "why": "SIL_IN (GPIO0 line) test point at the top of the silence column",
+   "pins": {
+    "1": "SIL_IN"
+   }
+  },
+  {
+   "ref": "FID1",
+   "value": "Fiducial",
+   "symbol": "Mechanical:Fiducial",
+   "footprint": "Fiducial:Fiducial_1mm_Mask2mm",
+   "lcsc": "",
+   "mpn": "none (copper dot)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 1.5,
+   "y": 1.5,
+   "rot": 0,
+   "why": "Fiducial, top-left corner (optional for Economic PCBA; costs nothing)",
+   "pins": {}
+  },
+  {
+   "ref": "FID2",
+   "value": "Fiducial",
+   "symbol": "Mechanical:Fiducial",
+   "footprint": "Fiducial:Fiducial_1mm_Mask2mm",
+   "lcsc": "",
+   "mpn": "none (copper dot)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 68.5,
+   "y": 1.5,
+   "rot": 0,
+   "why": "Fiducial, top-right corner",
+   "pins": {}
+  },
+  {
+   "ref": "FID3",
+   "value": "Fiducial",
+   "symbol": "Mechanical:Fiducial",
+   "footprint": "Fiducial:Fiducial_1mm_Mask2mm",
+   "lcsc": "",
+   "mpn": "none (copper dot)",
+   "assembly": "no part; exclude from BOM and position file",
+   "jlcpcb": false,
+   "x": 16.5,
+   "y": 48.6,
+   "rot": 0,
+   "why": "Fiducial, bottom-left area next to U1, asymmetric with FID1/FID2",
+   "pins": {}
+  }
+ ],
+ "keepouts": [
+  "Back side, ledge strips: the board rests on 1.5 mm ledges along both long edges, 3 mm above the back plate. No through-hole pad copper, lead tail or solder joint within 2.5 mm of y=0 or y=50 (i.e. keep THT pads inside y 2.5-47.5). Trim every lead tail to 2.0 mm or less (J1, J3, J4, J5, U1, U2 headers, J2/J6 wires). Nothing on the back except copper, mask and silkscreen.",
+  "Siren-holder height zone: x 5.5-57.0, y 0-17.0 (the holder shelf sits 16.4 mm in front of the board, about 15.4 mm with 1 mm foam tape): parts 13 mm or lower, and no harness connectors (J4, J5) in this zone. Everywhere else: 15 mm including mated plugs and wire bends.",
+  "Right edge is the only cable edge: J3 (y 8.9-34.3), J2 (y 36.1-39.3), J1 (y 41.2-48.1). Nothing may protrude past x=70 for y < 9: the LoRa SMA body starts 1.2 mm right of the top-right corner (case z 114 and up). Free space to the right is 14 mm (to the LoRa module) for y < 47, open below that.",
+  "No connectors on the left edge (4.3 mm to the wall), top edge (9.7 mm to the wall, siren holder and SMA) or bottom edge (battery pack top 4.8 mm below, cradle wall 2.7 mm below for x < 56).",
+  "Rule area 'no footprints' (tracks and pours allowed, vias tented) under U1's Pololu board: x 18.77-33.97, y 34.73-49.93.",
+  "Rule area 'no footprints' under U2's Adafruit board: x 36.53-54.31, y 17.46-36.51; inside it, no vias and no exposed copper under the speaker-terminal pins: x 41.5-49.5, y 31.0-35.0.",
+  "Copper to board edge at least 0.5 mm. No vias inside the Q11 or Q16 pads (thermal vias at least 0.3 mm outside the pad, tented).",
+  "Bottom layer: keep the battery-return area x 20-70, y 36-50 free of bottom-layer traces (solid GND under the J1 -> Q11 -> U1 path), and keep the plane unbroken under the I2S traces (x 46-60, y 15-21).",
+  "SGND copper only between J3 pins 1/8/14 and R20 pin 1; it must not touch the GND pours.",
+  "Silkscreen (as printed, 1.0 mm text, 0.16 mm stroke): pin legends for J4, J5 and J3 along the top edge; 'J3', 'J4' and 'J5 NOT BATT' at the connectors; 'BATTERY ONLY' with + beside J1 pad 1 and - beside pad 2; 'LILYGO BATT' with + and - over J2's pads; 'SHAKER', 'TIP', 'SLV' at J6; test-pad names where there is room (TP4, TP6 and TP10 are named on the assembly drawing); U1/U2 pin names inside their outlines."
+ ],
+ "trace_widths": [
+  "Battery path VBAT_IN and VBAT_SH (J1 pin 1 -> R1 -> Q11 drain): top-layer copper pours, at least 3.0 mm wide (IPC-2221 external, 1 oz, 10 C rise, my calculation: about 1.4 mm for 3 A, 2.8 mm for 5 A peaks).",
+  "VBAT_PROT main bus (Q11 source -> U1 VIN pads 4/5, C1, C2): pour or track at least 2.5 mm; 2.0 mm minimum in necks.",
+  "VBAT_PROT branches: to J2 pad 1 at least 1.5 mm (2 A bursts both ways); to U2 Vin, C3, C4 and R15 at least 1.0 mm.",
+  "GND: bottom layer solid plane. J1 pin 2, U1 pads 2/3, C1-, C2-, TVS1 anode, D1 anode and J6 pin 2 reach it through at least 4-6 vias each (0.3 mm drill / 0.6 mm pad). Through-hole GND pads use thermal reliefs (4 spokes, at least 0.5 mm; at least 0.75 mm on U1 GND); SMD pads connect solid.",
+  "+12V (U1 OUT -> C5, F2 pin 1, Q16 source, R11): at least 1.0 mm. +12V_INT (F2 pin 2 -> C7, D2, J4 pins 1/3/5): at least 0.6 mm.",
+  "SIREN_SW, LIGHT_SW, REDLED_SW (MOSFET drain -> J4): at least 0.5 mm. SHK_OUT and SHK_JACK (Q16 -> F1 -> J6, TVS1, D1): at least 0.6 mm; TVS1 anode to the plane 5 mm or shorter and at least 1.0 mm wide.",
+  "SGND (J3 pins 1, 8, 14 -> R20 pin 1): at least 1.0 mm (the three ribbon grounds can carry up to about 1.5 A of LilyGO current together, estimate).",
+  "R1 Kelvin sense traces to TP1/TP2: 0.25 mm from the inner edges of R1's pads.",
+  "All signals (gates, I2S, buttons, LED, silence, BOOST_EN, AMP_SD, AMP_GAIN, SHK_PG, SHK_DRV): 0.25 mm. Clearance 0.2 mm everywhere. I2S traces 40 mm or shorter over unbroken GND, away from U1 and the U2 speaker terminal.",
+  "Design rules for JLCPCB (conservative): min track 0.2 mm, min clearance 0.2 mm, vias 0.3 mm drill / 0.6 mm pad (no surcharge), copper-to-edge 0.5 mm, hole-to-hole 0.25 mm, annular ring 0.25 mm on plated holes, text height 1.0 mm or more. Keep each library footprint's own drill sizes (PH 0.75 mm, XH 0.95 mm, IDC and pin headers 1.0 mm, wire pads 1.15 and 0.85 mm)."
+ ]
+}

@@ -51,7 +51,8 @@ class Parts:
     # antenna end pointing down (parts side up), 59.2 mm from that end, sticking ~1.9 mm out past the board edge
     lily_usb_protrude: float = 1.9
     lily_ipex_from_ant_end: float = 14.0  # LTE ('NBIOT') IPEX socket, on the same edge as the USB-C (maker DXF)
-    lily_screw_pilot: float = 1.3  # M1.7 (or M1.6) self-tapping screws: the DXF holes are exactly 2.00 mm, too tight for M2
+    lily_screw_pilot: float = 1.5  # M1.7 (or M1.6) self-tapping screws: the DXF holes are exactly 2.00 mm, too tight for M2.
+                                   # Small vertical holes print ~0.2-0.3 mm under size, so 1.5 prints near 1.2-1.3
     lily_hdr_from_ant: tuple = (67.0, 105.0)  # 16-pin header rows run 67-105 mm from the antenna end
     lily_hdr_pitch: float = 30.2  # the two header rows are 30.2 mm apart
     # Waveshare Pico-LoRa-SX1262-915M: 21 x 52 mm board (Pico layout); height not published, ~12 mm with headers.
@@ -68,6 +69,8 @@ class Parts:
     siren_l: float = 47.0
     siren_w: float = 39.0
     siren_h: float = 23.5
+    siren_port_from_end: float = 16.0  # PS-723BQ rev B: the round sound port (26.3 mm) on the top face is centred 16.0 mm
+                                       # from the end WITHOUT the leads; the leads go out of the right-hand slot
     # Pololu U3V50F12 12 V boost (Amazon): 48 x 15 x 10.5 mm, 2 M2 holes ~43.2 x 10.2 mm apart (Pololu). The smaller
     # U3V40F12 (15.2 x 15.2 mm) sits on the driver board instead.
     boost_l: float = 48.0
@@ -94,7 +97,8 @@ class Parts:
     oled_glass_h: float = 23.2  # glass 34.5 x 23.1 mm, centred on the board (Adafruit 938 fab print)
     oled_back: float = 12.0     # board + header pins + wires behind the glass (MEASURE)
     oled_win_w: float = 32.0    # window: the 29.42 x 14.70 active area plus margin
-    oled_win_h: float = 17.0
+    oled_win_h: float = 20.0    # the DSP-9's lit area sits 2.05 mm off the board centre (ProtoSupplies drawing), so
+                                # a taller window shows all 64 rows whichever way up the screen is mounted
     # Green 30 mm arcade button (EG STARTS 5 V / Adafruit 3487): 30 mm hole; body behind the panel ~33 x 33 (MEASURE)
     green_hole: float = 30.0
     green_body_d: float = 36.0     # the nut is ~35 mm across (Adafruit drawing), wider than the 33.3 mm flange
@@ -117,6 +121,14 @@ class Parts:
     jack_body_d: float = 12.5      # the solder lugs span up to 11.4 mm
     jack_body_depth: float = 12.5
     jack_wall: float = 2.0
+    # Silence button (#48): Adafruit 1502, 16 mm yellow momentary pushbutton (R13 drawing: M16 x 1 thread with a flat,
+    # D-shaped 16.0 mm hole with 15.0 mm across the flat; bezel ~18.1 mm; cap 13 mm). Nut/washer ~22 mm (estimate);
+    # ~16 mm behind the panel bare, ~22 mm with soldered wires
+    sil_hole: float = 16.3
+    sil_flat: float = 15.2
+    sil_nut_d: float = 22.0
+    sil_body_d: float = 16.0
+    sil_depth: float = 22.0
     # LTE antenna included with the LilyGO: flexible, 110.5 x 19.9 mm, stick-on (LilyGO antenna sheet)
     lte_l: float = 110.5
     lte_w: float = 19.9
@@ -138,7 +150,8 @@ class Fit:
     inner_w: float = 150.0
     inner_h: float = 130.0
     inner_d: float = 75.0
-    boss_d: float = 7.0
+    boss_d: float = 7.8      # centred 3.5 mm from each wall, so it overlaps both walls by 0.4 mm: a 7.0 boss only
+                             # touched them along a line (weak corner, and slicers report non-manifold edges)
     screw_pilot: float = 2.5  # M3 self-tapping into plastic
     screw_clear: float = 3.4
     pilot_m2: float = 1.6     # M2 self-tapping (screen and boost posts)
@@ -174,6 +187,8 @@ PROTO_X0, PROTO_Z0 = 4.0, 70.0                     # driver board above the batt
 BOOST_X0, BOOST_Z0 = 92.0, 20.0                    # 12 V boost standing upright under the LoRa module
 JACK = (100.0, 11.0)                               # bed-shaker jack on the back plate, under the boost
 SMA = (81.0, 62.0)                                 # LoRa antenna connector through the top wall (x, y)
+SIL = (115.0, 31.0)                                # silence button on the top wall (x, y), like a snooze button (#48)
+TAPE = 1.0                                         # foam tape under the driver board: at most 1 mm (buy list)
 LTE_Y0, LTE_Z0 = 5.0, 9.0                          # LTE antenna on the RIGHT wall's inside face, in front of the main
                                                    # board, lead end at the top (near the board's LTE socket)
 BOSSES = [(3.5, 3.5), (W - 3.5, 3.5), (3.5, H - 3.5), (W - 3.5, H - 3.5)]  # (x, z)
@@ -195,10 +210,10 @@ def xcyl(y, z, x0, x1, d) -> Manifold:
     return Manifold.cylinder(x1 - x0, d / 2).rotate([0, 90, 0]).translate([x0, y, z])
 
 
-def pocket(x0, z0, l, w, ties_along_x=True, ties=True):
+def pocket(x0, z0, l, w, ties_along_x=True, ties=True, rail_top=None):
     """A board pocket on the back plate's inside face: ledges the board rests on (3 mm up, for solder joints), rails
     that rise to its front face, and zip-tie slots outside the rails. Returns (added, cut, tie_paths, rail_top_y)."""
-    face = D - 3 - 1.6
+    face = D - 3 - 1.6 if rail_top is None else rail_top
     if ties_along_x:   # long side along x; ties go across it in z
         x1, z1 = x0 + l + 0.6, z0 + w + 0.6
         add = (box(x0 - 1.6, face, z0 - 1.6, x1 + 1.6, D, z0) + box(x0 - 1.6, face, z1, x1 + 1.6, D, z1 + 1.6)
@@ -264,6 +279,8 @@ def make_front() -> Manifold:
     for (a, b, c, d) in ((sx0 - 1.6, sz0 - 1.6, sx1 + 1.6, sz0), (sx0 - 1.6, sz1, sx1 + 1.6, sz1 + 1.6),
                          (sx0 - 1.6, sz0, sx0, sz1), (sx1, sz0, sx1 + 1.6, sz1)):
         shell += box(a, 0, b, c, 10.0, d)
+    for x in (sx0 - 1.7, sx1 - 0.1):  # open-topped notches in both end walls for the speaker's leads
+        shell -= box(x, 4.0, SPK_Z - 4.5, x + 1.8, 10.1, SPK_Z + 4.5)
     # LED light window: the panel is thinned to a skin; the strip sticks to the inside
     shell -= box(LED_X0 - 1, -F.front + F.led_skin, LED_Z0 - 1, LED_X0 + P.led_l + 1, 0.5, LED_Z0 + P.led_w + 1)
     # buttons, with label recesses (stickers: "I'M OK" under green, "I NEED HELP" over red)
@@ -275,11 +292,18 @@ def make_front() -> Manifold:
                  RED[1] + P.red_bezel / 2 + 11)
     # siren grille on top, a hole for the LoRa antenna's SMA connector, USB-C opening on the right wall
     scx, scy = SIREN_X0 + P.siren_l / 2, SIREN_Y0 + P.siren_w / 2
+    port_x = SIREN_X0 + P.siren_port_from_end   # grille over the sound port, not the body centre
     for r, n in ((0.0, 1), (6.0, 6), (12.0, 12)):
         for i in range(n):
             a = 2 * np.pi * i / n
-            shell -= cyl(scx + r * np.cos(a), scy + r * np.sin(a), H - 1, H + F.wall + 1, 3.0)
+            shell -= cyl(port_x + r * np.cos(a), scy + r * np.sin(a), H - 1, H + F.wall + 1, 3.5)
     shell -= cyl(SMA[0], SMA[1], H - 1, H + F.wall + 1, P.sma_hole)
+    # silence button (#48) on the top wall: D-shaped hole (the button's thread has a flat, so it can't turn), and a
+    # 0.6 mm recess in front of it for the "SILENCE" sticker
+    shell -= (cyl(SIL[0], SIL[1], H - 1, H + F.wall + 1, P.sil_hole)
+              ^ box(SIL[0] - 10, SIL[1] - 10, H - 2, SIL[0] + 10, SIL[1] - P.sil_hole / 2 + P.sil_flat, H + F.wall + 2))
+    shell -= box(SIL[0] - 12.0, SIL[1] - P.sil_hole / 2 - 14.0, H + F.wall - 0.6, SIL[0] + 12.0,
+                 SIL[1] - P.sil_hole / 2 - 2.5, H + F.wall + 1)
     usb_y = LILY_PCB_FRONT - 1.6
     shell -= box(W - 1, usb_y - 6.0, USB_Z - 8.0, W + F.wall + 1, usb_y + 6.0, USB_Z + 8.0)
     # screw bosses (M3 self-tapping from the back)
@@ -291,10 +315,11 @@ def make_front() -> Manifold:
     hy1 = SIREN_Y0 + P.siren_w + 1.0
     shell += box(hx0 - 1.6, 0, SIREN_Z0 - 2.0, hx1 + 1.6, hy1, SIREN_Z0)
     for x in (hx0 - 1.6, hx1):
-        shell += box(x, 0, SIREN_Z0 - 2.0, x + 1.6, hy1, SIREN_Z0 + min(14.0, P.siren_h - 2.0))
+        shell += box(x, 0, SIREN_Z0 - 2.0, x + 1.6, hy1, H)  # up to the top wall, so the part above the slot is held
     shell -= cyl(scx, scy, SIREN_Z0 - 3, SIREN_Z0 + 0.1, 12.0)
     for x in (hx0 - 1.7, hx1 - 0.1):  # wire notches: the PS-723BQ's leads leave an end face at its base
-        shell -= box(x, SIREN_Y0 + 8.0, SIREN_Z0 - 0.1, x + 1.8, SIREN_Y0 + P.siren_w - 8.0, SIREN_Z0 + 5.0)
+        # a slot open at the back, so the leads ride in it while the siren slides forward onto the shelf
+        shell -= box(x, SIREN_Y0 + 8.0, SIREN_Z0 - 0.1, x + 1.8, hy1 + 0.1, SIREN_Z0 + 5.0)
     shell += box(hx0, 0, SIREN_Z0 - 0.1, hx1, SIREN_Y0 - 0.5, SIREN_Z0 + 4.0)  # front stop: keeps it under the grille
     # LTE antenna frame on the right wall: two low rails above and below the 110.5 x 19.9 mm sticker
     for z in (LTE_Z0 - 1.6, LTE_Z0 + P.lte_l + 0.6):
@@ -337,8 +362,15 @@ def make_back() -> tuple[Manifold, dict[str, list[Manifold]]]:
     # would have to cross its pin headers) and driver-board pocket (horizontal, ledges, rails and two ties)
     add, cut, p = pocket(LORA_X0, LORA_Z0, P.lora_l, P.lora_w, ties_along_x=False, ties=False)
     plate += add
-    add, cut, p = pocket(PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, ties_along_x=True, ties=False)
+    # rails and end stops rise 1 mm above the face of a board sitting on 1 mm of foam tape
+    proto_rail_top = D - 3 - TAPE - 1.6 - 1.0
+    add, cut, p = pocket(PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, ties_along_x=True, ties=False, rail_top=proto_rail_top)
     plate += add  # held on its ledges with double-sided foam tape (it's light; ties would cross its parts)
+    # end stops at the pocket's short ends: plugging the battery and ribbon in from the right pushes the board left.
+    # Left: the full height. Right: only the top 7 mm, clear of the plugs (driver PCB J3 starts 8.9 mm down)
+    px1 = PROTO_X0 + P.proto_l + 0.6
+    plate += box(PROTO_X0 - 1.6, proto_rail_top, PROTO_Z0, PROTO_X0, D, PROTO_Z0 + P.proto_w + 0.6)
+    plate += box(px1, proto_rail_top, PROTO_Z0 + P.proto_w + 0.6 - 7.0, px1 + 1.6, D, PROTO_Z0 + P.proto_w + 0.6)
     # 12 V boost (Pololu U3V50F12, standing upright): two posts for M2 self-tapping screws, diagonal corners
     bcx, bcz = BOOST_X0 + P.boost_w / 2, BOOST_Z0 + P.boost_l / 2
     for (sx, sz) in ((-1, 1), (1, -1)):  # U3V50Fx holes: top-left and bottom-right when upright, parts forward (Pololu)
@@ -373,16 +405,33 @@ def ghosts() -> dict[str, Manifold]:
                            LORA_Z0 + 0.3 + P.lora_l),
         "battery": box(BATT_X0, BATT_Y0, BATT_Z0, BATT_X0 + P.batt_l, BATT_Y0 + P.batt_t, BATT_Z0 + P.batt_w),
         "siren": box(sx, SIREN_Y0, SIREN_Z0, sx + P.siren_l, SIREN_Y0 + P.siren_w, SIREN_Z0 + P.siren_h),
-        "driver board": box(PROTO_X0 + 0.3, D - 3 - P.proto_parts - 1.6, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l,
-                            D - 3, PROTO_Z0 + 0.3 + P.proto_w),
-        "12 V boost": box(BOOST_X0, D - 4 - P.boost_h, BOOST_Z0, BOOST_X0 + P.boost_w, D - 4, BOOST_Z0 + P.boost_l),
+        # parts up to 15 mm, but only 13 mm in the board's top 17 mm strip, which sits behind the siren holder (the
+        # driver PCB's layout rule; keep the perfboard to the same)
+        "driver board": box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE,
+                            PROTO_Z0 + 0.3 + P.proto_w)
+        + box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6 - P.proto_parts, PROTO_Z0 + 0.3, PROTO_X0 + 0.3 + P.proto_l,
+              D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 17.0)
+        + box(PROTO_X0 + 0.3, D - 3 - TAPE - 1.6 - (P.proto_parts - 2.0), PROTO_Z0 + 0.3 + P.proto_w - 17.0,
+              PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w),
+        # driver PCB plugs on its right edge (hardware/beacon-driver-pcb): the battery plug in J1 and the ribbon
+        # socket in J3, each with ~10 mm of plug and cable bend past the board edge
+        "battery plug (PCB J1)": box(PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6 - 6.5,
+                                     PROTO_Z0 + 0.3 + P.proto_w - 48.1, PROTO_X0 + 0.3 + P.proto_l + 10.0,
+                                     D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 41.2),
+        "ribbon socket (PCB J3)": box(PROTO_X0 + 0.3 + P.proto_l, D - 3 - TAPE - 1.6 - 9.5,
+                                      PROTO_Z0 + 0.3 + P.proto_w - 34.3, PROTO_X0 + 0.3 + P.proto_l + 10.0,
+                                      D - 3 - TAPE - 1.6, PROTO_Z0 + 0.3 + P.proto_w - 8.9),
+        "silence button": cyl(SIL[0], SIL[1], H - 3.0, H, P.sil_nut_d) + cyl(SIL[0], SIL[1], H - P.sil_depth, H, P.sil_body_d),
+        "12 V boost (U3V50F12 only)": box(BOOST_X0, D - 4 - P.boost_h, BOOST_Z0, BOOST_X0 + P.boost_w, D - 4, BOOST_Z0 + P.boost_l),
         "speaker": box(SPK_X - P.spk_l / 2, 0.0, SPK_Z - P.spk_w / 2, SPK_X + P.spk_l / 2, P.spk_h,
                        SPK_Z + P.spk_w / 2),
         "screen": box(OLED_X - P.oled_bw / 2, P.oled_glass_t, OLED_Z - P.oled_bh / 2, OLED_X + P.oled_bw / 2,
                       P.oled_glass_t + P.oled_back, OLED_Z + P.oled_bh / 2)
                   + box(OLED_X - 17.25, 0.0, OLED_Z - P.oled_glass_h / 2, OLED_X + 17.25, P.oled_glass_t,
                         OLED_Z + P.oled_glass_h / 2),
-        "LED strip": box(LED_X0, 0.0, LED_Z0, LED_X0 + P.led_l, P.led_t, LED_Z0 + P.led_w),
+        # stuck to the inside of the 0.8 mm light-window skin
+        "LED strip": box(LED_X0, -F.front + F.led_skin, LED_Z0, LED_X0 + P.led_l, -F.front + F.led_skin + P.led_t,
+                         LED_Z0 + P.led_w),
         "green button": ycyl(GREEN[0], GREEN[1], 0.0, P.green_body_depth, P.green_body_d),
         "red button": ycyl(RED[0], RED[1], 0.0, P.red_collar_depth, P.red_behind_d)
         + ycyl(RED[0], RED[1], P.red_collar_depth, P.red_behind_depth, P.red_body_d),
@@ -425,7 +474,7 @@ def checks(front: Manifold, back: Manifold, paths: dict[str, list[Manifold]]) ->
         problems.append(f"battery cradle tighter than the pack + 0.4 mm ({v:.1f} mm^3)")
     # antennas: keep the LTE antenna >= 10 mm from metal (battery, boost, speaker magnet, siren)
     lte = gs["LTE antenna"]
-    for metal in ("battery", "12 V boost", "speaker", "siren"):
+    for metal in ("battery", "12 V boost (U3V50F12 only)", "speaker", "siren"):
         gap = Manifold.min_gap(lte, gs[metal], 20.0)
         if gap < 10.0:
             problems.append(f"LTE antenna only {gap:.1f} mm from the {metal} (want >= 10 mm)")
@@ -458,6 +507,53 @@ def render(front: Manifold, back: Manifold, gs: dict[str, Manifold], out: Path) 
     fig.savefig(out / "case_overview.png")
     plt.close(fig)
     layout_drawing(out / "case_layout.png")
+    section_drawing(front, back, gs, out / "case_sections.png")
+
+
+SECTIONS = [(20.0, "battery, jack, main board"), (44.0, "both buttons, battery, main board"),
+            (74.0, "screen, driver board, LoRa, main board"), (104.0, "speaker, driver board, LoRa"),
+            (118.0, "siren, speaker, driver board")]
+
+
+def section_drawing(front: Manifold, back: Manifold, gs: dict[str, Manifold], path: Path) -> None:
+    """Top-down cuts through the closed case at several heights: where each part sits and how close things come."""
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import PathPatch
+    from matplotlib.path import Path as MPath
+
+    colors = plt.get_cmap("tab20").colors
+    fig, axes = plt.subplots(2, 3, figsize=(16, 9), dpi=110)
+
+    def patch(ax, m, z, fc, ec, alpha, label=None):
+        cs = m.slice(z)
+        if cs.is_empty():
+            return
+        polys = [p for p in cs.to_polygons() if len(p) >= 3]
+        mp = MPath.make_compound_path(*[MPath(np.vstack([p, p[:1]]), closed=True) for p in polys])
+        ax.add_patch(PathPatch(mp, fc=fc, ec=ec, alpha=alpha, lw=0.8))
+        if label:
+            b = cs.bounds()
+            ax.text((b[0] + b[2]) / 2, (b[1] + b[3]) / 2, label, ha="center", va="center", fontsize=6.5)
+
+    for ax, (z, what) in zip(axes.flat, SECTIONS):
+        patch(ax, front, z, (0.85, 0.85, 0.82), "k", 1.0)
+        patch(ax, back, z, (0.6, 0.62, 0.66), "k", 1.0)
+        for i, (name, m) in enumerate(gs.items()):
+            patch(ax, m, z, colors[i % len(colors)], colors[i % len(colors)], 0.55, name)
+        ax.set_title(f"{z:.0f} mm up: {what}", fontsize=9)
+        ax.set_xlim(-6, W + 6)
+        ax.set_ylim(D + F.back + 4, -F.front - 6)   # front of the case at the bottom of each drawing
+        ax.set_aspect("equal")
+        ax.text(W / 2, -F.front - 3, "front panel", ha="center", va="center", fontsize=7)
+        ax.text(W / 2, D + F.back + 2, "back plate", ha="center", va="center", fontsize=7)
+    a = axes.flat[-1]
+    a.axis("off")
+    a.text(0.0, 0.95, "Top-down cuts through the closed case.\nLight grey: front part. Dark grey: back plate.\n"
+           "Coloured: the parts (stand-ins at the\nsizes in make_case.py `Parts`).\nAll sizes in mm.",
+           va="top", fontsize=9, transform=a.transAxes)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def layout_drawing(path: Path) -> None:
@@ -482,14 +578,15 @@ def layout_drawing(path: Path) -> None:
     rect(a, SPK_X - 29, SPK_Z - 10, 58, 20, "speaker grille", "steelblue")
     circ(a, GREEN[0], GREEN[1], P.green_hole, "I'M OK\n30 mm", "green")
     circ(a, RED[0], RED[1], P.red_bezel, "I NEED HELP\n60 mm", "red")
-    a.text(SIREN_X0 + P.siren_l / 2, H - 3, "siren grille on top", ha="center", va="top", fontsize=8)
+    a.text(SIREN_X0 + P.siren_port_from_end, H - 3, "siren grille on top", ha="center", va="top", fontsize=8)
     a.text(W - 2, USB_Z, "USB-C\n(right side)", ha="right", va="center", fontsize=8)
+    a.text(SIL[0], H - 3, "SILENCE button on top", ha="center", va="top", fontsize=8)
     a = axes[1]
     a.set_title("Back plate, inside face (seen from the front)")
     rect(a, BATT_X0, BATT_Z0, P.batt_l, P.batt_w, "10 Ah battery", "purple", fill=True)
-    rect(a, PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, "driver board\n5 x 7 cm\n(MOSFETs, amp)", "brown", fill=True)
+    rect(a, PROTO_X0, PROTO_Z0, P.proto_l, P.proto_w, "driver board\n5 x 7 cm\n(MOSFETs, amp,\nU3V40F12 boost)", "brown", fill=True)
     rect(a, LORA_X0, LORA_Z0, P.lora_w, P.lora_l, "LoRa", "teal", fill=True)
-    rect(a, BOOST_X0, BOOST_Z0, P.boost_w, P.boost_l, "12 V\nboost", "olive", fill=True, size=7)
+    rect(a, BOOST_X0, BOOST_Z0, P.boost_w, P.boost_l, "posts for\nU3V50F12\n(empty\nwith\nU3V40F12)", "olive", fill=True, size=6)
     rect(a, LILY_X0, LILY_Z0, P.lily_w, P.lily_l, "LilyGO\nT-SIM7080G-S3\n(cell + WiFi)", "navy", fill=True)
     circ(a, JACK[0], JACK[1], 9, "", "k")
     a.text(JACK[0] + 6, JACK[1], "shaker jack", va="center", fontsize=7)

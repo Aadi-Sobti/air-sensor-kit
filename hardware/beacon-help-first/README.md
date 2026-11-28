@@ -7,10 +7,12 @@ the WiFi-plus-LoRa design is in `hardware/beacon/`.
 
 ![Front panel and back plate layout](case_layout.png)
 
+![Top-down cuts through the closed case](case_sections.png)
+
 | File | What | Print orientation |
 |---|---|---|
-| `stl/front.stl` | Front panel and walls. **Front:** screen window, speaker grille, light window, 30 mm green and 60 mm red button holes, label recesses. **Top:** siren grille and the LoRa antenna's SMA hole. **Right side:** USB-C opening, and inside it a frame for the stick-on LTE antenna in front of the main board. **Inside:** screen posts, speaker frame, siren holder (with a wire notch and a front stop) | Front panel flat on the bed (already oriented). No supports |
-| `stl/back.stl` | Back plate. **Battery:** cradle with a strap. **Boards:** 4 screw posts for the LilyGO board; pockets for the LoRa module and the 5 × 7 cm driver board. **Also:** posts for the 12 V boost, and the bed-shaker jack hole (plate thinned to 2 mm there). **Outside:** a 0.6 mm recess for the safety label | Outer face flat on the bed (already oriented). No supports; the label recess's floor prints as a 30 mm bridge, so it may sag a little (the label covers it) |
+| `stl/front.stl` | Front panel and walls. **Front:** screen window, speaker grille, light window, 30 mm green and 60 mm red button holes, label recesses. **Top:** siren grille, the LoRa antenna's SMA hole, and the SILENCE button's 16 mm D-shaped hole (#48) with a 0.6 mm sticker recess in front of it. **Right side:** USB-C opening, and inside it a frame for the stick-on LTE antenna in front of the main board. **Inside:** screen posts, speaker frame, siren holder (with a wire slot on each side, open at the back, and a front stop) | Front panel flat on the bed (already oriented). No supports |
+| `stl/back.stl` | Back plate. **Battery:** cradle with a strap. **Boards:** 4 screw posts for the LilyGO board; pockets for the LoRa module (side rails) and the 70 × 50 mm driver board (perfboard or the driver PCB in `hardware/beacon-driver-pcb/`; end stops and rails that rise 1 mm above a board on 1 mm foam tape). **Also:** posts for a U3V50F12 boost (empty with the U3V40F12, #42), and the bed-shaker jack hole (plate thinned to 2 mm there). **Outside:** a 0.6 mm recess for the safety label | Outer face flat on the bed (already oriented). No supports; the label recess's floor prints as a 30 mm bridge, so it may sag a little (the label covers it) |
 
 **Size:** 155 wide × 81 deep × 135 tall mm, about the size of a small bedside speaker. It stands on a nightstand. There
 are no wall keyholes, because the driver board covers that part of the back.
@@ -18,13 +20,21 @@ are no wall keyholes, because the driver board covers that part of the back.
 ## Printing
 - **Material:** PETG or PLA, in **white** so the alarm light shows through the 0.8 mm skin over the LED strip.
 - **Settings:** 0.2 mm layers, 3 walls, 20% infill.
-- **Plastic:** about 247 cm³ of solid volume, roughly 200–250 g at typical settings; your slicer gives the exact amount.
-- **Bed:** about 155 × 135 mm, so it needs a printer bed at least 160 mm square.
+- **Plastic:** about 250 cm³ of solid volume. At these settings that's about 250–270 g (front about 200 g, back about
+  60 g). Check your slicer's figure, and have at least 250 g on the spool before starting the front.
+- **Time:** the front takes several hours (roughly 3–8 h, depending on the printer); the back about 1–2.5 h.
+- **Bed:** each part is about 155 × 135 mm, so it needs a bed at least 160 mm square with the brim off (180 mm or more
+  is comfortable). PLA and PETG don't need a brim on a face this big.
+- **Checked (2026-11-27):** both STLs are single closed solids with no bad edges, sit flat on the bed, and need no
+  supports. The only overhangs are short bridges: the label recesses (the back's is 30 mm), a 16 mm bridge over the
+  USB-C opening, the back grooves and the screw counterbores.
 - **Screws (self-tapping):**
   - **Case:** 4 × M3 × 10 mm.
-  - **LilyGO board:** 4 × M1.7 × 5–6 mm. Its holes are exactly 2.0 mm, too tight for M2.
+  - **LilyGO board:** 4 × M1.7 × 5–6 mm. Its holes are exactly 2.0 mm, too tight for M2. Before the board goes on,
+    drive each screw into its bare post once, by hand, and back it out: that cuts the thread. If one binds, open the
+    hole with a 1.2–1.3 mm drill in a pin vise.
   - **Screen:** 4 × M2 × 4–5 mm.
-  - **Boost:** 2 × M2 × 5–6 mm.
+  - **Boost** (only for a U3V50F12): 2 × M2 × 5 mm.
 
 ## Part sizes (sources)
 | Part | Size used | Source |
@@ -33,14 +43,15 @@ are no wall keyholes, because the driver board covers that part of the back.
 | LTE antenna (in the LilyGO box) | 110.5 × 19.9 mm flexible, stick-on; 126 mm lead leaving ~18 mm from one end | LilyGO antenna sheet (XY03-NB). **Measure** |
 | Waveshare Pico-LoRa-SX1262-915M | 21 × 52 mm; 28 mm allowed for headers and jumper plugs | [Waveshare wiki](https://www.waveshare.com/wiki/Pico-LoRa-SX1262). **Measure the height** |
 | Adafruit 5035 battery | Max 69.0 × 56.5 × 19.0 mm | Maker drawing (PKCELL, p. 8) via [Adafruit](https://www.adafruit.com/product/5035) |
-| 12 V square siren: Mallory PS-723BQ (the pick, decision #35); Wishiot for wiring tests only | 47 × 39 × 23.5 mm; the Mallory's leads leave a 39 mm end face at the base | Mallory datasheet 47 × 39 × 23 (rev B drawing); Wishiot listing. **Measure** |
-| Pololu U3V50F12 | 48 × 15 × 10.5 mm; M2 holes ~43.2 × 10.2 mm apart, top-left and bottom-right when stood upright with parts forward | [Pololu 2568](https://www.pololu.com/product/2568) |
-| Driver board (5 × 7 cm perfboard) | 70 × 50 mm, parts up to 15 mm | Adafruit 4786 / ELEGOO kit |
-| Speaker 3 W 4 Ω | 70.2 × 31 × 16.6 mm | Adafruit 3351 drawing; CQRobot listing |
-| 1.3-inch OLED | Board up to 35.6 × 33.5 mm; holes ~30.45 × 28.25 mm; glass 34.5 × 23.1 mm centred; active area 29.42 × 14.70 mm | Adafruit 938 fab print; Hosyond listing. **Measure the glass thickness and the lit area's position** |
+| 12 V square siren: Mallory PS-723BQ (the pick, decision #35); Wishiot for wiring tests only | 47 × 39 × 23.5 mm; the Mallory's leads leave a 39 mm end face at the base; its 26.3 mm round sound port is on the top face, centred 16.0 mm from the end without the leads (the grille is centred there) | Mallory datasheet 47 × 39 × 23 (rev B drawing); Wishiot listing. **Measure** |
+| Pololu U3V50F12 (only for a shaker over about 0.2 A; the U3V40F12 pick sits flat on the driver board) | 48 × 15 × 10.5 mm; M2 holes ~43.2 × 10.2 mm apart, top-left and bottom-right when stood upright with parts forward | [Pololu 2568](https://www.pololu.com/product/2568) |
+| Driver board (5 × 7 cm perfboard, later the driver PCB, #44) | 70 × 50 mm, parts up to 15 mm; under 13 mm in the top 17 mm strip (behind the siren holder) | Adafruit 4786 / ELEGOO kit |
+| Speaker 3 W 4 Ω | 70.2 × 31 × 16.6 mm; the frame is 71.2 × 32 mm inside, with lead notches in both ends | Adafruit 3351 drawing; CQRobot listing |
+| 1.3-inch OLED: ProtoSupplies DSP-9 (the pick, #43) | Board 35.40 × 33.50 mm; holes 3.0 mm on 30.40 × 28.50 mm; glass 23.00 mm tall, centred; lit area 29.42 × 14.70 mm, centred 2.05 mm toward the header. The window is 32 × 20 mm, so every row shows whichever way up the screen goes | ProtoSupplies dimension drawing (also fits the Adafruit 938 and the Hosyond). **Measure the glass thickness** |
 | Red 60 mm button | 26 mm hole; 60.8 mm bezel; ~38 mm collar, then ~32 mm body to 60 mm deep with wires | [Adafruit 1190](https://www.adafruit.com/product/1190) drawing and guide. **Measure** |
 | Green 30 mm button | 30 mm hole; nut ~35 mm across; ~30 mm deep | Adafruit 3487 drawing |
 | 3.5 mm panel jack | M6 thread, ~2.5 mm max panel; body 12.5 mm deep, lugs up to 11.4 mm wide | Adafruit 4361 (Kaweei PJ-314M-1) drawing |
+| SILENCE button (Adafruit 1502) | D-shaped hole 16.0 mm with 15.0 mm across the flat → printed 16.3 / 15.2; shaft 14.89 × 15.56 mm; bezel ~18 mm; about 16 mm behind the wall bare, ~22 mm with wires; nut ~22 mm (estimate) | Adafruit R13 drawing and product page. **Measure** the flat and the nut |
 
 ## What the fit checks cover
 `make_case.py` places a stand-in ("ghost") for every part and checks for overlaps:
@@ -55,37 +66,82 @@ are no wall keyholes, because the driver board covers that part of the back.
 A test that deliberately blocks the strap slot, or moves the red button onto the main board, makes the checks fail as
 they should.
 
+**Driver board stand-in:** 15 mm of parts, 13 mm in its top 17 mm strip (behind the siren holder), sitting on 1 mm
+of foam tape, plus the driver PCB's battery plug and ribbon socket on its right edge. **Silence button:** a 22 mm nut
+and a 16 mm body 22 mm deep under the top wall.
+
+**Size-limit tests (2026-11-27):** the checks still pass with the speaker at 70.3 × 31.2 × 17.6 mm, the LilyGO's
+holder at 15–20 mm and its front parts up to 14 mm, the siren up to 47.5 × 39.5 × 24 mm, the red button's body 34 mm
+and collar 40 mm, the green nut 37 mm and 35 mm deep, the LoRa module 31 mm tall, the screen 14 mm deep with 3 mm
+glass, and the jack 14 mm deep. They fail with a siren of 48.5 × 40 × 25 mm, driver-board parts over 15 mm, or a red
+button deeper than 60 mm (that one only hits a U3V50F12 boost on its posts). Also checked: the siren slides in from the
+back with its leads in the slot, and the screen window hides none of the lit area either way up.
+
+**Closest gaps** (`case_sections.png`): the driver board's 15 mm parts area to the siren holder's shelf 0.7 mm (on 1 mm
+foam tape; set by the 13 mm limit in the board's top 17 mm strip), red button to battery 1.0 mm, driver board to the LoRa
+antenna connector 1.2 mm, screen to green button 1.25 mm, main board to red button 1.4 mm, ribbon socket to the LoRa
+antenna connector 2.6 mm, siren to driver board 2.95 mm (3.4 mm straight back).
+
 **Assumptions to confirm on the bench:** the 18650 holder sits in the middle of the board's back, clear of the 4 mounting
 holes; and the wires soldered to the board's left header row (about 1.5–4 mm right of the red button's body, from 13 to
 54 mm up) can be routed past the red button's body and switch without pressing on them.
 
 ## Assembly order
-1. **Measure** the parts listed in the buy list's "Measure when the parts arrive", update `Parts`, rerun, then print.
+1. **Measure** whatever parts you already have from the buy list's "Measure when the parts arrive", update `Parts`,
+   rerun, then print. Printing before the parts arrive is fine for a first fit test: the size-limit tests above show
+   the slack. Right after printing:
+   - test-fit the bare back plate in the front; if it's snug, sand the lip's outer face a little;
+   - test-fit the green button (trim the first-layer lip if it binds);
+   - if the SMA connector binds in the top hole, run a 1/4 in drill through it by hand;
+   - test-fit the SILENCE button: if it binds on the hole's flat (the top edge as printed, an 8 mm bridge that can sag
+     a little), file only the flat.
 2. **Before any home use:** the box must carry the safety wording from `docs/HOME_BEACON.md` § 1: not a smoke alarm;
    does not call 911; doesn't replace official alerts or evacuation orders. Put the label in the recess on the back,
    with wording the founder approves. It also needs a reachable silence control (see the buy list's wiring plan).
 3. **Main board,** before it's mounted, with its power switch OFF:
    - Insert the SIM.
    - Solder wires straight to the header holes you need (no header pins).
-   - Last, solder the battery leads to the 18650 holder's tabs (leave the holder empty; check + and − with a meter).
+   - Last, solder the two battery-feed wires to the 18650 holder's tabs: from the driver PCB's J2 ("LILYGO BATT", red to
+     +, black to −), or on a perfboard unit from the protected + bus (the Pololu #2810's VOUT) and the − bus. + is the tab
+     at the ESP32 end, − the one at the LTE-antenna end (check with a meter). Leave the holder empty: it's for one 18650
+     lithium cell, and AA batteries must never go in.
+   - **Keep the battery's plug.** The pack plugs into J1 on the driver PCB, or into the JST S2B-PH-K-S socket on a
+     perfboard unit, so its current goes through the reverse-battery protection (#45/#49). Never solder the pack
+     straight to the holder tabs.
+   - **The OFF switch doesn't make the tabs safe:** they connect before the switch, so once the pack is plugged in, the
+     tabs and everything wired to them are live.
 4. **Back plate:**
-   - Strap the battery into its cradle, with the lead toward the right.
+   - Strap the battery into its cradle with its lead corner at the **top right**: the pack's leads are only 100 mm, and
+     its plug has to reach J1 at the driver board's lower right edge (about 20 mm away). First time only: Hold a bare JST S2B-PH-K-S as it sits on a board (its PCB pins pointing down, the opening facing you), plug the pack in and meter the two pins underneath: the LEFT pin is pin 1 and must read + (3.6–4.2 V). If it reads −, stop and don't plug that pack into a beacon.
    - Screw the LilyGO board onto its 4 posts with M1.7 screws: 18650 holder facing the plate, antenna end up, USB-C
      toward the right wall.
-   - Fix the LoRa module and the driver board on their ledges with foam tape.
-   - Screw the boost onto its posts.
+   - Fix the LoRa module and the driver board on their ledges with foam tape no thicker than 1 mm. With the driver
+     PCB, plug the battery and the ribbon in before pressing the board down onto its tape.
+   - The U3V40F12 boost is soldered flat on the driver board (#42). Only a U3V50F12 goes on the boost posts.
    - Fit the shaker jack.
 5. **Front:**
-   - Mount the screen on its posts (glass toward the window), the speaker in its frame, and the LED strip behind the
-     light window.
+   - Stick the LED strip into the light-window pocket first (leads soldered on), then mount the screen on its posts
+     (glass toward the window, either way up) and the speaker in its frame, with its leads out through a notch.
    - Fit the two buttons; cut the two alignment posts off the red one first.
-   - Set the siren on its shelf, against the front stop, with its leads out through the notch, and fix it with a dab of
-     hot glue: nothing else stops it sliding back about 2.4 mm onto the driver board's parts.
+   - Fit the yellow **SILENCE** button (Adafruit 1502) in the top hole: line its thread's flat up with the hole's
+     flat, then tighten the nut from inside. Put the "SILENCE" sticker in the recess in front of it (#48).
+   - Slide the siren in from the back, leads in the **right-hand** slot (so its round sound port is on the left, under
+     the grille), until it meets the front stop. Fix it with a dab of hot glue: nothing else stops it sliding back
+     about 3 mm onto the driver board's parts.
    - Stick the LTE antenna between the rails on the right wall, lead end at the top.
 6. **Wiring:**
+   - Wire with the two halves opened like a book along the top (or right) edge, and leave front-panel wires about
+     15 cm long; tuck the slack in when closing.
    - Follow the proposed wiring plan in the buy list, and check every connection against LilyGO's schematic.
+   - **Perfboard units:** return the boost's and the amplifier's ground to the − bus (the pack's −), not to the LilyGO's
+     GND pins (decision #45): LilyGO GND reaches the pack only through a small transistor on the LilyGO. Also run 3 wires
+     from the LilyGO GND holes P1-15, P2-2 and P2-15 to the − bus, beside the audio wires, as the PCB's ribbon does.
+     **Driver PCB:** its ground is the pack's −, and the ribbon's 3 ground wires tie the LilyGO's GND to it: nothing to
+     wire by hand.
    - First checks: battery polarity with a meter, and 12 V at the boost output.
    - Plug the LTE antenna into the board's LTE ("NBIOT") socket.
+   - Run the first siren tests with the back plate off and ear protection on, until the firmware's silence press
+     works: once the case is shut, the power switch is inside.
 7. **Close up:** fit the SMA connector through the top hole and screw the antenna on. Close the case with the 4 M3
    screws.
 
@@ -94,4 +150,4 @@ holes; and the wires soldered to the board's left header row (about 1.5–4 mm r
 hardware/.venv/bin/python hardware/beacon-help-first/make_case.py --preview hardware/beacon-help-first
 ```
 It writes `stl/front.stl` and `stl/back.stl` and prints "fit checks: OK" (or the problems). With `--preview` it also
-writes `case_layout.png` and `case_overview.png`.
+writes `case_layout.png`, `case_overview.png` and `case_sections.png`.
